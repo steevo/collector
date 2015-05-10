@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<install type="collector" version="0.6.0">
+	<name>text</name>
+	<creationDate>2011</creationDate>
+	<author>Philippe Ousset</author>
+	<authorEmail>steevo@steevo.fr</authorEmail>
+	<authorUrl>www.steevo.fr</authorUrl>
+	<copyright>Copyright (C) 2010 Philippe Ousset. All rights reserved.</copyright>
+	<license>http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL</license>
+	<version>0.6.0</version>
+	<description>Field type text for Collector</description>
+	<files>
+		<filename>field.text.php</filename>
+		<filename>field.xml</filename>
+	</files>
+	<config>
+		<fieldset name="general">
+			<field name="unikable" type="text" default="0" label="COM_COLLECTOR_UNIKABLE_LABEL" description="COM_COLLECTOR_UNIKABLE_DESC" />
+			<field name="sortable" type="text" default="0" label="COM_COLLECTOR_SORTABLE_LABEL" description="COM_COLLECTOR_SORTABLE_DESC" />
+			<field name="searchable" type="text" default="1" label="COM_COLLECTOR_SEARCHABLE_LABEL" description="COM_COLLECTOR_SEARCHABLE_DESC" />
+			<field name="filterable" type="text" default="0" label="COM_COLLECTOR_FILTERABLE_LABEL" description="COM_COLLECTOR_FILTERABLE_DESC" />
+			<field name="intitle" type="text" default="0" label="COM_COLLECTOR_INTITLE_LABEL" description="COM_COLLECTOR_INTITLE_DESC" />
+		</fieldset>
+		
+		<fields name="attribs">
+			<field
+				name="template"
+				type="CollectorText"
+				default=""
+				label="COM_COLLECTOR_TEMPLATE_LABEL"
+				description="COM_COLLECTOR_TEMPLATE_DESC"
+				hide="pagebreak,readmore"
+				filter="safehtml"
+			/>
+		</fields>
+	</config>
+</install>

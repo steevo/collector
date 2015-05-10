@@ -1,0 +1,111 @@
+#collectorSelect {
+	direction: ltr;
+	margin: 10px;
+	padding: 0 0 1px;
+	line-height: 1.25;
+	font-family: Arial,Helvetica,sans-serif;
+	font-size: 11px;
+}
+
+div#main {
+	padding: 0 0 1px;
+}
+
+#collectorSelect fieldset {
+	border: 1px solid #CCCCCC;
+	padding: 5px;
+	text-align: left;
+	margin-top: 2px;
+	margin-left: 2px;
+	margin-right: 2px;
+}
+
+#collectorSelect fieldset legend{
+	color: #0B55C4;
+	font-size: 1.182em;
+	font-weight: bold;
+}
+
+#collectorSelect fieldset.title  {
+	margin-bottom: 0px;
+	margin-top: 10px;
+}
+
+#collectorSelect table {
+	margin-bottom: 6px;
+	border-collapse: collapse;
+}
+
+#collectorSelect table.adminform {
+	background-color: #F9F9F9;
+	border: solid 1px #D5D5D5;
+	border-collapse: collapse;
+	margin: 8px 0 15px;
+	width: 100%;
+}
+
+#collectorSelect table.adminform td {
+	padding: 5px;
+}
+
+#collectorSelect table tbody tr, #collectorSelect table tbody tr td {
+	padding: 0px;
+	border: 0px;
+	/*font-size: 0.8em;*/
+}
+
+#collectorSelect input{
+	border: 1px solid silver;
+	font-size: 10px;
+}
+
+#collectorSelect a:link  {
+	color: #0B55C4;
+	text-decoration: none;
+}
+
+#collectorSelect a:visited  {
+	color: #0B55C4;
+	text-decoration: none;
+}
+
+#collectorSelect a:hover  {
+	text-decoration: underline;
+}
+
+#collectorSelect a, img {
+	margin: 0;
+	padding: 0;
+}
+
+#collectorSelect img {
+	border: 0;
+}
+
+#collectorSelect table.adminlist {
+	background-color: #E7E7E7;
+	border-spacing: 1px;
+	color: #666666;
+	width: 100%;
+}
+
+#collectorSelect table.adminlist tbody tr td {
+	background: none repeat scroll 0 0 #FFFFFF;
+	border: 1px solid #DDDDDD;
+	height: 25px;
+	padding: 4px;
+	padding-left: 8px;
+}
+
+#collectorSelect table.fileInfos td {
+	padding: 1px;
+	text-align: left;
+}
+
+#collectorSelect div.configuration  {
+	color: #0B55C4;
+	font-size: 14px;
+	font-weight: bold;
+	line-height: 16px;
+	text-align: center;
+}

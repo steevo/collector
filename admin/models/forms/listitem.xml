@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+	<fieldset>
+		<field name="id"  type="text" class="readonly" label="JGLOBAL_FIELD_ID_LABEL"
+			description ="JGLOBAL_FIELD_ID_DESC" size="10" default="0" 
+			readonly="true" />
+
+		<field name="defined"  type="lists" label="COM_COLLECTOR_FIELD_DEFINED_LABEL"
+			description ="COM_COLLECTOR_FIELD_DEFINED_DESC" default="0" 
+			readonly="true" />
+		
+		<field
+			name="parent_id"
+			type="listitemparent"
+			label="COM_COLLECTOR_FIELD_DEFINED_PARENTID_LABEL"
+			description="COM_COLLECTOR_FIELD_DEFINED_PARENTID_DESC"
+			default="1"
+			filter="int"
+			class="inputbox"
+			size="1">
+			<option
+				value="1">COM_COLLECTOR_NO_PARENT</option>
+		</field>
+
+		<field name="content" type="text" label="COM_COLLECTOR_FIELD_CONTENT_LABEL"
+			description="COM_COLLECTOR_FIELD_CONTENT_DESC" class="inputbox" size="45" required="true" />
+		
+		<field
+			name="image"
+			type="media"
+			label="COM_COLLECTOR_FIELD_IMAGE_LABEL"
+			description="COM_COLLECTOR_FIELD_IMAGE_DESC"
+			directory="Collector"
+			preview="tooltip" />
+		
+		<field
+			name="listordering"		
+			type="listordering"
+			label="COM_COLLECTOR_LISTITEM_FIELD_ORDERING_LABEL"
+			description="COM_COLLECTOR_LISTITEM_FIELD_ORDERING_DESC"
+			filter="int"
+			class="inputbox"
+			size="1">
+		</field>
+
+		<field
+			name="path"
+			type="hidden"
+			filter="unset"/>
+		
+		<field
+			name="level"
+			type="hidden"
+			filter="unset"/>
+		
+		<field
+			name="lft"
+			type="hidden"
+			filter="unset"/>
+
+		<field
+			name="rgt"
+			type="hidden"
+			filter="unset"/>
+	</fieldset>
+</form>

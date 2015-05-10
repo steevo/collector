@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<config>
+	<fieldset name="component">
+		<field
+			name="file_path"
+			type="text"
+			size="50"
+			default="images/collector"
+			label="COM_COLLECTOR_FIELD_PATH_FILE_FOLDER_LABEL"
+			description="COM_COLLECTOR_FIELD_PATH_FILE_FOLDER_DESC" />
+			
+	</fieldset>
+	<fieldset
+		name="list_default_parameters"
+		label="JGLOBAL_LIST_LAYOUT_OPTIONS"
+		description="COM_COLLECTOR_CONFIG_LIST_SETTINGS_DESC"
+		>
+
+		<field
+			name="show_pagination_limit"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="JGLOBAL_DISPLAY_SELECT_LABEL"
+			description="JGLOBAL_DISPLAY_SELECT_DESC">
+			<option value="0">JHIDE</option>
+			<option value="1">JSHOW</option>
+		</field>
+
+	</fieldset>
+	<fieldset
+		name="collection"
+		label="COM_COLLECTOR_COLLECTION"
+		description="COM_COLLECTOR_COLLECTION_DISPLAY_DESC"
+	>
+		<field
+			name="show_title"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="COM_COLLECTOR_SHOW_COLL_TITLE"
+			description="COM_COLLECTOR_SHOW_COLL_TITLE_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+		<field
+			name="show_desc"
+			type="radio"
+			default="1"
+			class="btn-group btn-group-yesno"
+			label="COM_COLLECTOR_SHOW_DESC"
+			description="COM_COLLECTOR_SHOW_DESC_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+		<field
+			name="show_author"
+			type="radio"
+			default="1"
+			class="btn-group btn-group-yesno"
+			label="COM_COLLECTOR_AUTHOR_NAMES"
+			description="COM_COLLECTOR_TIPIFSETTOSHOWAUTHOR">
+			<option value="0">JHIDE</option>
+			<option value="1">JSHOW</option>
+		</field>
+		<field
+			name="show_create_date"
+			type="radio"
+			default="1"
+			class="btn-group btn-group-yesno"
+			label="COM_COLLECTOR_CREATED_DATE_AND_TIME"
+			description="COM_COLLECTOR_TIPIFSETTOSHOWDATETIMECREATED">
+			<option value="0">JHIDE</option>
+			<option value="1">JSHOW</option>
+		</field>
+		<field
+			name="show_search_area"
+			type="radio"
+			default="1"
+			class="btn-group btn-group-yesno"
+			label="COM_COLLECTOR_SHOW_SEARCH_AREA"
+			description="COM_COLLECTOR_SHOW_SEARCH_AREA_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+		<field
+			name="show_word_filter"
+			type="radio"
+			default="1"
+			class="btn-group btn-group-yesno"
+			label="COM_COLLECTOR_SHOW_WORD_FILTER"
+			description="COM_COLLECTOR_SHOW_WORD_FILTER_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+		<field
+			name="show_entire_listing"
+			type="radio"
+			default="1"
+			class="btn-group btn-group-yesno"
+			label="COM_COLLECTOR_SHOW_ENTIRE_LISTING"
+			description="COM_COLLECTOR_SHOW_ENTIRE_LISTING_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+		<field
+			name="show_pagination"
+			type="list"
+			default="1"
+			description="JGLOBAL_PAGINATION_DESC"
+			label="JGLOBAL_PAGINATION_LABEL">
+			<option value="0">JHIDE</option>
+			<option value="1">JSHOW</option>
+			<option value="2">JGLOBAL_AUTO</option>
+		</field>
+
+		<field
+			name="show_pagination_results"
+			type="radio"
+			default="1"
+			class="btn-group btn-group-yesno"
+			label="JGLOBAL_PAGINATION_RESULTS_LABEL"
+			description="JGLOBAL_PAGINATION_RESULTS_DESC">
+			<option value="0">JHIDE</option>
+			<option value="1">JSHOW</option>
+		</field>
+		<field
+			name="display_num"
+			type="list"
+			default=""
+			description="COM_COLLECTOR_NUMBER_ITEMS_LIST_DESC"
+			label="COM_COLLECTOR_NUMBER_ITEMS_LIST_LABEL">
+			<option value="">JGLOBAL_USE_GLOBAL</option>
+			<option value="5">J5</option>
+			<option value="10">J10</option>
+			<option value="15">J15</option>
+			<option value="20">J20</option>
+			<option value="25">J25</option>
+			<option value="30">J30</option>
+			<option value="50">J50</option>
+			<option value="100">J100</option>
+			<option value="0">JALL</option>
+		</field>
+	</fieldset>
+	<fieldset name="item"
+		label="COM_COLLECTOR_ITEM"
+		description="COM_COLLECTOR_ITEM_DISPLAY_DESC"
+	>
+		<field
+			name="show_emptyfield"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="COM_COLLECTOR_SHOW_EMPTY_FIELD"
+			description="COM_COLLECTOR_SHOW_EMPTY_FIELD_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+	</fieldset>
+	
+	<fieldset name="modification"
+		label="COM_COLLECTOR_MODIFICATION"
+		description="COM_COLLECTOR_MODIFICATION_SETTINGS_DESC"
+		addpath="/administrator/components/com_collector/elements"
+	>
+		<field
+			name="allow_front_mod"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="COM_COLLECTOR_ALLOW_FRONT_MOD"
+			description="COM_COLLECTOR_ALLOW_FRONT_MOD_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+		<field
+			name="save_history"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="COM_COLLECTOR_SAVE_HISTORY"
+			description="COM_COLLECTOR_SAVE_HISTORY_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+		<field
+			name="show_modification"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="COM_COLLECTOR_SHOW_MOD"
+			description="COM_COLLECTOR_SHOW_MOD_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+	</fieldset>
+	
+	<fieldset name="submit"
+		label="COM_COLLECTOR_SUBMIT"
+		description="COM_COLLECTOR_SUBMIT_SETTINGS_DESC"
+	>
+		<field
+			name="auto_publish"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="COM_COLLECTOR_AUTO_PUBLISH"
+			description="COM_COLLECTOR_AUTO_PUBLISH_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+	</fieldset>
+	
+	<fieldset
+		name="permissions"
+		label="JCONFIG_PERMISSIONS_LABEL"
+		description="JCONFIG_PERMISSIONS_DESC"
+	>
+		<field
+			name="rules"
+			type="rules"
+			label="JCONFIG_PERMISSIONS_LABEL"
+			class="inputbox"
+			validate="rules"
+			filter="rules"
+			component="com_collector"
+			section="component"
+		/>
+	</fieldset>
+</config>

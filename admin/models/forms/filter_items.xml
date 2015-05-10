@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+	<field
+		name="collection"
+		type="collections"
+		label="COM_COLLECTOR_FILTER_COLLECTION"
+		description="JOPTION_FILTER_COLLECTION_DESC"
+		onchange="this.form.submit();"
+	/>
+	<fields name="filter">
+		<field
+			name="search"
+			type="text"
+			label="COM_COLLECTOR_FILTER_SEARCH_DESC"
+			hint="JSEARCH_FILTER"
+		/>
+		<field
+			name="published"
+			type="status"
+			label="COM_CONTENT_FILTER_PUBLISHED"
+			description="COM_CONTENT_FILTER_PUBLISHED_DESC"
+			onchange="this.form.submit();"
+			>
+			<option value="">JOPTION_SELECT_PUBLISHED</option>
+		</field>
+		<field
+			name="access"
+			type="accesslevel"
+			label="JOPTION_FILTER_ACCESS"
+			description="JOPTION_FILTER_ACCESS_DESC"
+			onchange="this.form.submit();"
+			>
+			<option value="">JOPTION_SELECT_ACCESS</option>
+		</field>
+		<field
+			name="author_id"
+			type="author"
+			label="COM_CONTENT_FILTER_AUTHOR"
+			description="COM_CONTENT_FILTER_AUTHOR_DESC"
+			onchange="this.form.submit();"
+			>
+			<option value="">JOPTION_SELECT_AUTHOR</option>
+		</field>
+	</fields>
+	<fields name="list">
+		<field
+			name="fullordering"
+			type="list"
+			label="COM_COLLECTOR_LIST_FULL_ORDERING"
+			description="COM_COLLECTOR_LIST_FULL_ORDERING_DESC"
+			onchange="this.form.submit();"
+			default="i.ordering ASC"
+			>
+			<option value="">JGLOBAL_SORT_BY</option>
+			<option value="i.ordering ASC">JGRID_HEADING_ORDERING_ASC</option>
+			<option value="i.ordering DESC">JGRID_HEADING_ORDERING_DESC</option>
+			<option value="i.state ASC">JSTATUS_ASC</option>
+			<option value="i.state DESC">JSTATUS_DESC</option>
+			<option value="i.alias ASC">JGLOBAL_TITLE_ASC</option>
+			<option value="i.alias DESC">JGLOBAL_TITLE_DESC</option>
+			<option value="i.access ASC">JGRID_HEADING_ACCESS_ASC</option>
+			<option value="i.access DESC">JGRID_HEADING_ACCESS_DESC</option>
+			<option value="i.created_by ASC">JAUTHOR_ASC</option>
+			<option value="i.created_by DESC">JAUTHOR_DESC</option>
+			<option value="i.created ASC">JDATE_ASC</option>
+			<option value="i.created DESC">JDATE_DESC</option>
+			<option value="i.id ASC">JGRID_HEADING_ID_ASC</option>
+			<option value="i.id DESC">JGRID_HEADING_ID_DESC</option>
+		</field>
+		<field
+			name="limit"
+			type="limitbox"
+			class="inputbox input-mini"
+			default="25"
+			label="COM_COLLECTOR_LIST_LIMIT"
+			description="COM_COLLECTOR_LIST_LIMIT_DESC"
+			onchange="this.form.submit();"
+		/>
+	</fields>
+</form>

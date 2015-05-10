@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+	<layout title="COM_COLLECTOR_COLLECTION_VIEW_DEFAULT_TITLE">
+		<message>
+			<![CDATA[COM_COLLECTOR_COLLECTION_VIEW_DEFAULT_TITLE_DESC]]>
+		</message>
+	</layout>
+	
+	<!-- Add fields to the request variables for the layout. -->
+	<fields name="request">
+		<fieldset name="request"
+			addfieldpath="/administrator/components/com_collector/models/fields">
+			
+			<field
+				name="id"
+				type="collection"
+				label="COM_COLLECTOR_COLLECTION"
+				required="true"
+				description="COM_COLLECTOR_A_COLLECTION"
+				onchange="loadFilter();loadRequired();">
+				<option value="">COM_COLLECTOR_SELECT_COLLECTION</option>
+			</field>
+			<field
+				name="reset"
+				type="radio"
+				class="btn-group btn-group-yesno"
+				default="1"
+				label="COM_COLLECTOR_RESET_FILTER"
+				description="COM_COLLECTOR_RESET_FILTER_DESC"
+			>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+		</fieldset>
+	</fields>
+	
+	<!-- Add fields to the parameters object for the layout. -->
+	<fields name="params"
+		addfieldpath="/administrator/components/com_collector/models/fields">
+		
+		<fieldset name="advanced" label="JGLOBAL_LIST_LAYOUT_OPTIONS" >
+		
+			<field
+				name="show_pagination_limit"
+				type="radio"
+				class="btn-group"
+				label="JGLOBAL_DISPLAY_SELECT_LABEL"
+				description="JGLOBAL_DISPLAY_SELECT_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JHIDE</option>
+				<option value="1">JSHOW</option>
+			</field>
+			
+			<field
+				name="order"
+				type="list"
+				default="ordering"
+				label="COM_COLLECTOR_ORDER"
+				description="COM_COLLECTOR_ORDER_TO_DISPLAY_ARTICLES">
+				<option value="ordering">COM_COLLECTOR_ORDER</option>
+				<option value="created">COM_COLLECTOR_OLDEST_FIRST</option>
+				<option value="rcreated">COM_COLLECTOR_NEWEST_FIRST</option>
+				<option value="modified">COM_COLLECTOR_LATEST_MODIFIED_FIRST</option>
+				<option value="rmodified">COM_COLLECTOR_LATEST_MODIFIED_LAST</option>
+				<option value="default">COM_COLLECTOR_ALPHABETICAL_DEFAULT</option>
+			</field>
+			
+			<field
+				name="filter"
+				type="filterfield"
+				default="0"
+				label="COM_COLLECTOR_FILTER"
+				description="COM_COLLECTOR_FILTER_ITEMS"
+				view="collection"
+			/>
+			
+			<field
+				name="hide_filter"
+				type="radio"
+				class="btn-group btn-group-yesno"
+				default="1"
+				label="COM_COLLECTOR_HIDE_FILTER_FIELD"
+				description="COM_COLLECTOR_HIDE_FILTER_FIELD_DESC">
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+		</fieldset>
+		
+		<fieldset name="collection" label="COM_COLLECTOR_COLLECTION">
+		
+			<field
+				name="show_desc"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_SHOW_DESC"
+				description="COM_COLLECTOR_SHOW_DESC_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+			
+			<field
+				name="show_author"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_AUTHOR_NAMES"
+				description="COM_COLLECTOR_TIPIFSETTOSHOWAUTHOR">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JHIDE</option>
+				<option value="1">JSHOW</option>
+			</field>
+			
+			<field
+				name="show_create_date"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_CREATED_DATE_AND_TIME"
+				description="COM_COLLECTOR_TIPIFSETTOSHOWDATETIMECREATED">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JHIDE</option>
+				<option value="1">JSHOW</option>
+			</field>
+			
+			<field
+				name="show_search_area"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_SHOW_SEARCH_AREA"
+				description="COM_COLLECTOR_SHOW_SEARCH_AREA_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+			
+			<field
+				name="show_word_filter"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_SHOW_WORD_FILTER"
+				description="COM_COLLECTOR_SHOW_WORD_FILTER_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+			
+			<field
+				name="show_entire_listing"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_SHOW_ENTIRE_LISTING"
+				description="COM_COLLECTOR_SHOW_ENTIRE_LISTING_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+			
+			<field
+				name="required"
+				type="requiredfilter"
+				default="0"
+				label="COM_COLLECTOR_REQUIRED_FILTER"
+				description="COM_COLLECTOR_REQUIRED_FILTER_DESC" />
+				
+			<field
+				name="show_pagination"
+				type="radio"
+				class="btn-group"
+				description="JGLOBAL_PAGINATION_DESC"
+				label="JGLOBAL_PAGINATION_LABEL">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JHIDE</option>
+				<option value="1">JSHOW</option>
+				<option value="2">JGLOBAL_AUTO</option>
+			</field>
+
+			<field
+				name="show_pagination_results"
+				type="radio"
+				class="btn-group"
+				label="JGLOBAL_PAGINATION_RESULTS_LABEL"
+				description="JGLOBAL_PAGINATION_RESULTS_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JHIDE</option>
+				<option value="1">JSHOW</option>
+			</field>
+			
+			<field
+				name="display_num"
+				type="list"
+				description="COM_COLLECTOR_NUMBER_ITEMS_LIST_DESC"
+				label="COM_COLLECTOR_NUMBER_ITEMS_LIST_LABEL">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="5">J5</option>
+				<option value="10">J10</option>
+				<option value="15">J15</option>
+				<option value="20">J20</option>
+				<option value="25">J25</option>
+				<option value="30">J30</option>
+				<option value="50">J50</option>
+				<option value="100">J100</option>
+				<option value="0">JALL</option>
+			</field>
+			
+		</fieldset>
+		
+		<fieldset name="item" label="COM_COLLECTOR_ITEM">
+			<field
+				name="show_emptyfield"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_SHOW_EMPTY_FIELD"
+				description="COM_COLLECTOR_SHOW_EMPTY_FIELD_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+		</fieldset>
+		
+		<fieldset name="modification" label="COM_COLLECTOR_MODIFICATION"
+			addpath="/administrator/components/com_collector/elements">
+			<field
+				name="allow_front_mod"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_ALLOW_FRONT_MOD"
+				description="COM_COLLECTOR_ALLOW_FRONT_MOD_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+			
+			<field
+				name="save_history"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_SAVE_HISTORY"
+				description="COM_COLLECTOR_SAVE_HISTORY_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+			
+			<field
+				name="show_modification"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_SHOW_MOD"
+				description="COM_COLLECTOR_SHOW_MOD_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+		</fieldset>
+	</fields>
+</metadata>

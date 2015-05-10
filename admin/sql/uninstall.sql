@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS `#__collector`;
+DROP TABLE IF EXISTS `#__collector_defined`;
+DROP TABLE IF EXISTS `#__collector_defined_content`;
+DROP TABLE IF EXISTS `#__collector_fields`;
+DROP TABLE IF EXISTS `#__collector_fields_type`;
+DROP TABLE IF EXISTS `#__collector_files_ext`;
+DROP TABLE IF EXISTS `#__collector_files_type`;
+DROP TABLE IF EXISTS `#__collector_items`;
+DROP TABLE IF EXISTS `#__collector_templates`;
+DROP TABLE IF EXISTS `#__collector_users`;

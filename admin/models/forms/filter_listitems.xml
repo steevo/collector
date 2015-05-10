@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+	<field
+		name="defined"
+		type="lists"
+		label="COM_COLLECTOR_FILTER_LIST"
+		description="JOPTION_FILTER_LIST_DESC"
+		onchange="this.form.submit();"
+	/>
+	<fields name="filter">
+		<field
+			name="search"
+			type="text"
+			label="COM_COLLECTOR_FILTER_SEARCH_DESC"
+			hint="JSEARCH_FILTER"
+		/>
+		<field
+			name="level"
+			type="integer"
+			first="1"
+			last="10"
+			step="1"
+			label="JOPTION_FILTER_LEVEL"
+			languages="*"
+			description="JOPTION_FILTER_LEVEL_DESC"
+			onchange="this.form.submit();"
+			>
+			<option value="">JOPTION_SELECT_MAX_LEVELS</option>
+		</field>
+		<field
+			name="path"
+			type="ListitemPath"
+			label="COM_COLLECTOR_FILTER_PATH"
+			description="COM_COLLECTOR_FILTER_PATH_DESC"
+			onchange="this.form.submit();"
+			>
+			<option
+				value="">COM_COLLECTOR_SELECT_PARENT</option>
+		</field>
+	</fields>
+	<fields name="list">
+		<field
+			name="fullordering"
+			type="list"
+			label="COM_COLLECTOR_LIST_FULL_ORDERING"
+			description="COM_COLLECTOR_LIST_FULL_ORDERING_DESC"
+			onchange="this.form.submit();"
+			default="c.lft ASC"
+			>
+			<option value="">JGLOBAL_SORT_BY</option>
+			<option value="c.lft ASC">JGRID_HEADING_ORDERING_ASC</option>
+			<option value="c.lft DESC">JGRID_HEADING_ORDERING_DESC</option>
+			<option value="c.content ASC">JGLOBAL_TITLE_ASC</option>
+			<option value="c.content DESC">JGLOBAL_TITLE_DESC</option>
+			<option value="c.id ASC">JGRID_HEADING_ID_ASC</option>
+			<option value="c.id DESC">JGRID_HEADING_ID_DESC</option>
+		</field>
+		<field
+			name="limit"
+			type="limitbox"
+			class="inputbox input-mini"
+			default="25"
+			label="COM_COLLECTOR_LIST_LIMIT"
+			description="COM_COLLECTOR_LIST_LIMIT_DESC"
+			onchange="this.form.submit();"
+		/>
+	</fields>
+</form>

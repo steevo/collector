@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+	<fieldset>
+		<field name="id"  type="text" class="readonly" label="JGLOBAL_FIELD_ID_LABEL"
+			description ="JGLOBAL_FIELD_ID_DESC" size="10" default="0" 
+			readonly="true"  />
+		
+		<field name="itemid" type="text" class="readonly" label="COM_COLLECTOR_FIELD_ITEMID_LABEL"
+			description="COM_COLLECTOR_FIELD_ITEMID_DESC"
+			size="40" readonly="true" />
+		
+		<field name="userlist" type="text" class="readonly" label="COM_COLLECTOR_FIELD_USERLIST_LABEL"
+			description ="COM_COLLECTOR_FIELD_USERLIST$!_DESC" size="10" default="0" 
+			readonly="true"  />
+
+		<field
+			name="comment"
+			type="textarea"
+			label="COM_COLLECTOR_FIELD_COMMENT_LABEL"
+			description="COM_COLLECTOR_FIELD_COMMENT_DESC"
+			class="inputbox"
+			cols="120"
+			rows="4"
+		/>
+
+	</fieldset>
+</form>

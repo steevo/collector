@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="component" version="3.0" method="upgrade">
+	<name>Collector</name>
+	<author>Philippe Ousset</author>
+	<creationDate>2015</creationDate>
+	<copyright>Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.</copyright>
+	<license>http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL</license>
+	<authorEmail>steevo@steevo.fr</authorEmail>
+	<authorUrl>www.steevo.fr</authorUrl>
+	<version>0.6.0</version>
+	<description>COLLECTOR</description>
+
+	<files folder="site">
+		<filename>controller.php</filename>
+		<filename>collector.php</filename>
+		<filename>index.html</filename>
+		<filename>router.php</filename>
+		
+		<folder>assets</folder>
+		<folder>controllers</folder>
+		<folder>helpers</folder>
+		<folder>layouts</folder>
+		<folder>models</folder>
+		<folder>views</folder>
+	</files>
+	
+	<languages folder="site">
+		<language tag="fr-FR">languages/fr-FR/fr-FR.com_collector.ini</language>
+		<language tag="en-GB">languages/en-GB/en-GB.com_collector.ini</language>
+		<language tag="de-DE">languages/de-DE/de-DE.com_collector.ini</language>
+		<language tag="es-ES">languages/es-ES/es-ES.com_collector.ini</language>
+		<language tag="el-GR">languages/el-GR/el-GR.com_collector.ini</language>
+		<language tag="pl-PL">languages/pl-PL/pl-PL.com_collector.ini</language>
+	</languages>
+	
+	<administration>
+		<!-- Administration Menu Section -->
+		<menu>COM_COLLECTOR</menu>
+		<submenu>
+			<menu link="option=com_collector">COM_COLLECTOR_DASHBOARD</menu>
+			<menu link="option=com_collector&amp;view=filemanager">COM_COLLECTOR_FILEMANAGER</menu>
+			<menu link="option=com_collector&amp;view=collections">COM_COLLECTOR_COLLECTIONS</menu>
+			<menu link="option=com_collector&amp;view=lists">COM_COLLECTOR_DEFINED</menu>
+			<menu link="option=com_collector&amp;view=fields">COM_COLLECTOR_FIELDS</menu>
+			<menu link="option=com_collector&amp;view=items">COM_COLLECTOR_ITEMS</menu>
+			<!-- <menu link="option=com_collector&amp;view=userslists">COM_COLLECTOR_USERSLISTS</menu>
+			<menu link="option=com_collector&amp;view=templates">COM_COLLECTOR_TEMPLATES</menu> -->
+		</submenu>
+
+		<!-- Administration Main File Copy Section -->
+		<files folder="admin">
+			<filename>access.xml</filename>
+			<filename>collector.php</filename>
+			<filename>config.xml</filename>
+			<filename>controller.php</filename>
+			<filename>index.html</filename>
+			
+			<folder>assets</folder>
+			<folder>classes</folder>
+			<folder>controllers</folder>
+			<folder>helpers</folder>
+			<folder>layouts</folder>
+			<folder>models</folder>
+			<folder>params</folder>
+			<folder>sql</folder>
+			<folder>tables</folder>
+			<folder>views</folder>
+		</files>
+		
+		<languages folder="admin">
+			<language tag="fr-FR">languages/fr-FR/fr-FR.com_collector.ini</language>
+			<language tag="fr-FR">languages/fr-FR/fr-FR.com_collector.menu.ini</language>
+			<language tag="fr-FR">languages/fr-FR/fr-FR.com_collector.sys.ini</language>
+			<language tag="en-GB">languages/en-GB/en-GB.com_collector.ini</language>
+			<language tag="en-GB">languages/en-GB/en-GB.com_collector.menu.ini</language>
+			<language tag="en-GB">languages/en-GB/en-GB.com_collector.sys.ini</language>
+			<language tag="es-ES">languages/es-ES/es-ES.com_collector.ini</language>
+			<language tag="es-ES">languages/es-ES/es-ES.com_collector.menu.ini</language>
+			<language tag="es-ES">languages/es-ES/es-ES.com_collector.sys.ini</language>
+			<language tag="de-DE">languages/de-DE/de-DE.com_collector.ini</language>
+			<language tag="de-DE">languages/de-DE/de-DE.com_collector.menu.ini</language>
+			<language tag="de-DE">languages/de-DE/de-DE.com_collector.sys.ini</language>
+			<language tag="el-GR">languages/el-GR/el-GR.com_collector.menu.ini</language>
+			<language tag="el-GR">languages/el-GR/el-GR.com_collector.sys.ini</language>
+			<language tag="pl-PL">languages/pl-PL/pl-PL.com_collector.ini</language>
+			<language tag="pl-PL">languages/pl-PL/pl-PL.com_collector.menu.ini</language>
+			<language tag="pl-PL">languages/pl-PL/pl-PL.com_collector.sys.ini</language>
+		</languages>
+	
+	</administration>
+	
+	<scriptfile>script.php</scriptfile>
+	
+	<install folder="admin">
+		<sql>
+			<file charset="utf8" driver="mysql">sql/install.sql</file>
+		</sql>
+	</install>
+	
+	<uninstall folder="admin">
+		<sql>
+			<file charset="utf8" driver="mysql">sql/uninstall.sql</file>
+		</sql>
+	</uninstall>
+	
+	<config>
+		<fields name="params">
+			<fieldset name="basic">
+				<field name="auto_publish" type="radio" default="1" label="COM_COLLECTOR_AUTO_PUBLISH" />
+				<field name="save_history" type="radio" default="1" label="COM_COLLECTOR_SAVE_HISTORY" />
+				<field name="show_modification" type="radio" default="1" label="COM_COLLECTOR_SHOW_MOD" />
+				<field name="show_title" type="radio" default="1" label="COM_COLLECTOR_SHOW_COLL_TITLE" />
+				<field name="show_desc" type="radio" default="1" label="COM_COLLECTOR_SHOW_DESC" />
+				<field name="show_author" type="radio" default="1" label="COM_COLLECTOR_AUTHOR_NAMES" />
+				<field name="show_create_date" type="radio" default="1" label="COM_COLLECTOR_CREATED_DATE_AND_TIME" />
+				<field name="show_emptyfield" type="radio" default="1" label="COM_COLLECTOR_SHOW_EMPTY_FIELD" />
+				<field name="show_fieldlink" type="radio" default="1" label="COM_COLLECTOR_SHOW_FIELD_LINK" />
+				<field name="show_search_area" type="radio" default="1" label="COM_COLLECTOR_SHOW_SEARCH_AREA" />
+				<field name="show_word_filter" type="radio" default="1" label="COM_COLLECTOR_SHOW_WORD_FILTER" />
+				<field name="show_entire_listing" type="radio" default="1" label="COM_COLLECTOR_SHOW_ENTIRE_LISTING" />
+				<field name="allow_front_mod" type="radio" default="1" label="COM_COLLECTOR_ALLOW_FRONT_MOD" />
+			</fieldset>
+		</fields>
+	</config>
+	
+	<updateservers>
+		<server type="collection">http://www.steevo.fr/update/collector-update.xml</server>
+	</updateservers>
+</extension>
