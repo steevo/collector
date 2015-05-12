@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Open Source Matters, Inc. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -225,9 +225,11 @@ class CollectorField
 	 * @param	JDatabaseQuery object		$query
 	 * @param	string						$search_all_value
 	 */
-	function getSearchWhereClause(&$query,$search_all_value)
+	function getSearchWhereClause(&$query, $search_all_value)
 	{
-		$where = 'h.'.$this->_field->tablecolumn.' LIKE "%'.$search_all_value.'%"';
+		$db = JFactory::getDbo();
+		$text = $db->quote('%' . $db->escape($search_all_value, true) . '%', false);
+		$where = 'LOWER(h.' . $this->_field->tablecolumn . ') LIKE LOWER(' . $text . ')';
 		return $where;
 	}
 	

@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Open Source Matters, Inc. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -83,6 +83,10 @@ class CollectorModelCollections extends JModelList
 		$db = $this->getDbo();
 		$query = $db->getQuery(true);
 		
+		$jnow		= JFactory::getDate();
+		$now		= $jnow->toSql();
+		$nullDate	= $db->getNullDate();
+		
 		// Select the required fields from the table.
 		$query->select(
 			$this->getState(
@@ -111,7 +115,8 @@ class CollectorModelCollections extends JModelList
 		// Filter by published state
 		$published = $this->getState('filter.published');
 		if (is_numeric($published)) {
-			$query->where('c.state = ' . (int) $published);
+			$query->where('( c.created_by = ' . (int) $user->id . ' OR ( c.state = ' . (int) $published . ' AND ( c.publish_up = '.$db->Quote($nullDate).' OR c.publish_up <= '.$db->Quote($now).' ) AND ( c.publish_down = '.$db->Quote($nullDate).' OR c.publish_down >= '.$db->Quote($now).' ) ) )');
+		
 		}
 		else if ($published === '') {
 			$query->where('(c.state = 0 OR c.state = 1)');
