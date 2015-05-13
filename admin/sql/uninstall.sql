@@ -7,4 +7,6 @@ DROP TABLE IF EXISTS `#__collector_files_ext`;
 DROP TABLE IF EXISTS `#__collector_files_type`;
 DROP TABLE IF EXISTS `#__collector_items`;
 DROP TABLE IF EXISTS `#__collector_templates`;
-DROP TABLE IF EXISTS `#__collector_users`;
+DROP TABLE IF EXISTS `#__collector_userslists`;
+DROP TABLE IF EXISTS `#__collector_userlist`;
+DROP TABLE IF EXISTS `#__collector_usersitems`;

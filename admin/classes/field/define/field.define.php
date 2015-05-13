@@ -401,9 +401,9 @@ class CollectorField_Define extends CollectorField
 	 *
 	 * Can be overloaded/supplemented by the child class
 	 *
-	 * @param	JRegistry object		$params
+	 * @param	string		$value	Field value
 	 */
-	function displayInTitle($value)
+	function rebuild($value)
 	{
 		$db = JFactory::getDBO();
 		

@@ -316,7 +316,7 @@ class CollectorModelItems extends JModelList
 	}
 
 	/**
-	 * Method to load listdrop of collections
+	 * Method to load fields of collection
 	 *
 	 * @access	public
 	 */
@@ -331,7 +331,7 @@ class CollectorModelItems extends JModelList
 			$query = $db->getQuery(true);
 			
 			// Select the required fields from the table.
-			$query->select('f.id, f.field, f.tablecolumn');
+			$query->select('f.id, f.field, f.tablecolumn, f.attribs');
 			$query->from('#__collector_fields as f');
 			
 			// Join over the type.
@@ -385,6 +385,9 @@ class CollectorModelItems extends JModelList
 			
 			foreach ($fieldsReordered as $field)
 			{
+				$registry = new JRegistry;
+				$registry->loadString($field->attribs);
+				$field->attribs = $registry->toArray();
 				$this->_fields[] = CollectorField::getInstance( $this->_collection->id, $field );
 			}
 		}

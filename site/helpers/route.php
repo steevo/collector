@@ -25,12 +25,13 @@ abstract class CollectorHelperRoute
 	 *
 	 * @param   integer  $id        The route of the collector item.
 	 * @param   integer  $colid     The collection ID.
+	 * @param   integer  $language  The language code.
 	 *
 	 * @return  string  The item route.
 	 *
 	 * @since   1.5
 	 */
-	public static function getItemRoute($id, $colid = 0)
+	public static function getItemRoute($id, $colid = 0, $language = 0)
 	{
 		$needles = array(
 			'item'  => array((int) $id)
@@ -38,19 +39,6 @@ abstract class CollectorHelperRoute
 
 		// Create the link
 		$link = 'index.php?option=com_collector&view=item&collection=' . $colid . '&id=' . $id;
-
-		// if ((int) $colid > 1)
-		// {
-			// $categories = JCategories::getInstance('Content');
-			// $category   = $categories->get((int) $catid);
-
-			// if ($category)
-			// {
-				// $needles['category']   = array_reverse($category->getPath());
-				// $needles['categories'] = $needles['category'];
-				// $link .= '&catid=' . $catid;
-			// }
-		// }
 
 		// if ($language && $language != "*" && JLanguageMultilang::isEnabled())
 		// {
@@ -69,49 +57,29 @@ abstract class CollectorHelperRoute
 	/**
 	 * Get the category route.
 	 *
-	 * @param   integer  $catid     The category ID.
+	 * @param   integer  $colid     The category ID.
 	 * @param   integer  $language  The language code.
 	 *
 	 * @return  string  The article route.
 	 *
 	 * @since   1.5
 	 */
-	public static function getCategoryRoute($catid, $language = 0)
+	public static function getCollectionRoute($colid, $language = 0)
 	{
-		if ($catid instanceof JCategoryNode)
-		{
-			$id       = $catid->id;
-			$category = $catid;
-		}
-		else
-		{
-			$id       = (int) $catid;
-			$category = JCategories::getInstance('Content')->get($id);
-		}
+		$needles = array();
 
-		if ($id < 1 || !($category instanceof JCategoryNode))
-		{
-			$link = '';
-		}
-		else
-		{
-			$needles               = array();
-			$link                  = 'index.php?option=com_content&view=category&id=' . $id;
-			$catids                = array_reverse($category->getPath());
-			$needles['category']   = $catids;
-			$needles['categories'] = $catids;
+		$link = 'index.php?option=com_collector&view=collection&id=' . $colid;
 
-			if ($language && $language != "*" && JLanguageMultilang::isEnabled())
-			{
-				$link .= '&lang=' . $language;
-				$needles['language'] = $language;
-			}
+		// if ($language && $language != "*" && JLanguageMultilang::isEnabled())
+		// {
+			// $link .= '&lang=' . $language;
+			// $needles['language'] = $language;
+		// }
 
-			if ($item = self::_findItem($needles))
-			{
-				$link .= '&Itemid=' . $item;
-			}
-		}
+		// if ($item = self::_findItem($needles))
+		// {
+			// $link .= '&Itemid=' . $item;
+		// }
 
 		return $link;
 	}
@@ -130,11 +98,11 @@ abstract class CollectorHelperRoute
 		// Create the link
 		if ($id)
 		{
-			$link = 'index.php?option=com_content&task=article.edit&a_id=' . $id;
+			$link = 'index.php?option=com_collector&task=item.edit&id=' . $id;
 		}
 		else
 		{
-			$link = 'index.php?option=com_content&task=article.edit&a_id=0';
+			$link = 'index.php?option=com_collector&task=item.edit&a_id=0';
 		}
 
 		return $link;
@@ -160,7 +128,7 @@ abstract class CollectorHelperRoute
 		{
 			self::$lookup[$language] = array();
 
-			$component  = JComponentHelper::getComponent('com_content');
+			$component  = JComponentHelper::getComponent('com_collector');
 
 			$attributes = array('component_id');
 			$values     = array($component->id);
@@ -221,7 +189,7 @@ abstract class CollectorHelperRoute
 		$active = $menus->getActive();
 
 		if ($active
-			&& $active->component == 'com_content'
+			&& $active->component == 'com_collector'
 			&& ($language == '*' || in_array($active->language, array('*', $language)) || !JLanguageMultilang::isEnabled()))
 		{
 			return $active->id;

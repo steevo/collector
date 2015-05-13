@@ -107,9 +107,21 @@ class CollectorField_Number extends CollectorField
 	 *
 	 * Can be overloaded/supplemented by the child class
 	 *
-	 * @param	JRegistry object		$params
+	 * @param	string					$value		Field value
 	 */
 	function displayInTitle($value)
+	{
+		return htmlspecialchars($value, ENT_QUOTES);
+	}
+	
+	/**
+	 * Method to rebuild fulltitle
+	 *
+	 * Can be overloaded/supplemented by the child class
+	 *
+	 * @param	string					$value		Field value
+	 */
+	function rebuild($value)
 	{
 		return htmlspecialchars($value, ENT_QUOTES);
 	}

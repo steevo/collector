@@ -381,6 +381,9 @@ class TableCollector_items extends JTable
 		
 		foreach ($fieldsReordered as $field)
 		{
+			$registry = new JRegistry;
+			$registry->loadString($field->attribs);
+			$field->attribs = $registry->toArray();
 			$fieldsTitle[] = CollectorField::getInstance( $this->collection, $field );
 		}
 		
@@ -394,7 +397,7 @@ class TableCollector_items extends JTable
 			}
 			$nameField = $field->_field->tablecolumn;
 		
-			$this->fulltitle .= $field->displayInTitle($this->$nameField);
+			$this->fulltitle .= $field->rebuild($this->$nameField);
 		}
 		
 		$this->alias = JFilterOutput::stringURLSafe($this->fulltitle);

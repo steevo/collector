@@ -373,6 +373,7 @@ class CollectorField
 	 * Can be overloaded/supplemented by the child class
 	 *
 	 * @param	JRegistry object		$params
+	 * @param	string		$value	Field value
 	 */
 	function displayFilter($params,$value,$menu=false)
 	{
@@ -384,11 +385,23 @@ class CollectorField
 	 *
 	 * Can be overloaded/supplemented by the child class
 	 *
-	 * @param	JRegistry object		$params
+	 * @param	string		$value	Field value
 	 */
 	function displayInTitle($value)
 	{
-		return;
+		return $value;
+	}
+	
+	/**
+	 * Method to rebuild fulltitle
+	 *
+	 * Can be overloaded/supplemented by the child class
+	 *
+	 * @param	string		$value	Field value
+	 */
+	function rebuild($value)
+	{
+		return $value;
 	}
 	
 	/**
@@ -396,7 +409,8 @@ class CollectorField
 	 *
 	 * Can be overloaded/supplemented by the child class
 	 *
-	 * @param	JRegistry object		$params
+	 * @param	JRegistry object	$params
+	 * @param	string				$value	Field value
 	 */
 	function displayRequired($params,$value)
 	{

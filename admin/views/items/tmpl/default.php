@@ -125,7 +125,7 @@ $sortFields = $this->getSortFields();
 							$title .= ' ';
 						}
 						$nameField = $field->_field->tablecolumn;
-						$title .= $item->$nameField;
+						$title .= $field->displayInTitle($item->$nameField);
 					}
 					$rebuild = ( $title != $item->fulltitle );
 					?>

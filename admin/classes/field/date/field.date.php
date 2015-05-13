@@ -95,9 +95,31 @@ class CollectorField_Date extends CollectorField
 	 *
 	 * Can be overloaded/supplemented by the child class
 	 *
-	 * @param	JRegistry object		$params
+	 * @param	string		$value	Field value
 	 */
 	function displayInTitle($value)
+	{
+		$format = $this->_field->attribs['format'];
+		if ( $format == '' )
+		{
+			$format = '%Y-%m-%d';
+		}
+		if ($value != 0) {
+			$format = str_replace('%','',$format);
+			return JHTML::_( 'date', $value, $format);
+		}
+		
+		return;
+	}
+	
+	/**
+	 * Method to display value in fulltitle
+	 *
+	 * Can be overloaded/supplemented by the child class
+	 *
+	 * @param	string		$value	Field value
+	 */
+	function rebuild($value)
 	{
 		$format = $this->_field->attribs['format'];
 		if ( $format == '' )

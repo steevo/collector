@@ -110,18 +110,6 @@ class CollectorField_Line extends CollectorField
 		}
 		return $return;
 	}
-	
-	/**
-	 * Method to display value in fulltitle
-	 *
-	 * Can be overloaded/supplemented by the child class
-	 *
-	 * @param	JRegistry object		$params
-	 */
-	function displayInTitle($value)
-	{
-		return $value;
-	}
 }
 
 require_once(JPATH_ROOT.'/libraries/joomla/form/fields/text.php');
