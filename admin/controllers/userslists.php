@@ -38,11 +38,9 @@ class CollectorControllerUserslists extends JControllerAdmin
 	 */
 	public function delete()
 	{
-		$app = JFactory::getApplication();
-		
 		parent::delete();
 		
-		$collection = $app->input->getCmd( 'collection' );
+		$collection = JFactory::getApplication()->input->getCmd( 'collection' );
 		
 		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list .'&collection='.$collection );
 	}
@@ -52,16 +50,14 @@ class CollectorControllerUserslists extends JControllerAdmin
      */
     public function saveorder()
     {
-        $app = JFactory::getApplication();
-		
-		// Check for request forgeries.
+        // Check for request forgeries.
         JSession::checkToken() or jexit(JText::_('JINVALID_TOKEN'));
  
         // Get the input
-        $pks		= $app->input->getVar('cid',    null,    'post',    'array');
-        $order		= $app->input->getVar('order',    null,    'post',    'array');
-		$collection = $app->input->getCmd( 'collection' );
- 
+		$pks = $this->input->post->get('cid', array(), 'array');
+		$order = $this->input->post->get('order', array(), 'array');
+		$collection = $this->input->post->get( 'collection' );
+		
         // Sanitize the input
         JArrayHelper::toInteger($pks);
         JArrayHelper::toInteger($order);
@@ -78,7 +74,8 @@ class CollectorControllerUserslists extends JControllerAdmin
             $message = JText::sprintf('JLIB_APPLICATION_ERROR_REORDER_FAILED', $model->getError());
             $this->setRedirect(JRoute::_('index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection, false), $message, 'error');
             return false;
-        } else
+        }
+		else
         {
             // Reorder succeeded.
             $this->setMessage(JText::_('JLIB_APPLICATION_SUCCESS_ORDERING_SAVED'));
@@ -92,24 +89,25 @@ class CollectorControllerUserslists extends JControllerAdmin
      */
 	public function reorder()
     {
-        $app = JFactory::getApplication();
-		
 		// Check for request forgeries.
         JSession::checkToken() or jexit(JText::_('JINVALID_TOKEN'));
- 
-        // Initialise variables.
-        $ids    	= $app->input->getVar('cid', null, 'post', 'array');
-        $inc    	= ($this->getTask() == 'orderup') ? -1 : +1;
-		$collection = $app->input->getCmd( 'collection' );
- 
+
+		$ids = JFactory::getApplication()->input->post->get('cid', array(), 'array');
+		$inc = ($this->getTask() == 'orderup') ? -1 : 1;
+		$collection = JFactory::getApplication()->input->getCmd( 'collection' );
+
         $model = $this->getModel();
         $return = $model->reorder($ids, $inc);
-        if ($return === false) {
+
+        if ($return === false)
+		{
             // Reorder failed.
             $message = JText::sprintf('JLIB_APPLICATION_ERROR_REORDER_FAILED', $model->getError());
             $this->setRedirect(JRoute::_('index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection, false), $message, 'error');
             return false;
-        } else {
+        }
+		else
+		{
             // Reorder succeeded.
             $message = JText::_('JLIB_APPLICATION_SUCCESS_ITEM_REORDERED');
             $this->setRedirect(JRoute::_('index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection, false), $message);
@@ -124,12 +122,9 @@ class CollectorControllerUserslists extends JControllerAdmin
 	 */
 	public function publish()
 	{
-		$app = JFactory::getApplication();
-		
 		parent::publish();
 		
-		// Get some variables from the request
-		$collection = $app->input->getVar( 'collection' );
+		$collection = JFactory::getApplication()->input->getVar( 'collection' );
 		
 		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection );
 	}
@@ -141,12 +136,9 @@ class CollectorControllerUserslists extends JControllerAdmin
 	 */
 	public function unpublish()
 	{
-		$app = JFactory::getApplication();
-		
 		parent::unpublish();
 		
-		// Get some variables from the request
-		$collection = $app->input->getVar( 'collection' );
+		$collection = JFactory::getApplication()->input->getVar( 'collection' );
 		
 		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection );
 	}
@@ -158,12 +150,9 @@ class CollectorControllerUserslists extends JControllerAdmin
 	 */
 	public function trash()
 	{
-		$app = JFactory::getApplication();
-		
 		parent::trash();
 		
-		// Get some variables from the request
-		$collection = $app->input->getVar( 'collection' );
+		$collection = JFactory::getApplication()->input->getVar( 'collection' );
 		
 		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection );
 	}
@@ -178,54 +167,25 @@ class CollectorControllerUserslists extends JControllerAdmin
 		// Check for request forgeries.
         JSession::checkToken() or jexit(JText::_('JINVALID_TOKEN'));
  
-        // Initialise variables.
-        $user		= JFactory::getUser();
-        $ids		= $app->input->getVar('cid', null, 'post', 'array');
-		$collection = $app->input->getVar( 'collection' );
+        $ids = JFactory::getApplication()->input->post->get('cid', array(), 'array');
+		$collection = JFactory::getApplication()->input->getVar( 'collection' );
  
         $model = $this->getModel();
         $return = $model->checkin($ids);
-        if ($return === false) {
+		
+        if ($return === false)
+		{
             // Checkin failed.
             $message = JText::sprintf('JLIB_APPLICATION_ERROR_CHECKIN_FAILED', $model->getError());
             $this->setRedirect(JRoute::_('index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection, false), $message, 'error');
             return false;
-        } else {
+        }
+		else
+		{
             // Checkin succeeded.
             $message =  JText::plural($this->text_prefix.'_N_ITEMS_CHECKED_IN', count($ids));
             $this->setRedirect(JRoute::_('index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection, false), $message);
             return true;
         }
     }
-	
-	/**
-	 * Method to save the submitted ordering values for records via AJAX.
-	 *
-	 * @return  void
-	 *
-	 * @since   3.0
-	 */
-	public function saveOrderAjax()
-	{
-		$pks = $this->input->post->get('cid', array(), 'array');
-		$order = $this->input->post->get('order', array(), 'array');
-
-		// Sanitize the input
-		JArrayHelper::toInteger($pks);
-		JArrayHelper::toInteger($order);
-
-		// Get the model
-		$model = $this->getModel();
-
-		// Save the ordering
-		$return = $model->saveorder($pks, $order);
-
-		if ($return)
-		{
-			echo "1";
-		}
-
-		// Close the application
-		JFactory::getApplication()->close();
-	}
 }

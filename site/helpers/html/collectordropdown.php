@@ -2,9 +2,7 @@
 /**
  * Joomla! 3.0 component Collector
  *
- * @version 	$Id$
- * @author 		Philippe Ousset steevo@steevo.fr
- * * @package 	Collector
+ * @package 	Collector
  * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
@@ -114,7 +112,7 @@ abstract class JHtmlCollectorDropdown
 		$url = 'index.php?option=com_collector&view='.$view.'&tmpl=component&collection='.$collection.'&item='.$id.'&userlist='.$userlist;
 		static::$dropDownList[] = '<li>'
 			. '<a class="modal" href = "'.JRoute::_($url).'">'
-			. ($icon ? '<span class="icon-' . $icon . '"></span> ' : '')
+			. ($icon ? '<span class="collector-icon icon-' . $icon . '"></span> ' : '')
 			. $label
 			. '</a>'
 			. '</li>';

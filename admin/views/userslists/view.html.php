@@ -92,7 +92,6 @@ class CollectorViewUserslists extends JViewLegacy
 			JToolBarHelper::custom('userslists.publish', 'publish.png', 'publish_f2.png','JTOOLBAR_PUBLISH', true);
 			JToolBarHelper::custom('userslists.unpublish', 'unpublish.png', 'unpublish_f2.png', 'JTOOLBAR_UNPUBLISH', true);
 			JToolBarHelper::divider();
-			JToolBarHelper::archiveList('userslists.archive','JTOOLBAR_ARCHIVE');
 			JToolBarHelper::custom('userslists.checkin', 'checkin.png', 'checkin_f2.png', 'JTOOLBAR_CHECKIN', true);
 		}
 

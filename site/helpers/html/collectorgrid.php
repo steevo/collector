@@ -2,9 +2,7 @@
 /**
  * Joomla! 3.0 component Collector
  *
- * @version 	$Id$
- * @author 		Philippe Ousset steevo@steevo.fr
- * * @package 	Collector
+ * @package 	Collector
  * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *

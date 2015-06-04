@@ -14,6 +14,8 @@
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
+JHtml::stylesheet(Juri::base() . 'components/com_collector/assets/css/icomoon.css');
+
 ?>
 <div class="modal-header"><h3>
 	<?php echo JText::_('remove'); ?>

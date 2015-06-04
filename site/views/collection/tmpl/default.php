@@ -15,12 +15,16 @@
 defined('_JEXEC') or die( 'Restricted access' );
 
 JHtml::stylesheet(Juri::base() . 'components/com_collector/assets/css/collection.css');
+JHtml::stylesheet(Juri::base() . 'components/com_collector/assets/css/dropdown.css');
+JHtml::stylesheet(Juri::base() . 'components/com_collector/assets/css/icomoon.css');
 
 JHtml::_('behavior.keepalive');
 JHtml::_('behavior.calendar');
 JHtml::_('behavior.formvalidation');
 JHtml::_('formbehavior.chosen', 'select');
 
+$defaultListOrder	= $this->escape($this->state->get('list.default.ordering'));
+$defaultListDirn	= $this->escape($this->state->get('list.default.direction'));
 $listOrder	= $this->escape($this->state->get('list.ordering'));
 $listDirn	= $this->escape($this->state->get('list.direction'));
 $search_all_value = $this->state->get('filter.filter_search_all');
@@ -50,10 +54,10 @@ foreach ( $this->fields as $field )
 	
 	function initialiser()
 	{
-		var form = document.collectorForm;
+		var form = document.adminForm;
 
-		form.filter_order.value 		= '<?php echo $listOrder; ?>';
-		form.filter_order_Dir.value		= '<?php echo $listDirn; ?>';
+		form.filter_order.value 		= '<?php echo $defaultListOrder; ?>';
+		form.filter_order_Dir.value		= '<?php echo $defaultListDirn; ?>';
 		form.filter_search_all.value	= '';
 		
 		<?php
@@ -64,11 +68,13 @@ foreach ( $this->fields as $field )
 			}
 		}
 		?>
+		
+		form.submit();
 	}
 	
 	function submitsearchbox()
 	{
-		var form = document.collectorForm;
+		var form = document.adminForm;
 		
 		var requiredfilters = form.getElementsByClassName("required");
 		for(var i = 0; i < requiredfilters.length; i++)
@@ -124,7 +130,7 @@ foreach ( $this->fields as $field )
 	</div>
 	<?php endif; ?>
 	
-	<form action="<?php echo JRoute::_('index.php?option=com_collector&view=collection&id='.$this->collection->id.'&reset=0'); ?>" method="post" name="collectorForm" id="collectorForm">
+	<form action="<?php echo JRoute::_('index.php?option=com_collector&view=collection&id='.$this->collection->id.'&reset=0'); ?>" method="post" name="adminForm" id="adminForm">
 	
 		<fieldset class="filters">
 		<?php if ($this->params->get('show_search_area', 1)) : ?>
@@ -155,7 +161,7 @@ foreach ( $this->fields as $field )
 					</button>
 				</div>
 				<div class="btn-group">
-					<button type="button" class="btn" onclick="initialiser();this.form.submit();">
+					<button type="button" class="btn" onclick="initialiser();">
 						<span class="icon-cancel"></span>&#160;<?php echo JText::_('COM_COLLECTOR_INIT') ?>
 					</button>
 				</div>

@@ -115,18 +115,20 @@ class CollectorControllerItems extends JControllerAdmin
 
 		$model = $this->getModel();
 		$return = $model->rebuild($ids);
+		
 		if ($return === false)
 		{
 			// Rebuild failed.
 			$message = JText::sprintf('COM_COLLECTOR_FULLTITLES_REBUILT_FAILED', $model->getError());
-			$this->setRedirect(JRoute::_('index.php?option=' . $this->option . '&view=' . $this->view_list.'&collection='.$collection, false), $message, 'error');
+			$this->setRedirect(JRoute::_('index.php?option=' . $this->option . '&view=' . $this->view_list.'&collection='.$collection, false), $message);
 			return false;
 		}
 		else
 		{
 			// Rebuild succeeded.
-			$message = JText::_('COM_COLLECTOR_FULLTITLES_REBUILT');
-			$this->setRedirect(JRoute::_('index.php?option=' . $this->option . '&view=' . $this->view_list.'&collection='.$collection, false), $message);
+			$message = 'COM_COLLECTOR_N_FULLTITLES_REBUILT';
+			$this->setMessage(JText::plural($message, count($ids)));
+			$this->setRedirect(JRoute::_('index.php?option=' . $this->option . '&view=' . $this->view_list.'&collection='.$collection, false));
 			return true;
 		}
 	}

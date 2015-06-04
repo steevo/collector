@@ -90,7 +90,7 @@ class CollectorModelCollection extends JModelList
 	 * return	void
 	 * @since	1.6
 	 */
-	protected function populateState($ordering = 'ordering', $direction = 'ASC')
+	protected function populateState($ordering = 'i.ordering', $direction = 'ASC')
 	{
 		// Initiliase variables.
 		$app	= JFactory::getApplication();
@@ -324,6 +324,12 @@ class CollectorModelCollection extends JModelList
 	 */
 	function getUserslists()
 	{
+		$user = JFactory::getUser();
+		if ($user->guest)
+		{
+			return false;
+		}
+		
 		if ( empty($this->_userslists) )
 		{
 			if ( $this->_collection->id == '0' )
@@ -338,8 +344,6 @@ class CollectorModelCollection extends JModelList
 			$db		= $this->getDbo();
 			$query	= $db->getQuery(true);
 			
-			$user		= JFactory::getUser();
-			$aid		= (int) $user->get('aid', 0);
 			
 			$jnow		= JFactory::getDate();
 			$now		= $jnow->toSql();
@@ -349,10 +353,10 @@ class CollectorModelCollection extends JModelList
 			$query->from('#__collector_userslists AS ul');
 			
 			$query->where('( ul.created_by = ' . (int) $user->id . ' OR ( ul.state = 1 AND ( ul.publish_up = '.$db->Quote($nullDate).' OR ul.publish_up <= '.$db->Quote($now).' ) AND ( ul.publish_down = '.$db->Quote($nullDate).' OR ul.publish_down >= '.$db->Quote($now).' ) ) )');
+			$query->where('collection = ' . $collection);
 			
 			// Filter by access level.
 			if ($access = $this->getState('filter.access')) {
-				$user	= JFactory::getUser();
 				$groups	= implode(',', $user->getAuthorisedViewLevels());
 				$query->where('ul.access IN ('.$groups.')');
 			}
@@ -597,6 +601,9 @@ class CollectorModelCollection extends JModelList
 			$order_default = 'i.ordering';
 			$order_dir_default = '';
 		}
+		
+		$this->setState('list.default.ordering', $order_default);
+		$this->setState('list.default.direction', $order_dir_default);
 		
 		if ( $reset ) {
 			$app->setUserState('com_collector.collection.' . $itemid . '.filter_order', $order_default);

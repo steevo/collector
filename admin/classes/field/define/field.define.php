@@ -330,7 +330,7 @@ class CollectorField_Define extends CollectorField
 		
 		$query = 'SELECT id, content, image, defined';
 		$query .= ' FROM #__collector_defined_content';
-		$query .= ' WHERE content = "'.$value.'"';
+		$query .= ' WHERE content = '.$db->quote($value);
 
 		$db->setQuery( $query );
 

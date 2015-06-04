@@ -16,7 +16,9 @@ defined('_JEXEC') or die( 'Restricted access' );
 
 JHtml::addIncludePath(JPATH_COMPONENT.'/helpers/html');
 
+JHtmlBootstrap::loadCss();
 JHtml::_('behavior.tooltip');
+// JHtml::_('behavior.framework', true);
 JHtml::_('behavior.modal');
 
 $listOrder	= $this->escape($this->state->get('list.ordering'));
@@ -95,7 +97,7 @@ for ($i=0, $n=count($this->items);$i<$n;$i++)
 		?>
 		<?php if (!empty($this->userslists)) : ?>
 		<td class="list-edit" style="border-left-width:0;vertical-align:middle;" >
-			<div class="btn-group">
+			<div class="btn-group collector-dropdown">
 				<?php // echo JHtml::_('collectorgrid.edit', $item->state, $item->id, 'item.', $canChange); ?>
 				<?php
 				// Create dropdown items

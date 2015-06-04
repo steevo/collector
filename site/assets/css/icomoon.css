@@ -1,0 +1,38 @@
+/**
+ * Joomla! 3.0 component Collector
+ *
+ * @package 	Collector
+ * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @license     GNU General Public License version 2 or later; see LICENSE.txt
+ *
+ * Collector is a Multi Purpose Listing Tool.
+ * Originaly developped to list Collections
+ * it can be used for several purpose.
+ */
+
+@font-face {
+  font-family: 'IcoMoon';
+  src: url('../../../../../media/jui/fonts/IcoMoon.eot');
+  src: url('../../../../../media/jui/fonts/IcoMoon.eot?#iefix') format('embedded-opentype'),
+       url('../../../../../media/jui/fonts/IcoMoon.svg#IcoMoon') format('svg'),
+       url('../../../../../media/jui/fonts/IcoMoon.woff') format('woff'),
+       url('../../../../../media/jui/fonts/IcoMoon.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+.collector-icon.icon-new:before {
+  font-family: 'IcoMoon';
+  content: "\2a";
+}
+.collector-icon.icon-delete:before {
+  font-family: 'IcoMoon';
+  content: "\49";
+}
+.collector-icon.icon-cancel:before {
+  font-family: 'IcoMoon';
+  content: "\4a";
+}
+.collector-icon.icon-ok:before {
+  font-family: 'IcoMoon';
+  content: "\47";
+}

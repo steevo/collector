@@ -16,6 +16,8 @@ defined('_JEXEC') or die( 'Restricted access' );
 
 JHtml::_('behavior.formvalidation');
 
+JHtml::stylesheet(Juri::base() . 'components/com_collector/assets/css/icomoon.css');
+
 ?>
 <div class="modal-header"><h3>
 	<?php echo JText::sprintf('COM_COLLECTOR_ADD_TO_USERLIST',$this->list->name); ?>
