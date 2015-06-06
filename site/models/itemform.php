@@ -279,6 +279,7 @@ class CollectorModelItemform extends JModelAdmin
 		{
 			// Initialize new item.
 			$return = $table->initVersion($collection);
+			unset($table->history);
 		}
 
 		// Convert to the JObject before adding other data.
@@ -338,8 +339,8 @@ class CollectorModelItemform extends JModelAdmin
 		}
 		
 		// Check edit state permission.
-		// if ($pk)
-		// {
+		if ($pk)
+		{
 			// Existing item
 			if ($user->authorise('core.edit.state', $assetItem))
 			{
@@ -359,22 +360,22 @@ class CollectorModelItemform extends JModelAdmin
 					}
 				}
 			}
-		// }
-		// else
-		// {
+		}
+		else
+		{
 			// New item.
-			// $catId = (int) $this->getState('article.catid');
+			$colId = (int) $this->getState('collection.id');
 
-			// if ($catId)
-			// {
-				// $item->params->set('access-change', $user->authorise('core.edit.state', 'com_content.category.' . $catId));
-				// $item->catid = $catId;
-			// }
-			// else
-			// {
-				// $item->params->set('access-change', $user->authorise('core.edit.state', 'com_content'));
-			// }
-		// }
+			if ($colId)
+			{
+				$item->params->set('access-change', $user->authorise('core.edit.state', 'com_collector.collection.' . $colId));
+				$item->collection = $colId;
+			}
+			else
+			{
+				$item->params->set('access-change', $user->authorise('core.edit.state', 'com_collector'));
+			}
+		}
 		
 		if ($pk)
 		{
@@ -494,9 +495,11 @@ class CollectorModelItemform extends JModelAdmin
 			foreach ($attributes as $key => $value) {
 				$child->addAttribute($key,$value);
 			}
-			if ($field->_field->edit == 0)
-			{
-				$child->addAttribute('disabled', 'true');
+			if ( $this->getState('item.id') != null ) {
+				if ($field->_field->edit == 0)
+				{
+					$child->addAttribute('disabled', 'true');
+				}
 			}
 		}
 		

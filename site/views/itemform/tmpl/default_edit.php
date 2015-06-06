@@ -51,8 +51,12 @@ JHtml::_('formbehavior.chosen', 'select');
 						echo JText::_('COM_COLLECTOR_ITEM_DETAILS');
 					}
 					?></a></li>
-				<li><a href="#publishing" data-toggle="tab"><?php echo JText::_('COM_COLLECTOR_PUBLISHING') ?></a></li>
-				<li><a href="#metadata" data-toggle="tab"><?php echo JText::_('COM_COLLECTOR_METADATA') ?></a></li>
+				<?php if ( ( $this->params->get('show_publishfields') ) || ($this->item->params->get('access-change')) ) :?>
+					<li><a href="#publishing" data-toggle="tab"><?php echo JText::_('COM_COLLECTOR_PUBLISHING') ?></a></li>
+				<?php endif; ?>
+				<?php if ( $this->params->get('show_metafields') ) :?>
+					<li><a href="#metadata" data-toggle="tab"><?php echo JText::_('COM_COLLECTOR_METADATA') ?></a></li>
+				<?php endif; ?>
 			</ul>
 			
 			<div class="tab-content">
@@ -86,74 +90,78 @@ JHtml::_('formbehavior.chosen', 'select');
 					</div>
 				</div>
 				
-				<div class="tab-pane" id="publishing">
-					<div class="control-group">
-						<div class="control-label">
-							<?php echo $this->form->getLabel('created_by_alias'); ?>
-						</div>
-						<div class="controls">
-							<?php echo $this->form->getInput('created_by_alias'); ?>
-						</div>
-					</div>
-					<?php if ($this->item->params->get('access-change')) : ?>
+				<?php if ( ( $this->params->get('show_publishfields') ) || ($this->item->params->get('access-change')) ) :?>
+					<div class="tab-pane" id="publishing">
 						<div class="control-group">
 							<div class="control-label">
-								<?php echo $this->form->getLabel('state'); ?>
+								<?php echo $this->form->getLabel('created_by_alias'); ?>
 							</div>
 							<div class="controls">
-								<?php echo $this->form->getInput('state'); ?>
+								<?php echo $this->form->getInput('created_by_alias'); ?>
+							</div>
+						</div>
+						<?php if ($this->item->params->get('access-change')) : ?>
+							<div class="control-group">
+								<div class="control-label">
+									<?php echo $this->form->getLabel('state'); ?>
+								</div>
+								<div class="controls">
+									<?php echo $this->form->getInput('state'); ?>
+								</div>
+							</div>
+							<div class="control-group">
+								<div class="control-label">
+									<?php echo $this->form->getLabel('publish_up'); ?>
+								</div>
+								<div class="controls">
+									<?php echo $this->form->getInput('publish_up'); ?>
+								</div>
+							</div>
+							<div class="control-group">
+								<div class="control-label">
+									<?php echo $this->form->getLabel('publish_down'); ?>
+								</div>
+								<div class="controls">
+									<?php echo $this->form->getInput('publish_down'); ?>
+								</div>
+							</div>
+						<?php endif; ?>
+						<div class="control-group">
+							<div class="control-label">
+								<?php echo $this->form->getLabel('access'); ?>
+							</div>
+							<div class="controls">
+								<?php echo $this->form->getInput('access'); ?>
+							</div>
+						</div>
+					</div>
+				<?php endif; ?>
+					
+				<?php if ( $this->params->get('show_metafields') ) :?>
+					<div class="tab-pane" id="metadata">
+						<div class="control-group">
+							<div class="control-label">
+								<?php echo $this->form->getLabel('metadesc'); ?>
+							</div>
+							<div class="controls">
+								<?php echo $this->form->getInput('metadesc'); ?>
 							</div>
 						</div>
 						<div class="control-group">
 							<div class="control-label">
-								<?php echo $this->form->getLabel('publish_up'); ?>
+								<?php echo $this->form->getLabel('metakey'); ?>
 							</div>
 							<div class="controls">
-								<?php echo $this->form->getInput('publish_up'); ?>
+								<?php echo $this->form->getInput('metakey'); ?>
 							</div>
 						</div>
-						<div class="control-group">
-							<div class="control-label">
-								<?php echo $this->form->getLabel('publish_down'); ?>
-							</div>
-							<div class="controls">
-								<?php echo $this->form->getInput('publish_down'); ?>
-							</div>
-						</div>
-					<?php endif; ?>
-					<div class="control-group">
-						<div class="control-label">
-							<?php echo $this->form->getLabel('access'); ?>
-						</div>
-						<div class="controls">
-							<?php echo $this->form->getInput('access'); ?>
-						</div>
 					</div>
-				</div>
-				
-				<div class="tab-pane" id="metadata">
-					<div class="control-group">
-						<div class="control-label">
-							<?php echo $this->form->getLabel('metadesc'); ?>
-						</div>
-						<div class="controls">
-							<?php echo $this->form->getInput('metadesc'); ?>
-						</div>
-					</div>
-					<div class="control-group">
-						<div class="control-label">
-							<?php echo $this->form->getLabel('metakey'); ?>
-						</div>
-						<div class="controls">
-							<?php echo $this->form->getInput('metakey'); ?>
-						</div>
-					</div>
+				<?php endif; ?>
 
-					<input type="hidden" name="task" value="" />
-					<input type="hidden" name="jform[id]" id="jform_id" value="<?php echo $this->item->id; ?>" />
-					<input type="hidden" name="jform[collection]" id="jform_collection" value="<?php echo $this->collection->id; ?>" />
-					<?php echo JHtml::_( 'form.token' ); ?>
-				</div>
+				<input type="hidden" name="task" value="" />
+				<input type="hidden" name="jform[id]" id="jform_id" value="<?php echo $this->item->id; ?>" />
+				<input type="hidden" name="jform[collection]" id="jform_collection" value="<?php echo $this->collection->id; ?>" />
+				<?php echo JHtml::_( 'form.token' ); ?>
 			</div>
 		</fieldset>
 	</form>

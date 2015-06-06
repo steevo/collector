@@ -36,6 +36,26 @@
 				<option value="0">JNO</option>
 				<option value="1">JYES</option>
 			</field>
+			<field
+				name="show_publishfields"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_SHOW_PUBLISHFIELDS"
+				description="COM_COLLECTOR_SHOW_PUBLISHFIELDS_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+			<field
+				name="show_metafields"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_SHOW_METAFIELDS"
+				description="COM_COLLECTOR_SHOW_METAFIELDS_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
 		</fieldset>
 	</fields>
 </metadata>
