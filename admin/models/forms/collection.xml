@@ -44,7 +44,7 @@
 			name="description"
 			type="editor"
 			label="COM_COLLECTOR_COLLECTION_DESCRIPTION_LABEL"
-			description="COM_COLLECTOR_COLLECTION_DESCRIPTION_LABEL_DESC"
+			description="COM_COLLECTOR_COLLECTION_DESCRIPTION_DESC"
 			buttons="true"
 			hide="pagebreak,readmore"
 			class="inputbox"

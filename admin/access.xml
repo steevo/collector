@@ -15,23 +15,24 @@
 		<action name="core.edit" title="JACTION_EDIT" description="JACTION_EDIT_COMPONENT_DESC" />
 	</section>
 	<section name="collection">
-		<action name="core.create" title="JACTION_CREATE" description="COM_COLLECTOR_ACCESS_CREATE_DESC" />
-		<action name="core.delete" title="JACTION_DELETE" description="COM_COLLECTOR_ACCESS_DELETE_DESC" />
-		<action name="core.edit" title="JACTION_EDIT" description="COM_COLLECTOR_ACCESS_EDIT_DESC" />
-		<action name="core.edit.state" title="JACTION_EDITSTATE" description="COM_COLLECTOR_ACCESS_EDITSTATE_DESC" />
-		<action name="core.edit.own" title="JACTION_EDITOWN" description="COM_COLLECTOR_ACCESS_EDITOWN_DESC" />
+		<action name="core.create" title="JACTION_CREATE" description="COM_COLLECTOR_COLLECTION_ACCESS_CREATE_DESC" />
+		<action name="core.delete" title="JACTION_DELETE" description="COM_COLLECTOR_COLLECTION_ACCESS_DELETE_DESC" />
+		<action name="core.edit" title="JACTION_EDIT" description="COM_COLLECTOR_COLLECTION_ACCESS_EDIT_DESC" />
+		<action name="core.edit.state" title="JACTION_EDITSTATE" description="COM_COLLECTOR_COLLECTION_ACCESS_EDITSTATE_DESC" />
+		<action name="core.edit.own" title="JACTION_EDITOWN" description="COM_COLLECTOR_COLLECTION_ACCESS_EDITOWN_DESC" />
 	</section>
 	<section name="field">
-		<action name="core.create" title="JACTION_CREATE" description="COM_COLLECTOR_ACCESS_CREATE_DESC" />
-		<action name="core.delete" title="JACTION_DELETE" description="COM_COLLECTOR_ACCESS_DELETE_DESC" />
-		<action name="core.edit" title="JACTION_EDIT" description="COM_COLLECTOR_ACCESS_EDIT_DESC" />
-		<action name="core.edit.state" title="JACTION_EDITSTATE" description="COM_COLLECTOR_ACCESS_EDITSTATE_DESC" />
-		<action name="core.edit.own" title="JACTION_EDITOWN" description="COM_COLLECTOR_ACCESS_EDITOWN_DESC" />
+		<action name="core.create" title="JACTION_CREATE" description="COM_COLLECTOR_FIELD_ACCESS_CREATE_DESC" />
+		<action name="core.delete" title="JACTION_DELETE" description="COM_COLLECTOR_FIELD_ACCESS_DELETE_DESC" />
+		<action name="core.edit" title="JACTION_EDIT" description="COM_COLLECTOR_FIELD_ACCESS_EDIT_DESC" />
+		<action name="core.edit.state" title="JACTION_EDITSTATE" description="COM_COLLECTOR_FIELD_ACCESS_EDITSTATE_DESC" />
+		<action name="core.edit.own" title="JACTION_EDITOWN" description="COM_COLLECTOR_FIELD_ACCESS_EDITOWN_DESC" />
 	</section>
 	<section name="item">
-		<action name="core.delete" title="JACTION_DELETE" description="COM_COLLECTOR_ACCESS_DELETE_DESC" />
-		<action name="core.edit" title="JACTION_EDIT" description="COM_COLLECTOR_ACCESS_EDIT_DESC" />
-		<action name="core.edit.state" title="JACTION_EDITSTATE" description="COM_COLLECTOR_ACCESS_EDITSTATE_DESC" />
-		<action name="core.edit.own" title="JACTION_EDITOWN" description="COM_COLLECTOR_ACCESS_EDITOWN_DESC" />
+		<action name="core.create" title="JACTION_CREATE" description="COM_COLLECTOR_ITEM_ACCESS_CREATE_DESC" />
+		<action name="core.delete" title="JACTION_DELETE" description="COM_COLLECTOR_ITEM_ACCESS_DELETE_DESC" />
+		<action name="core.edit" title="JACTION_EDIT" description="COM_COLLECTOR_ITEM_ACCESS_EDIT_DESC" />
+		<action name="core.edit.state" title="JACTION_EDITSTATE" description="COM_COLLECTOR_ITEM_ACCESS_EDITSTATE_DESC" />
+		<action name="core.edit.own" title="JACTION_EDITOWN" description="COM_COLLECTOR_ITEM_ACCESS_EDITOWN_DESC" />
 	</section>
 </access>

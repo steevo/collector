@@ -26,6 +26,11 @@ class CollectorViewFilemanager extends JViewLegacy
 	 */
 	function display($tpl = null)
 	{
+		$lang = JFactory::getLanguage();
+		$extension = 'com_media';
+		$base_dir = JPATH_ADMINISTRATOR;
+		$lang->load($extension, $base_dir);
+
 		$user = JFactory::getUser();
 		$session	= JFactory::getSession();
 		$config = JComponentHelper::getParams('com_media');

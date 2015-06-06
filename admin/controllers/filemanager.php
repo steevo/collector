@@ -108,7 +108,7 @@ class CollectorControllerFilemanager extends JControllerAdmin
 		else
 		{
 			// File name is of zero length (null).
-			JError::raiseWarning(100, JText::_('COM_MEDIA_ERROR_UNABLE_TO_CREATE_FOLDER_WARNDIRNAME'));
+			JError::raiseWarning(100, JText::_('COM_COLLECTOR_ERROR_UNABLE_TO_CREATE_FOLDER_WARNDIRNAME'));
 
 			return false;
 		}
