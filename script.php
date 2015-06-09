@@ -111,7 +111,7 @@ class com_collectorInstallerScript
 		$msg[] = '<table width="100%" style="border:0px; margin-bottom:10px;">';
 		$msg[] = '<tr>';
 		$msg[] = '<td align="center" colspan="2">';
-		$msg[] = '<img src="' . $imagepath . '" border="0" alt="Collector" /><br />Version 0.6.1';
+		$msg[] = '<img src="' . $imagepath . '" border="0" alt="Collector" /><br />Version 0.6.2';
 		$msg[] = '</td>';
 		$msg[] = '</tr>';
 		$msg[] = '<tr>';

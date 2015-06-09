@@ -33,10 +33,10 @@ class CollectorViewCollectors extends JViewLegacy
 		$user = JFactory::getUser();
 		
 		// Get data from the model
-		$collectorVersions = $this->get( 'versions' );
+		// $collectorVersions = $this->get( 'versions' );
 		
 		$this->user = $user;
-		$this->collectorVersions = $collectorVersions;
+		// $this->collectorVersions = $collectorVersions;
 		
 		$this->addToolbar();
 		$this->sidebar = JHtmlSidebar::render();
@@ -68,7 +68,7 @@ class CollectorViewCollectors extends JViewLegacy
 	function compare_version_panel()
 	{
 		$version_message = '';
-		$last_version = $this->collectorVersions;
+		// $last_version = $this->collectorVersions;
 		$filename = JPATH_ADMINISTRATOR . '/components/com_collector/manifest.xml';
 		if (file_exists($filename) && is_readable($filename))
 		{
@@ -79,18 +79,18 @@ class CollectorViewCollectors extends JViewLegacy
 			$your_version = JText::_('COM_COLLECTOR_UNKNOWN');
 		}
 		
-		if (($last_version != JText::_('COM_COLLECTOR_UNKNOWN')) && ($your_version != JText::_('COM_COLLECTOR_UNKNOWN')))
-		{
-			$compare = version_compare($your_version, $last_version);
-			if ( $compare == -1 )
-			{
-				$version_message = '<img src="components/com_collector/assets/images/cross.png" /> ' . JText::_('COM_COLLECTOR_VERSION_TO_UPDATE') . '<br /><a href="http://joomlacode.org/gf/project/collector/frs/?action=FrsReleaseBrowse&frs_package_id=4710" target="blank" >'.JText::_('COM_COLLECTOR_CHECK_VERSIONS').'</a>';
-			} else if ( $compare == 0 ) {
-				$version_message = '<img src="components/com_collector/assets/images/tick.png" /> ' . JText::_('COM_COLLECTOR_VERSION_UP_TO_DATE');
-			} else {
-				$version_message = '<img src="components/com_collector/assets/images/bullet_error.png" /> ' . JText::_('COM_COLLECTOR_VERSION_TEST');
-			}
-		}
+		// if (($last_version != JText::_('COM_COLLECTOR_UNKNOWN')) && ($your_version != JText::_('COM_COLLECTOR_UNKNOWN')))
+		// {
+			// $compare = version_compare($your_version, $last_version);
+			// if ( $compare == -1 )
+			// {
+				// $version_message = '<img src="components/com_collector/assets/images/cross.png" /> ' . JText::_('COM_COLLECTOR_VERSION_TO_UPDATE') . '<br /><a href="http://joomlacode.org/gf/project/collector/frs/?action=FrsReleaseBrowse&frs_package_id=4710" target="blank" >'.JText::_('COM_COLLECTOR_CHECK_VERSIONS').'</a>';
+			// } else if ( $compare == 0 ) {
+				// $version_message = '<img src="components/com_collector/assets/images/tick.png" /> ' . JText::_('COM_COLLECTOR_VERSION_UP_TO_DATE');
+			// } else {
+				// $version_message = '<img src="components/com_collector/assets/images/bullet_error.png" /> ' . JText::_('COM_COLLECTOR_VERSION_TEST');
+			// }
+		// }
 		
 		$pane = '<table class="paramlist admintable" cellspacing="1" width="100%"><tbody>';
 		$pane .= '<tr>
@@ -98,14 +98,14 @@ class CollectorViewCollectors extends JViewLegacy
 		<td class="paramlist_value">' . $your_version . '</td>
 		</tr>
 		<tr>
-		<td class="paramlist_key" width="40%"><span class="editlinktip"><label id="detailscreated_by-lbl" for="detailscreated_by" class="hasTip">' . JText::_('COM_COLLECTOR_LAST_VERSION') . '</label></span></td>
-		<td class="paramlist_value">' . $last_version . '</td>
-		</tr>
-		<tr>
-		<td colspan=2 class="paramlist_value" align="center">' . $version_message . '</td>
-		</tr>
-		</tbody>
 		</table>';
+		// <td class="paramlist_key" width="40%"><span class="editlinktip"><label id="detailscreated_by-lbl" for="detailscreated_by" class="hasTip">' . JText::_('COM_COLLECTOR_LAST_VERSION') . '</label></span></td>
+		// <td class="paramlist_value">' . $last_version . '</td>
+		// </tr>
+		// <tr>
+		// <td colspan=2 class="paramlist_value" align="center">' . $version_message . '</td>
+		// </tr>
+		// </tbody>
 		return $pane;
 	}
 	
@@ -127,8 +127,8 @@ class CollectorViewCollectors extends JViewLegacy
 		<td class="paramlist_value"><a href="http://forum.steevo.fr" target="blank" >http://forum.steevo.fr</a></td>
 		</tr>
 		<tr>
-		<td class="paramlist_key" width="50%"><span class="editlinktip"><label id="detailscreated_by-lbl" for="detailscreated_by" class="hasTip">' . JText::_('COM_COLLECTOR_JOOMLACODE') . '</label></span></td>
-		<td class="paramlist_value"><a href="http://joomlacode.org/gf/project/collector/" target="blank" >http://joomlacode.org</a></td>
+		<td class="paramlist_key" width="50%"><span class="editlinktip"><label id="detailscreated_by-lbl" for="detailscreated_by" class="hasTip">' . JText::_('COM_COLLECTOR_GITHUB') . '</label></span></td>
+		<td class="paramlist_value"><a href="https://github.com/steevo/collector" target="blank" >https://github.com/</a></td>
 		</tr>
 		<tr>
 		<td class="paramlist_key" width="50%"><span class="editlinktip"><label id="detailscreated_by-lbl" for="detailscreated_by" class="hasTip">' . JText::_('COM_COLLECTOR_CONTACT') . '</label></span></td>
