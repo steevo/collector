@@ -465,10 +465,10 @@ class CollectorModelItem extends JModelItem
 		$fields		= $this->getFields();
 		$params		= $app->getParams();
 		
-		$this->_prev = 0;
-		$this->_next = 0;
+		$this->_prev_id = 0;
+		$this->_next_id = 0;
 
-		$query->select('i.id, i.alias');
+		$query->select('i.id, i.alias, i.fulltitle');
 		$query->from('#__collector_items AS i');
 		
 		// Join over the values.
@@ -562,11 +562,13 @@ class CollectorModelItem extends JModelItem
 		
 		if ( $key != 0 )
 		{
-			$this->_prev = $items[$key - 1][0].':'.$items[$key - 1][1];
+			$this->_prev_id = $items[$key - 1][0].':'.$items[$key - 1][1];
+			$this->_prev_title = $items[$key - 1][2];
 		}
 		if ( $key != $total - 1 )
 		{
-			$this->_next = $items[$key + 1][0].':'.$items[$key + 1][1];
+			$this->_next_id = $items[$key + 1][0].':'.$items[$key + 1][1];
+			$this->_next_title = $items[$key + 1][2];
 		}
 		
 		$limit = $this->getState('list.limit');
@@ -592,8 +594,8 @@ class CollectorModelItem extends JModelItem
 			
 			$this->getPrevNext();
 			
-			$prev = $this->_prev;
-			$next = $this->_next;
+			$prev = $this->_prev_id;
+			$next = $this->_next_id;
 			$img_base = './components/com_collector/assets/images/';
 			$link_base = 'index.php';
 			$link_back = $link_base;
@@ -612,10 +614,10 @@ class CollectorModelItem extends JModelItem
 			}
 			else
 			{
-				$this->_navigation .= '<a href="'.JRoute::_($link_base.'&id='. $prev) .'" ><img src="'.$img_base.'leftarrow.png" /></a>';
+				$this->_navigation .= '<a title="'.$this->_prev_title.'" href="'.JRoute::_($link_base.'&id='. $prev) .'" ><img src="'.$img_base.'leftarrow.png" /></a>';
 			}
 
-			$this->_navigation .= '<a href="'.JRoute::_($link_back).'" ><img src="'.$img_base.'uparrow.png" /></a>';
+			$this->_navigation .= '<a title="'.JText::_("COM_COLLECTOR_RETURN_TO_LIST").'" href="'.JRoute::_($link_back).'" ><img src="'.$img_base.'uparrow.png" /></a>';
 
 			if ($next == 0)
 			{
@@ -623,7 +625,7 @@ class CollectorModelItem extends JModelItem
 			}
 			else
 			{
-				$this->_navigation .= '<a href="'.JRoute::_($link_base.'&id='. $next) .'" ><img src="'.$img_base.'rightarrow.png" /></a>';
+				$this->_navigation .= '<a title="'.$this->_next_title.'" href="'.JRoute::_($link_base.'&id='. $next) .'" ><img src="'.$img_base.'rightarrow.png" /></a>';
 			}
 		}
 		return $this->_navigation;

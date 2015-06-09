@@ -21,7 +21,7 @@ defined('_JEXEC') or die( 'Restricted access' );
 		$field = $this->fields[$i];
 		$name_field = $field->_field->tablecolumn;
 		
-		if (!( $field->display($this->item->$name_field,false,$this->params) === false )) {
+		if ((!( $field->display($this->item->$name_field,false,$this->params) === false ))||($this->params->get('show_emptyfield'))) {
 			echo '<tr>';
 			?>
 				<td>

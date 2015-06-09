@@ -91,7 +91,11 @@ class CollectorField_Image extends CollectorField
 		$imagedefault=$this->_field->attribs['default'];
 		$imagedefault=explode('|',$imagedefault);
 		
-		if ($value == '' ) {
+		$url = explode('|',$value);
+		if (( $url[0] == '' )&&(!$params->get('show_emptyfield'))) {
+			return false;
+		}
+		if ( $value == '' ) {
 			$value = '||||||';
 		}
 		$imageInfos = explode('|',$value);
