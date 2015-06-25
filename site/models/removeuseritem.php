@@ -62,16 +62,90 @@ class CollectorModelRemoveuseritem extends JModelList
 		// Initialise variables.
 		$app = JFactory::getApplication();
 		
-		$item = $app->input->getString('item', null);
-		$this->setState('filter.item', $item);
+		$collection = $app->input->getInt('collection');
+		$this->setState('collection.id', $collection);
 		
-		$userlist = $app->input->getString('userlist', null);
-		$this->setState('filter.userlist', $userlist);
+		$item = $app->input->getInt('item', null);
+		$this->setState('item.id', $item);
+		
+		$userlist = $app->input->getInt('userlist', null);
+		$this->setState('userlist.id', $userlist);
 
 		$this->setState('layout', $app->input->getString('layout'));
 
 		// List state information.
 		parent::populateState('c.name', 'asc');
+	}
+
+	/**
+	 * Method to load list informations
+	 *
+	 * @access	private
+	 * @return	mixed			Array of fields objects. False if no fields loaded.
+	 */
+	function getList()
+	{
+		if ( empty($this->_list) )
+		{
+			$userlist = (int) $this->getState('userlist.id');
+			
+			$db		= $this->getDbo();
+			$query	= $db->getQuery(true);
+			
+			$user		= JFactory::getUser();
+			$aid		= (int) $user->get('aid', 0);
+			
+			$jnow		= JFactory::getDate();
+			$now		= $jnow->toSql();
+			$nullDate	= $db->getNullDate();
+			
+			$query->select('l.*');
+			$query->from('#__collector_userslists AS l');
+			$query->where('id = ' . $userlist);
+			
+			$db->setQuery($query);
+			$list = $db->loadObject();
+			
+			if ( ! $list ) {
+				return false;
+			}
+			
+			$this->_list = $list;
+		}
+		return $this->_list;
+	}
+	
+	/**
+	 * Method to get a single record.
+	 *
+	 * @param   integer  $pk  The id of the primary key.
+	 *
+	 * @return  mixed    Object on success, false on failure.
+	 * @since   11.1
+	 */
+	public function getItem($pk = null)
+	{
+		$item = (int) $this->getState('item.id');
+		$userlist = (int) $this->getState('userlist.id');
+		
+		// Get a row instance.
+		$table	= $this->getTable('Collector_items');
+		$collection = (int) $this->getState('collection.id');
+		
+		// Attempt to load the row.
+		$return = $table->loadVersion($collection,$item);
+
+		// Check for a table object error.
+		if ($return === false && $table->getError())
+		{
+			$this->setError($table->getError());
+			
+			return false;
+		}
+		
+		$table->userlist = $userlist;
+		
+		return $table;
 	}
 	
 	/**
@@ -110,11 +184,11 @@ class CollectorModelRemoveuseritem extends JModelList
 		$query->where('ul.user = '.$user->id);
 		
 		// Filter by userlist
-		$userlist = $this->getState('filter.userlist');
+		$userlist = $this->getState('userlist.id');
 		$query->where('ul.userslist = ' . (int) $userlist);
 		
 		// Filter by item
-		$item = $this->getState('filter.item');
+		$item = $this->getState('item.id');
 		$query->where('ui.itemid = ' . (int) $item);
 		
 		return $query;

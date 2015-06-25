@@ -22,6 +22,7 @@ JHtml::_('behavior.keepalive');
 JHtml::_('behavior.calendar');
 JHtml::_('behavior.formvalidation');
 JHtml::_('formbehavior.chosen', 'select');
+JHtml::_('bootstrap.framework');
 
 $defaultListOrder	= $this->escape($this->state->get('list.default.ordering'));
 $defaultListDirn	= $this->escape($this->state->get('list.default.direction'));
@@ -39,8 +40,56 @@ foreach ( $this->fields as $field )
 }
 ?>
 <script language="javascript" type="text/javascript">
-// Fonction d'initialisation des champs de recherche
-
+	// requete ajax pour ajout dans userlist
+	jQuery(document).ready(function() {
+		// lorsque je soumets le formulaire
+		jQuery('#useritemAddForm').on('submit', function() {
+			// je récupère les valeurs
+			var item = jQuery('#useritemAddForm_item').val();
+			// appel Ajax
+			jQuery.ajax({
+				url: jQuery(this).attr('action'), // le nom du fichier indiqué dans le formulaire
+				type: jQuery(this).attr('method'), // la méthode indiquée dans le formulaire (get ou post)
+				data: jQuery(this).serialize(), // je sérialise les données (voir plus loin), ici les $_POST
+				success: function(response) { // je récupère la réponse du fichier PHP
+					jQuery('#dropdown'+item).html(response);
+					SqueezeBox.initialize({});
+					SqueezeBox.assign($$('#dropdown'+item+'  a.modal'), {
+						parse: 'rel'
+					});
+				}
+			});
+			return false; // j'empêche le navigateur de soumettre lui-même le formulaire
+		});
+	});
+	
+	// requete ajax pour suppression dune userlist
+	jQuery(document).ready(function() {
+		// lorsque je soumets le formulaire
+		jQuery('#useritemRemoveForm').on('submit', function() {
+			// je récupère les valeurs
+			var item = jQuery('#useritemRemoveForm_item').val();
+			// appel Ajax
+			jQuery.ajax({
+				url: jQuery(this).attr('action'), // le nom du fichier indiqué dans le formulaire
+				type: jQuery(this).attr('method'), // la méthode indiquée dans le formulaire (get ou post)
+				data: jQuery(this).serialize(), // je sérialise les données (voir plus loin), ici les $_POST
+				success: function(response) { // je récupère la réponse du fichier PHP
+					jQuery('#dropdown'+item).html(response);
+					SqueezeBox.initialize({});
+					SqueezeBox.assign($$('#dropdown'+item+'  a.modal'), {
+						parse: 'rel'
+					});
+					jQuery.each(jQuery("input[name='cid[]']"), function(){
+						jQuery(this).remove();
+					});
+				}
+			});
+			return false; // j'empêche le navigateur de soumettre lui-même le formulaire
+		});
+	});
+	
+	// Fonction d'initialisation des champs de recherche
 	document.getElementsByClassName = function(cl) {
 	var retnode = [];
 	var myclass = new RegExp('\\b'+cl+'\\b');
@@ -212,5 +261,19 @@ foreach ( $this->fields as $field )
 			<?php endif; ?>
 			
 		<?php endif; ?>
+	</form>
+	
+	<form action="<?php echo JRoute::_('index.php?option=com_collector&format=raw&tmpl=component&task=useritem.add'); ?>" method="post" name="useritemAddForm" id="useritemAddForm">
+		<input type="hidden" id="useritemAddForm_userlist" name="userlist" value="" />
+		<input type="hidden" id="useritemAddForm_item" name="item" value="" />
+		<input type="hidden" id="useritemAddForm_comment" name="comment" value="" />
+		<?php echo JHtml::_( 'form.token' ); ?>
+	</form>
+	
+	<form action="<?php echo JRoute::_('index.php?option=com_collector&format=raw&tmpl=component&task=useritem.delete'); ?>" method="post" name="useritemRemoveForm" id="useritemRemoveForm">
+		<input type="hidden" id="useritemRemoveForm_userlist" name="userlist" value="" />
+		<input type="hidden" id="useritemRemoveForm_item" name="item" value="" />
+		<!-- <input type="hidden" id="useritemRemoveForm_cid" name="cid[]" value="" /> -->
+		<?php echo JHtml::_( 'form.token' ); ?>
 	</form>
 </div>

@@ -135,6 +135,57 @@ class com_collectorInstallerScript
 		// $parent is the class calling this method
 
         $this->install($parent);
+		
+		$db = JFactory::getDBO();
+		$query = "SHOW COLUMNS FROM `#__collector_userslists` LIKE 'type'";
+		$db->setQuery( $query );
+		$db->execute();
+		$exist = $db->getNumRows();
+		
+		if (!$exist) {
+			$query = "ALTER TABLE `#__collector_userslists` ADD `type` INT(11) NOT NULL after `collection`";
+			$db->setQuery( $query );
+			$db->query();
+		}
+		
+		// Userlists creation if not exists
+		// foreach collection
+		$query = "SELECT id FROM `#__collector`;";
+		$db->setQuery( $query );
+		$collections = $db->loadObjectList();
+
+		foreach ($collections AS $collection)
+		{
+			// collection list
+			$query = "SELECT id FROM `#__collector_userslists` WHERE collection = '".$collection->id."' AND type = '2'";
+			$db->setQuery( $query );
+			if (!$result = $db->LoadResult())
+			{
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 2,`name` = '".$db->escape(JText::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`alias` = '".JApplication::stringURLSafe(JText::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`state` = '0',`ordering` = '0',`created` = '".JFactory::getDate()->toSql()."',`created_by` = '".JFactory::getUser()->get('id')."',`publish_up` = '".JFactory::getDate()->toSql()."',`access` = '1';";
+				$db->setQuery( $query );
+				$db->query();
+			}
+			
+			// wish list
+			$query = "SELECT id FROM `#__collector_userslists` WHERE collection = '".$collection->id."' AND type = '0'";
+			$db->setQuery( $query );
+			if (!$result = $db->LoadResult())
+			{
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 0,`name` = '".$db->escape(JText::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`alias` = '".JApplication::stringURLSafe(JText::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`state` = '0',`ordering` = '0',`created` = '".JFactory::getDate()->toSql()."',`created_by` = '".JFactory::getUser()->get('id')."',`publish_up` = '".JFactory::getDate()->toSql()."',`access` = '1';";
+				$db->setQuery( $query );
+				$db->query();
+			}
+			
+			// swap list
+			$query = "SELECT id FROM `#__collector_userslists` WHERE collection = '".$collection->id."' AND type = '1'";
+			$db->setQuery( $query );
+			if (!$result = $db->LoadResult())
+			{
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 1,`name` = '".$db->escape(JText::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`alias` = '".JApplication::stringURLSafe(JText::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`state` = '0',`ordering` = '0',`created` = '".JFactory::getDate()->toSql()."',`created_by` = '".JFactory::getUser()->get('id')."',`publish_up` = '".JFactory::getDate()->toSql()."',`access` = '1';";
+				$db->setQuery( $query );
+				$db->query();
+			}
+		}
 	}
 	
 	/**

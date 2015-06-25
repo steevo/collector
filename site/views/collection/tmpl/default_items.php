@@ -97,7 +97,7 @@ for ($i=0, $n=count($this->items);$i<$n;$i++)
 		?>
 		<?php if (!empty($this->userslists)) : ?>
 		<td class="list-edit" style="border-left-width:0;vertical-align:middle;" >
-			<div class="btn-group collector-dropdown">
+			<div id="dropdown<?php echo $row->id; ?>" class="btn-group collector-dropdown">
 				<?php // echo JHtml::_('collectorgrid.edit', $item->state, $item->id, 'item.', $canChange); ?>
 				<?php
 				// Create dropdown items

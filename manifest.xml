@@ -43,8 +43,8 @@
 			<menu link="option=com_collector&amp;view=lists">COM_COLLECTOR_DEFINED</menu>
 			<menu link="option=com_collector&amp;view=fields">COM_COLLECTOR_FIELDS</menu>
 			<menu link="option=com_collector&amp;view=items">COM_COLLECTOR_ITEMS</menu>
-			<!-- <menu link="option=com_collector&amp;view=userslists">COM_COLLECTOR_USERSLISTS</menu>
-			<menu link="option=com_collector&amp;view=templates">COM_COLLECTOR_TEMPLATES</menu> -->
+			<menu link="option=com_collector&amp;view=userslists">COM_COLLECTOR_USERSLISTS</menu>
+			<!-- <menu link="option=com_collector&amp;view=templates">COM_COLLECTOR_TEMPLATES</menu> -->
 		</submenu>
 
 		<!-- Administration Main File Copy Section -->

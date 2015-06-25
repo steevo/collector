@@ -51,6 +51,7 @@ $input = $app->input;
 			<div class="span9">
 				<?php echo $this->form->getControlGroup('description'); ?>
 				<?php echo $this->form->getControlGroup('collection'); ?>
+				<?php echo $this->form->getControlGroup('type'); ?>
 			</div>
 			<div class="span3">
 				<?php echo JLayoutHelper::render('joomla.edit.global', $this); ?>

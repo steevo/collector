@@ -39,6 +39,7 @@ class CollectorModelUserslists extends JModelList
 			$config['filter_fields'] = array(
 				'id', 'cu.id',
 				'collection', 'cu.collection',
+				'type', 'cu.collection',
 				'name', 'cu.name',
 				'ordering', 'cu.ordering',
 				'state', 'cu.state',
@@ -96,6 +97,9 @@ class CollectorModelUserslists extends JModelList
 
 		$published = $this->getUserStateFromRequest($this->context.'.filter.published', 'filter_published', '');
 		$this->setState('filter.published', $published);
+
+		$type = $this->getUserStateFromRequest($this->context.'.filter.type', 'filter_type', '');
+		$this->setState('filter.type', $type);
 
 		// List state information.
 		parent::populateState('cu.ordering', 'asc');
@@ -189,6 +193,13 @@ class CollectorModelUserslists extends JModelList
 				$search = $db->quote('%'.$db->escape($search, true).'%');
 				$query->where('(cu.name LIKE '.$search.')');
 			}
+		}
+		
+		// Filter by type.
+		$type = $this->getState('filter.type');
+		if ($type != '')
+		{
+			$query->where('cu.type = ' . (int) $type);
 		}
 		
 		// Add the list ordering clause.

@@ -79,9 +79,9 @@ class CollectorViewUserslists extends JViewLegacy
 		$user		= JFactory::getUser();
 		JToolBarHelper::title(JText::_('COM_COLLECTOR_USERSLISTS_MANAGER'), 'menumgr');
 
-		if ($this->canDo->get('core.create') || (count($user->getAuthorisedCategories('com_collector', 'core.create'))) > 0 ) {
-			JToolBarHelper::addNew('userslist.add','JTOOLBAR_NEW');
-		}
+		// if ($this->canDo->get('core.create') || (count($user->getAuthorisedCategories('com_collector', 'core.create'))) > 0 ) {
+			// JToolBarHelper::addNew('userslist.add','JTOOLBAR_NEW');
+		// }
 
 		if (($this->canDo->get('core.edit')) || ($this->canDo->get('core.edit.own'))) {
 			JToolBarHelper::editList('userslist.edit','JTOOLBAR_EDIT');
@@ -95,12 +95,12 @@ class CollectorViewUserslists extends JViewLegacy
 			JToolBarHelper::custom('userslists.checkin', 'checkin.png', 'checkin_f2.png', 'JTOOLBAR_CHECKIN', true);
 		}
 
-		if ($this->state->get('filter.published') == -2 && $this->canDo->get('core.delete')) {
-			JToolBarHelper::deleteList('', 'userslists.delete','JTOOLBAR_EMPTY_TRASH');
-		}
-		else if ($this->canDo->get('core.edit.state')) {
-			JToolBarHelper::trash('userslists.trash','JTOOLBAR_TRASH');
-		}
+		// if ($this->state->get('filter.published') == -2 && $this->canDo->get('core.delete')) {
+			// JToolBarHelper::deleteList('', 'userslists.delete','JTOOLBAR_EMPTY_TRASH');
+		// }
+		// else if ($this->canDo->get('core.edit.state')) {
+			// JToolBarHelper::trash('userslists.trash','JTOOLBAR_TRASH');
+		// }
 	}
 
 	/**

@@ -43,4 +43,28 @@ class TableCollector_usersitems extends JTable
 		
 		return $return;
 	}
+	
+	/**
+	 * Overloaded check function
+	 *
+	 * @access	public
+	 * @return	boolean	True if the object is ok
+	 * @see		JTable::check
+	 */
+	public function check()
+	{
+		// Create userlist if not exist
+		// Import the class file.
+		require_once(JPATH_ROOT.'/administrator/components/com_collector/tables/collector_userlist.php');
+		if (!$userlist = TableCollector_userlist::getInstance('collector_userlist', 'Table')) {
+			$this->setError(JText::_('COM_COLLECTOR_DATABASE_ERROR_CREATE_USER_LIST'));
+			return false;
+		} else {
+			$userlistId = $userlist->initList($this->userlist);
+		}
+		
+		$this->userlist = $userlistId;
+		
+		return parent::check();
+	}
 }

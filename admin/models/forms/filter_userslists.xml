@@ -25,6 +25,18 @@
 			<option value="">JOPTION_SELECT_PUBLISHED</option>
 		</field>
 		<field
+			name="type"
+			type="userlisttype"
+			label="COM_COLLECTOR_FILTER_USERLISTTYPE"
+			description="COM_COLLECTOR_FILTER_USERLISTTYPE_DESC"
+			onchange="this.form.submit();"
+			>
+			<option value="">COM_COLLECTOR_SELECT_USERLIST_TYPE</option>
+			<option value="2">COM_COLLECTOR_USERLIST_COLLECTION</option>
+			<option value="0">COM_COLLECTOR_USERLIST_WISH_LIST</option>
+			<option value="1">COM_COLLECTOR_USERLIST_SWAP_LIST</option>
+		</field>
+		<field
 			name="access"
 			type="accesslevel"
 			label="JOPTION_FILTER_ACCESS"

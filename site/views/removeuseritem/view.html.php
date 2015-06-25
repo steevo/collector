@@ -38,10 +38,14 @@ class CollectorViewRemoveuseritem extends JViewLegacy
 		// Get some data from the models
 		$state		= $this->get('State');
 		$items		= $this->get('Items');
+		$item		= $this->get('Item');
+		$list		= $this->get('List');
 		$this->items = $items;
+		$this->item = $item;
 		
 		$this->params = $params;
 		$this->state = $state;
+		$this->list = $list;
 		
 		parent::display($tpl);
 	}

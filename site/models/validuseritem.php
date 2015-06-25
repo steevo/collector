@@ -152,6 +152,7 @@ class CollectorModelValiduseritem extends JModelAdmin
 	public function getItem($pk = null)
 	{
 		$item = (int) $this->getState('item.id');
+		$userlist = (int) $this->getState('userlist.id');
 		
 		// Get a row instance.
 		$table	= $this->getTable('Collector_items');
@@ -167,6 +168,8 @@ class CollectorModelValiduseritem extends JModelAdmin
 			
 			return false;
 		}
+		
+		$table->userlist = $userlist;
 		
 		return $table;
 	}

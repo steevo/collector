@@ -265,4 +265,46 @@ class TableCollector_userslists extends JTable
 		
 		return true;
     }
+	
+	/**
+     * Method to init users lists for one collection
+     *
+     * @param    integer	collection Id.
+     *
+     * @return    boolean    True on success.
+     */
+    public function initLists($collection)
+    {
+        $db = JFactory::getDBO();
+		
+		$query = "SELECT id FROM `#__collector_userslists` WHERE collection = '".$collection."'";
+		$db->setQuery( $query );
+		if (!$result = $db->LoadResult())
+		{
+			$this->collection = $collection;
+			$this->state = 0;
+			$this->ordering = 0;
+			$this->access = 1;
+			
+			$this->id = 0;
+			$this->type = 2;
+			$this->name = JText::_('COM_COLLECTOR_USERLIST_COLLECTION');
+			$this->check();
+			$this->store();
+			
+			$this->id = 0;
+			$this->type = 0;
+			$this->name = JText::_('COM_COLLECTOR_USERLIST_WISH_LIST');
+			$this->check();
+			$this->store();
+			
+			$this->id = 0;
+			$this->type = 1;
+			$this->name = JText::_('COM_COLLECTOR_USERLIST_SWAP_LIST');
+			$this->check();
+			$this->store();
+		}
+		
+		return true;
+    }
 }

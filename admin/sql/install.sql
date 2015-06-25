@@ -205,6 +205,7 @@ CREATE TABLE IF NOT EXISTS `#__collector_files_ext` (
 CREATE TABLE IF NOT EXISTS `#__collector_userslists` (
 	`id` int(11) unsigned NOT NULL auto_increment,
 	`collection` int(11) NOT NULL,
+	`type` int(11) NOT NULL,
 	`name` varchar(30) NOT NULL default '',
 	`alias` varchar(30) NOT NULL default '',
 	`description` text NOT NULL default '',

@@ -15,19 +15,14 @@
 defined('_JEXEC') or die( 'Restricted access' );
 
 ?>
-<?php if (count($this->items)>1) { ?>
+<?php //if (count($this->items)>1) { ?>
 	<table class="table table-striped" id="articleList">
 		<tbody>
 			<?php foreach ($this->items as $i => $item) : ?>
 			<tr class="row<?php echo $i % 2; ?>" >
-				<td class="center hidden-phone" rowspan="2" >
+				<td width="1%" class="center hidden-phone" >
 					<?php echo JHtml::_('grid.id', $i, $item->id); ?>
 				</td>
-				<td>
-					<?php echo $this->escape($item->name); ?>
-				</td>
-			</tr>
-			<tr>
 				<td>
 					<?php echo $this->escape($item->comment); ?>
 				</td>
@@ -35,7 +30,7 @@ defined('_JEXEC') or die( 'Restricted access' );
 			<?php endforeach; ?>
 		</tbody>
 	</table>
-<?php } else { ?>
+<?php //} else { ?>
 
 
-<?php } ?>
+<?php //} ?>

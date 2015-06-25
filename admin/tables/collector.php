@@ -165,6 +165,16 @@ class TableCollector extends JTable
 			return false;
 		}
 		
+		// Create userlists
+		// Import the class file.
+		require_once(JPATH_ROOT.'/administrator/components/com_collector/tables/collector_userslists.php');
+		if (!$tablelists = TableCollector_userslists::getInstance('collector_userslists', 'Table')) {
+			$this->setError(JText::_('COM_COLLECTOR_DATABASE_ERROR_CREATE_USERS_LISTS'));
+			return false;
+		} else {
+			$tablelists->initLists($this->id);
+		}
+		
 		return $store;
 	}
 	
@@ -188,6 +198,10 @@ class TableCollector extends JTable
 			$this->_db->execute();
 			
 			$query = 'DROP TABLE `#__collector_items_history_'.$pk.'`';
+			$this->_db->setQuery( $query );
+			$this->_db->execute();
+			
+			$query = 'DELETE FROM `#__collector_userslists` WHERE collection = '.$pk;
 			$this->_db->setQuery( $query );
 			$this->_db->execute();
 		}

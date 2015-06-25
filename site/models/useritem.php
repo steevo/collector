@@ -14,12 +14,32 @@
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
+JHtml::addIncludePath(JPATH_COMPONENT.'/helpers/html');
+
 /**
  * Useritem model
  * @package	Collector
  */
 class CollectorModelUseritem extends JModelAdmin
 {
+	/**
+	 * Collection Id
+	 * @var int
+	 */
+	var $_collection;
+	
+	/**
+	 * Userslists
+	 * @var int
+	 */
+	var $_userslists = array();
+	
+	/**
+	 * Usersitems
+	 * @var int
+	 */
+	var $_usersitems = array();
+	
 	/**
 	 * Method to auto-populate the model state.
 	 *
@@ -253,7 +273,7 @@ class CollectorModelUseritem extends JModelAdmin
 	 * @return  mixed    Object on success, false on failure.
 	 * @since   11.1
 	 */
-	public function getItem($pk = null)
+	/*public function getItem($pk = null)
 	{
 		$pk		= (!empty($pk)) ? $pk : (int) $this->getState('item.id');
 		
@@ -421,7 +441,7 @@ class CollectorModelUseritem extends JModelAdmin
 		
 		return $item;
 	}
-	
+	*/
 	/**
 	 * Method to test whether a record can have its state edited.
 	 *
@@ -562,7 +582,7 @@ class CollectorModelUseritem extends JModelAdmin
 	* @return  boolean  True on success, False on error.
 	* @since   11.1
 	*/
-	public function save($data)
+	/*public function save($data)
 	{
 		// Initialise variables;
 		$app		= JFactory::getApplication();
@@ -649,16 +669,146 @@ class CollectorModelUseritem extends JModelAdmin
 	
 		return true;
 	}
+	*/
+	/**
+	* Method to save the form data.
+	*
+	* @param   array  $data  The form data.
+	*
+	* @return  boolean  True on success, False on error.
+	* @since   11.1
+	*/
+	public function add($data)
+	{
+		// Initialise variables;
+		$app		= JFactory::getApplication();
+		$params		= $app->getParams();
+		$table		= $this->getTable();
+
+		// Allow an exception to be thrown.
+		try
+		{
+			// Bind the data.
+			if (!$table->bind($data)) {
+				$this->setError($table->getError());
+				return false;
+			}
+
+			// Check the data.
+			if (!$table->check()) {
+				$this->setError($table->getError());
+				return false;
+			}
+
+			// Store the data.
+			if (!$table->store()) {
+				$this->setError($table->getError());
+				return false;
+			}
+
+			// Clean the cache.
+			$this->cleanCache();
+		}
+		catch (Exception $e)
+		{
+			$this->setError($e->getMessage());
+
+			return false;
+		}
+		
+		return $this->getDropdown($data);
+	}
+	
+	/**
+	 * Method to delete one or more records.
+	 *
+	 * @param   array  &$pks  An array of record primary keys.
+	 *
+	 * @return  boolean  True if successful, false if an error occurs.
+	 *
+	 * @since   12.2
+	 */
+	public function delete(&$data)
+	{
+		$dispatcher = JEventDispatcher::getInstance();
+		$pks = (array) $data['cid'];
+		$table = $this->getTable();
+
+		// Include the plugins for the delete events.
+		JPluginHelper::importPlugin($this->events_map['delete']);
+
+		// Iterate the items to delete each one.
+		foreach ($pks as $i => $pk)
+		{
+			if ($table->load($pk))
+			{
+				if ($this->canDelete($table))
+				{
+					$context = $this->option . '.' . $this->name;
+
+					// Trigger the before delete event.
+					$result = $dispatcher->trigger($this->event_before_delete, array($context, $table));
+
+					if (in_array(false, $result, true))
+					{
+						$this->setError($table->getError());
+
+						return false;
+					}
+
+					if (!$table->delete($pk))
+					{
+						$this->setError($table->getError());
+
+						return false;
+					}
+
+					// Trigger the after event.
+					$dispatcher->trigger($this->event_after_delete, array($context, $table));
+				}
+				else
+				{
+					// Prune items that you can't change.
+					unset($pks[$i]);
+					$error = $this->getError();
+
+					if ($error)
+					{
+						JLog::add($error, JLog::WARNING, 'jerror');
+
+						return false;
+					}
+					else
+					{
+						JLog::add(JText::_('JLIB_APPLICATION_ERROR_DELETE_NOT_PERMITTED'), JLog::WARNING, 'jerror');
+
+						return false;
+					}
+				}
+			}
+			else
+			{
+				$this->setError($table->getError());
+
+				return false;
+			}
+		}
+
+		// Clear the component's cache
+		$this->cleanCache();
+
+		return $this->getDropdown($data);
+	}
 
 	/**
 	 * Method to get navigation
-	 * using FOR loop
-	 * Put values in <var>_prev</var> and <var>_next</var>
+	 *
+	 * @param   array  $data  The form data.
 	 *
 	 * @access	public
 	 * @return	void
 	 */
-	function getPrevNext()
+	function getDropdown($data)
 	{
 		$db			= $this->getDbo();
 		$nullDate	= $db->getNullDate();
@@ -668,173 +818,149 @@ class CollectorModelUseritem extends JModelAdmin
 		
 		$user	= JFactory::getUser();
 		$groups	= implode(',', $user->getAuthorisedViewLevels());
-		
-		$app		= JFactory::getApplication();
-		$collection	= $this->getCollection();
-		$fields		= $this->getFields();
-		$params		= $app->getParams();
-		
-		$this->_prev = 0;
-		$this->_next = 0;
 
-		$query->select('i.id, i.alias');
+		$query->select('i.collection');
 		$query->from('#__collector_items AS i');
 		
-		// Join over the values.
-		$query->join('LEFT', '#__collector_items_history_'.$collection->id.' AS h ON h.item = i.id');
-		foreach($fields as $field)
-		{
-			$field->setQuery($query);
-		}
-		
-		// Join over the users for the author and modified_by names.
-		$query->select("CASE WHEN i.created_by_alias > ' ' THEN i.created_by_alias ELSE ua.name END AS author");
-		$query->join('LEFT', '#__users AS ua ON ua.id = i.created_by');
-		$query->join('LEFT', '#__users AS uam ON uam.id = i.modified_by');
-		
-		// Filter by item state.
-		if ($this->getState('filter.published') == 1)
-		{
-			$query->where('i.state = 1');
-		}
-		
-		// Filter by history state.
-		$query->where('h.state = 1');
-		
 		// Filter by collection.
-		$query->where('i.collection = '.$collection->id);
-		
-		// Filter by access level.
-		$query->where('i.access IN ('.$groups.')');
-		
-		// Filter by start and end dates.
-		if ((!$user->authorise('core.edit.state', 'com_collector.collection.'.(int) $collection->id)) &&  (!$user->authorise('core.edit', 'com_collector.collection.'.(int) $collection->id))){
-			$nullDate	= $db->quote($db->getNullDate());
-			$nowDate	= $db->quote(JFactory::getDate()->toSql());
-
-			$query->where('(i.publish_up = '.$nullDate.' OR i.publish_up <= '.$nowDate.')')
-				->where('(i.publish_down = '.$nullDate.' OR i.publish_down >= '.$nowDate.')');
-		}
-		
-		$whereSearch = array();
-		
-		$itemid = $app->input->getInt('collection', 0) . ':' . $app->input->getInt('Itemid', 0);
-		
-		$filter = $params->get('filter');
-		
-		foreach($fields as $field)
-		{
-			if ( $field->_field->filter == 1 )
-			{
-				$nameFilterCollection = 'filterfield_'.$field->_field->tablecolumn;
-				if (isset($filter[$nameFilterCollection])) {
-					$valueFilterMenu = $filter[$nameFilterCollection];
-				} else {
-					$valueFilterMenu = '';
-				}
-
-				$filtervalue = $app->getUserStateFromRequest('com_collector.collection.' . $itemid . '.'.$nameFilterCollection, $nameFilterCollection, $valueFilterMenu);
-				
-				$field->setFilterWhereClause($query,$filtervalue);
-			}
-			
-			$search_all_value = $this->getState('filter.filter_search_all');
-			if ( $search_all_value != '' )
-			{
-				$whereSearch[] = $field->getSearchWhereClause($query,$search_all_value);
-			}
-		}
-		
-		if (count($whereSearch) > 0 ) {
-			$query->where('('.implode(' OR ', $whereSearch).')');
-		}
-		
-		$orderby = $this->getState('list.ordering').' '.$this->getState('list.direction');
-		$query->order($orderby);
+		$query->where('i.id = '.$data['itemid']);
 		
 		$db->setQuery($query);
 		
-		$items = $db->loadRowList();
-
-		$total = count($items);
-
-		$id = $this->getState('item.id');
+		$this->_collection = $db->loadResult();
 		
-		for($i=0;$i<count($items);$i++)
-		{
-			if ($items[$i][0] == $id)
+		$userslists = $this->getUserslists();
+		
+		$usersitems = $this->getUsersitems();
+		
+		if (!empty($userslists)) {
+			// Create dropdown items
+			foreach ( $userslists as $userslist )
 			{
-				$key = $i;
-				break;
+				JHtml::_('collectordropdown.add', $this->_collection, $data['itemid'], $userslist);
+
+				if ( $usersitems[$userslist->id] != null )
+				{
+					if(array_key_exists($data['itemid'], $usersitems[$userslist->id]))
+					{
+						JHtml::_('collectordropdown.remove', $this->_collection, $data['itemid'], $userslist);
+					}
+				}
 			}
+
+			// Render dropdown list
+			$html = JHtml::_('collectordropdown.render');
 		}
 		
-		if ( $key != 0 )
-		{
-			$this->_prev = $items[$key - 1][0].':'.$items[$key - 1][1];
-		}
-		if ( $key != $total - 1 )
-		{
-			$this->_next = $items[$key + 1][0].':'.$items[$key + 1][1];
-		}
-		
-		$limit = $this->getState('list.limit');
-		
-		$this->_limitstart = $limit ? ((int)($key/$limit))*$limit : 0;
+		return $html;
 	}
 	
 	/**
-	 * Method to get html navigation
-	 * Put data in <var>_navigation</var>
+	 * Method to load userslists informations
 	 *
-	 * @access	public
-	 * @return	string Navigation html
+	 * @access	private
+	 * @return	mixed			Array of userslists objects. False if no userslists loaded.
 	 */
-	function getNavigation()
+	function getUserslists()
 	{
-		$app = JFactory::getApplication();
-		
-		// Load the content if it doesn't already exist
-		if (empty($this->_navigation))
+		$user = JFactory::getUser();
+		if ($user->guest)
 		{
-			$this->_navigation = '';
-			
-			$this->getPrevNext();
-			
-			$prev = $this->_prev;
-			$next = $this->_next;
-			$img_base = './components/com_collector/assets/images/';
-			$link_base = 'index.php';
-			$link_back = $link_base;
-
-			$option = $app->input->getVar('option', 0, 'get');
-			$collection = $app->input->getVar('collection', 0, 'get');
-			$item = $app->input->getVar('id', 0, 'get');
-			$Itemid = $app->input->getVar('Itemid', 0, 'get');
-
-			$link_base .= '?option='.$option.'&view=item&collection='.$collection.'&Itemid='.$Itemid;
-			$link_back .= '?option='.$option.'&view=collection&id='.$collection.'&limitstart='.$this->_limitstart.'&Itemid='.$Itemid;
-
-			if ($prev == 0)
+			return false;
+		}
+		
+		if ( empty($this->_userslists) )
+		{
+			if ( $this->_collection == '0' )
 			{
-				$this->_navigation .= '<img src="'.$img_base.'empty.png" />';
+				return false;
 			}
 			else
 			{
-				$this->_navigation .= '<a href="'.JRoute::_($link_base.'&id='. $prev) .'" ><img src="'.$img_base.'leftarrow.png" /></a>';
+				$collection = $this->_collection;
 			}
-
-			$this->_navigation .= '<a href="'.JRoute::_($link_back).'" ><img src="'.$img_base.'uparrow.png" /></a>';
-
-			if ($next == 0)
-			{
-				$this->_navigation .= '<img src="'.$img_base.'empty.png" />';
+			
+			$db		= $this->getDbo();
+			$query	= $db->getQuery(true);
+			
+			
+			$jnow		= JFactory::getDate();
+			$now		= $jnow->toSql();
+			$nullDate	= $db->getNullDate();
+			
+			$query->select('ul.*');
+			$query->from('#__collector_userslists AS ul');
+			
+			$query->where('( ul.created_by = ' . (int) $user->id . ' OR ( ul.state = 1 AND ( ul.publish_up = '.$db->Quote($nullDate).' OR ul.publish_up <= '.$db->Quote($now).' ) AND ( ul.publish_down = '.$db->Quote($nullDate).' OR ul.publish_down >= '.$db->Quote($now).' ) ) )');
+			$query->where('collection = ' . $collection);
+			
+			// Filter by access level.
+			if ($access = $this->getState('filter.access')) {
+				$groups	= implode(',', $user->getAuthorisedViewLevels());
+				$query->where('ul.access IN ('.$groups.')');
 			}
-			else
+			$query->order('ordering');
+			
+			$db->setQuery($query);
+			$userslists = $db->loadObjectList('id');
+			
+			if ( ! $userslists ) {
+				return false;
+			}
+			
+			$this->_userslists = $userslists;
+		}
+		
+		return $this->_userslists;
+	}
+	
+	/**
+	 * Method to load usersitems informations
+	 *
+	 * @access	private
+	 * @return	mixed			Array of usersitems objects. False if no usersitems loaded.
+	 */
+	function getUsersitems()
+	{
+		if ( empty($this->_usersitems) )
+		{
+			if ( empty($this->_userslists) )
 			{
-				$this->_navigation .= '<a href="'.JRoute::_($link_base.'&id='. $next) .'" ><img src="'.$img_base.'rightarrow.png" /></a>';
+				return false;
+			}
+			
+			$this->_usersitems = array();
+			
+			$user	= JFactory::getUser();
+			
+			foreach ($this->_userslists as $userslist)
+			{
+				$db		= $this->getDbo();
+				$query	= $db->getQuery(true);
+				
+				$user		= JFactory::getUser();
+				$aid		= (int) $user->get('aid', 0);
+				
+				$jnow		= JFactory::getDate();
+				$now		= $jnow->toSql();
+				$nullDate	= $db->getNullDate();
+				
+				$query->select('ui.*');
+				$query->from('#__collector_usersitems AS ui');
+				
+				// Join over the userlist.
+				$query->join('LEFT', '#__collector_userlist AS ul ON ul.id = ui.userlist');
+				$query->where('ul.userslist = '.$userslist->id);
+				
+				$query->where('ul.user = '.$user->id);
+				
+				$db->setQuery($query);
+				$usersitems = $db->loadObjectList('itemid');
+				
+				$this->_usersitems[$userslist->id] = $usersitems;
 			}
 		}
-		return $this->_navigation;
+		
+		return $this->_usersitems;
 	}
 }

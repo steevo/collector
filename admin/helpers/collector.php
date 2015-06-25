@@ -62,11 +62,11 @@ class CollectorHelper
 			'index.php?option=com_collector&view=items',
 			($vName == 'items' || $vName == 'itemversions')
 		);
-		// JHtmlSidebar::addEntry(
-			// JText::_('COM_COLLECTOR_USERSLISTS'),
-			// 'index.php?option=com_collector&view=userslists',
-			// $vName == 'userslists'
-		// );
+		JHtmlSidebar::addEntry(
+			JText::_('COM_COLLECTOR_USERSLISTS'),
+			'index.php?option=com_collector&view=userslists',
+			$vName == 'userslists'
+		);
 		// JHtmlSidebar::addEntry(
 			// JText::_('COM_COLLECTOR_TEMPLATES'),
 			// 'index.php?option=com_collector&view=templates',

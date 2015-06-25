@@ -73,7 +73,7 @@ class CollectorViewUserslist extends JViewLegacy
 			{
 				JToolBarHelper::apply('userslist.apply');
 				JToolBarHelper::save('userslist.save');
-				JToolBarHelper::save2new('userslist.save2new');
+				// JToolBarHelper::save2new('userslist.save2new');
 				JToolBarHelper::cancel('userslist.cancel');
 			}
 		}
@@ -87,9 +87,9 @@ class CollectorViewUserslist extends JViewLegacy
 					JToolBarHelper::save('userslist.save');
 
 					// We can save this record, but check the create permission to see if we can return to make a new one.
-					if ($canDo->get('core.create')) {
-						JToolBarHelper::save2new('userslist.save2new');
-					}
+					// if ($canDo->get('core.create')) {
+						// JToolBarHelper::save2new('userslist.save2new');
+					// }
 				}
 			}
 

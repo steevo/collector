@@ -9,6 +9,14 @@
 			description ="COM_COLLECTOR_FIELD_COLLECTION_DESC" default="0" 
 			readonly="true" />
 			
+		<field name="type"  type="userlisttype" label="COM_COLLECTOR_FIELD_USERLIST_TYPE_LABEL"
+			description ="COM_COLLECTOR_FIELD_USERLIST_TYPE_DESC" default="0" 
+			readonly="true" >
+			<option value="2">COM_COLLECTOR_USERLIST_COLLECTION</option>
+			<option value="0">COM_COLLECTOR_USERLIST_WISH_LIST</option>
+			<option value="1">COM_COLLECTOR_USERLIST_SWAP_LIST</option>
+		</field>
+			
 		<field
 			name="name"
 			type="text"
