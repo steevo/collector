@@ -32,7 +32,7 @@ class CollectorControllerUseritem extends JControllerForm
 		$data = array();
         $item = $app->input->getInt('item');
         $userlist = $app->input->getInt('userlist');
-        $comment = $app->input->get('comment');
+        $comment = $app->input->getString('comment');
 		$data['itemid'] = $item;
 		$data['userlist'] = $userlist;
 		$data['comment'] = $comment;

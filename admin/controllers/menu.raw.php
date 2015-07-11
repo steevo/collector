@@ -14,6 +14,7 @@
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
+jimport('joomla.filesystem.file');
 require_once(JPATH_ROOT.'/administrator/components/com_collector/classes/field.php');
 
 /**
@@ -90,6 +91,79 @@ class CollectorControllerMenu extends JControllerLegacy
 		}
 		
 		echo '<table><tr>'.implode('<tr/><tr>',$code).'</tr></table>';
+		return;
+	}
+	
+	/**
+	 * Method to load filter fields in menu edition
+	 */
+	function loadScripts()
+	{
+		$app = JFactory::getApplication();
+		$db = JFactory::getDBO(); 
+		$collection = $app->input->getVar( 'collection', '', '', 'int');
+		$menuId = $app->input->getVar( 'itemId', '', '', 'int');
+		$menuParams = new JRegistry;
+		$code = array();
+		
+		if ( $menuId != 0 )
+		{
+			$query = 'SELECT params';
+			$query .= ' FROM `#__menu`';
+			$query .= ' WHERE id = \''.$menuId.'\'';
+			
+			$db->setQuery( $query );
+			
+			$params = $db->loadResult();
+			$menuParams->loadString($params);
+			if ( $menuParams != null )
+			{
+				$filter = $menuParams->get('filter');
+			}
+		}
+		
+		if ( $collection == 0 )
+		{
+			$code[] = JText::_('COM_COLLECTOR_SELECT_COLLECTION');
+		}
+		else
+		{
+			$query = 'SELECT f.*, t.type AS type';
+			$query .= ' FROM `#__collector_fields` AS f';
+			$query .= ' LEFT JOIN `#__collector_fields_type` AS t ON f.type = t.id';
+			$query .= ' WHERE collection = \''.$collection.'\'';
+			$query .= ' AND filterable = 1';
+			
+			$db->setQuery( $query );
+			
+			$fields = $db->loadObjectList();
+			
+			if ($fields == null)
+			{
+				$code[] = JText::_('COM_COLLECTOR_NO_FILTER_AVAILABLE');
+			}
+			else
+			{
+				foreach ($fields as $field)
+				{
+					$registry = new JRegistry;
+					$registry->loadString($field->attribs);
+					$field->attribs = $registry->toArray();
+					$_field = CollectorField::getInstance( $collection, $field );
+					
+					$paramName = 'filterfield_'.$field->tablecolumn;
+					if (isset($filter->$paramName)) {
+						$default = $filter->$paramName;
+					} else {
+						$default = 0;
+					}
+					
+					$code[] = $_field->getMenuJs();
+				}
+			}
+		}
+		
+		echo implode($code);
 		return;
 	}
 	

@@ -185,6 +185,38 @@ class CollectorField
 	}
 	
 	/**
+	 * Gets the action to do on reset search
+	 *
+	 * @param	JRegistry object	$params
+	 *
+	 * @return string
+	 */
+	function resetSearchArea($params)
+	{
+		return 'form.filterfield_'.$this->_field->tablecolumn.'.value = \'\';';
+	}
+	
+	/**
+	 * Gets the action to do on submit search
+	 *
+	 * @return string
+	 */
+	function submitSearchArea()
+	{
+		return;
+	}
+	
+	/**
+	 * Gets the javascript for menu creation
+	 *
+	 * @return string
+	 */
+	function getMenuJs()
+	{
+		return;
+	}
+	
+	/**
 	 * Gets the type of field
 	 *
 	 * @return string
@@ -240,8 +272,9 @@ class CollectorField
 	 *
 	 * @param	JDatabaseQuery object		$query
 	 * @param	mixed						$value
+	 * @param	JRegistry object			$params
 	 */
-	function setFilterWhereClause(&$query,$value)
+	function setFilterWhereClause(&$query,$value,$params)
 	{
 		return false;
 	}

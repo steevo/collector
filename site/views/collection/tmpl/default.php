@@ -112,8 +112,9 @@ foreach ( $this->fields as $field )
 		<?php
 		foreach ( $this->fields as $field )
 		{
-			if (( $field->_field->filter ) && ($field->isFiltered($this->params)==false)) {
-				echo 'form.filterfield_'.$field->_field->tablecolumn.'.value = \'\';';
+			// if (( $field->_field->filter ) && ($field->isFiltered($this->params)==false)) {
+			if ( $field->_field->filter ) {
+				echo $field->resetSearchArea($this->params);
 			}
 		}
 		?>
@@ -134,6 +135,13 @@ foreach ( $this->fields as $field )
 				return 0;
 			}
 		}
+		
+		<?php
+		foreach ( $this->fields as $field )
+		{
+			echo $field->submitSearchArea();
+		}
+		?>
 		
 		form.submit();
 	}
@@ -217,7 +225,7 @@ foreach ( $this->fields as $field )
 			</div>
 		<?php endif; ?>
 
-			<?php if (( count($this->items) != 0 ) && ($this->params->get('show_pagination_limit'))) : ?>
+			<?php if (( $this->pagination->get('total') != 0 ) && ($this->params->get('show_pagination_limit'))) : ?>
 				<div class="btn-group pull-right">
 					<label for="limit" class="element-invisible">
 						<?php echo JText::_('JGLOBAL_DISPLAY_NUM'); ?>
@@ -232,7 +240,7 @@ foreach ( $this->fields as $field )
 		</fieldset>
 		<?php if ( ( $this->searched == 1 ) || ( $this->params->get('show_entire_listing', 1) ) ) : ?>
 			
-			<?php if ( count($this->items) == 0 ) : ?>
+			<?php if ( $this->pagination->get('total') == 0 ) : ?>
 				<div class="alert alert-no-items">
 					<?php echo JText::_('COM_COLLECTOR_NO_ITEMS_FOUND'); ?>
 				</div>

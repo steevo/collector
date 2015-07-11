@@ -17,7 +17,7 @@
 				label="COM_COLLECTOR_COLLECTION"
 				required="true"
 				description="COM_COLLECTOR_A_COLLECTION"
-				onchange="loadFilter();loadRequired();">
+				onchange="loadFilter();loadRequired();loadScripts();">
 				<option value="">COM_COLLECTOR_SELECT_COLLECTION</option>
 			</field>
 			<field
@@ -73,6 +73,8 @@
 				description="COM_COLLECTOR_FILTER_ITEMS"
 				view="collection"
 			/>
+			
+			<field name="loadscripts" type="loadscripts" />
 			
 			<field
 				name="hide_filter"

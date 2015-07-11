@@ -521,7 +521,7 @@ class CollectorModelCollection extends JModelList
 				}
 				$this->setState('filter.'.$nameFilterCollection, $filtervalue);
 				
-				if ($field->setFilterWhereClause($query,$filtervalue))
+				if ($field->setFilterWhereClause($query,$filtervalue,$params))
 				{
 					$this->_search = 1;
 				}

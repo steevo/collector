@@ -47,6 +47,25 @@ class CollectorField_Define extends CollectorField
 	}
 	
 	/**
+	 * Gets the action to do on submit
+	 *
+	 * @param	JRegistry object		$params
+	 *
+	 * @return string
+	 */
+	function resetSearchArea($params)
+	{
+		if ( $this->valueFilterMenu == null ) {
+			$this->isFiltered($params);
+		}
+		
+		$return = array();
+		$return[] = "jQuery( '#filterfield_".$this->_field->tablecolumn."' ).val( '".$this->valueFilterMenu."' );";
+		
+		return implode($return);
+	}
+	
+	/**
 	 * Gets the field attributes for the form definition
 	 *
 	 * @return string
@@ -98,8 +117,9 @@ class CollectorField_Define extends CollectorField
 	 *
 	 * @param	JDatabaseQuery object		$query
 	 * @param	mixed						$value
+	 * @param	JRegistry object			$params
 	 */
-	function setFilterWhereClause(&$query,$value)
+	function setFilterWhereClause(&$query,$value,$params)
 	{
 		if ( $value != '' )
 		{
@@ -284,6 +304,9 @@ class CollectorField_Define extends CollectorField
 
 		if ( $this->valueFilterMenu == null ) {
 			$this->isFiltered($params);
+			if ( $value == '' ) {
+				$value = $this->valueFilterMenu;
+			}
 		}
 		
 		if ( ($menu == true) || (!$this->valueFilterMenu) || ( $this->valueFilterMenu && (!$params->get('hide_filter'))) )

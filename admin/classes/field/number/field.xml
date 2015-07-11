@@ -12,6 +12,7 @@
 	<files>
 		<filename>field.number.php</filename>
 		<filename>field.xml</filename>
+		<filename>searchmethod.php</filename>
 	</files>
 	<config>
 		<fieldset name="general">
@@ -30,6 +31,58 @@
 				label="COM_COLLECTOR_TEMPLATE_LABEL"
 				description="COM_COLLECTOR_TEMPLATE_DESC"
 			/>
+			<field
+				name="search_method"
+				type="searchmethod"
+				onchange="changeMethod();"
+				default="0"
+				label="COM_COLLECTOR_NUMBER_FIELD_SEARCH_METHOD_LABEL"
+				description="COM_COLLECTOR_NUMBER_FIELD_SEARCH_METHOD_DESC">
+					<option value="0">COM_COLLECTOR_NUMBER_FIELD_TEXT_BOX</option>
+					<option value="1">COM_COLLECTOR_NUMBER_FIELD_SLIDER</option>
+			</field>
+			<field
+				name="decimal"
+				type="integer"
+				default="0"
+				label="COM_COLLECTOR_NUMBER_FIELD_DECIMAL_LABEL"
+				description="COM_COLLECTOR_NUMBER_FIELD_DECIMAL_DESC"
+				first="0" last="10" step="1"
+			/>
+			<field
+				name="textboxwidth"
+				type="text"
+				class="textbox slider"
+				default="60"
+				label="COM_COLLECTOR_NUMBER_FIELD_TEXTBOXWIDTH_LABEL"
+				description="COM_COLLECTOR_NUMBER_FIELD_TEXTBOXWIDTH_DESC"
+			/>
+			<field
+				name="sliderwidth"
+				type="text"
+				class="slider"
+				default="200"
+				label="COM_COLLECTOR_NUMBER_FIELD_SLIDERWIDTH_LABEL"
+				description="COM_COLLECTOR_NUMBER_FIELD_SLIDERWIDTH_DESC"
+			/>
+			<field
+				name="sliderstep"
+				type="number"
+				class="slider"
+				default="1"
+				label="COM_COLLECTOR_NUMBER_FIELD_SLIDERSTEP_LABEL"
+				description="COM_COLLECTOR_NUMBER_FIELD_SLIDERSTEP_DESC"
+			/>
+			<field
+				name="textboxeditable"
+				type="radio"
+				class="slider btn-group btn-group-yesno"
+				default="1"
+				label="COM_COLLECTOR_NUMBER_FIELD_TEXTBOXEDITABLE_LABEL"
+				description="COM_COLLECTOR_NUMBER_FIELD_TEXTBOXEDITABLE_DESC" >
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
 		</fields>
 	</config>
 </install>

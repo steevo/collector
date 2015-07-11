@@ -474,19 +474,29 @@ class CollectorModelUseritem extends JModelAdmin
      *
      * @since   11.1
      */
-    // protected function canDelete($record)
-    // {
-        // $user = JFactory::getUser();
+    protected function canDelete($record)
+    {
+        $user = JFactory::getUser();
+		$db = JFactory::getDBO();
 		
-		// Check for existing collection.
-		// if (!empty($record->id)) {
-			// return $user->authorise('core.delete', 'com_collector.item.'.(int) $record->id);
-		// }
-		// Default to component settings if no collection known.
-		// else {
-			// return $user->authorise('core.delete', 'com_collector');
-		// }
-    // }
+		// Check for user.
+		if (!empty($record->id)) {
+			$query = "SELECT user FROM `#__collector_userlist` WHERE id = '".$record->userlist."'";
+			$db->setQuery( $query );
+			$result = $db->LoadResult();
+			
+			if ($result == $user->id)
+			{
+				return true;
+			} else {
+				return false;
+			}
+		}
+		// Default no.
+		else {
+			return false;
+		}
+    }
 	
 	/**
 	 * Method to get the record form.

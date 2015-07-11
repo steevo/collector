@@ -127,7 +127,7 @@ $input = $app->input;
 						<?php
 						if (sizeof($this->form->getGroup('attribs-'.$type->type)) != 0) {
 							foreach($this->form->getGroup('attribs-'.$type->type) as $field): ?>
-							<div class="control-group">
+							<div class="control-group <?php echo $field->class; ?>">
 								<div class="control-label">
 									<?php echo $field->label; ?>
 								</div>

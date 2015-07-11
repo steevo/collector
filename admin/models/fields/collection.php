@@ -102,6 +102,22 @@ class JFormFieldCollection extends JFormFieldList
 			}";
 			$doc->addScriptDeclaration($js);
 		}
+		if ( preg_match("/loadScripts/",$this->element['onchange']) ) {
+			$doc = JFactory::getDocument();
+			
+			$js = "
+			function loadScripts() {
+				var form = document.adminForm;
+				var action = form.action;
+				var reg1=new RegExp('&id=','g');
+				var tab = action.split(reg1);
+				var itemId = tab[1];
+				var collection = $('jform_request_id').get('value');
+				var url='index.php?option=com_collector&format=raw&view=menu&tmpl=component&task=menu.loadScripts&collection='+collection+'&itemId='+itemId;
+				jQuery.getScript( url );
+			}";
+			$doc->addScriptDeclaration($js);
+		}
 		
 		return parent::getInput();
 	}

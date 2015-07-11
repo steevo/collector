@@ -98,8 +98,9 @@ class CollectorField_Item extends CollectorField
 	 *
 	 * @param	JDatabaseQuery object		$query
 	 * @param	mixed						$value
+	 * @param	JRegistry object			$params
 	 */
-	function setFilterWhereClause(&$query,$value)
+	function setFilterWhereClause(&$query,$value,$params)
 	{
 		if ( $value != '' )
 		{
