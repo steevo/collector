@@ -89,7 +89,6 @@ class CollectorField_Number extends CollectorField
 		$return[] = "jQuery( '#filterfield_".$this->_field->tablecolumn."_max' ).val( ".$maxValue." );";
 		$return[] = "jQuery( '#slider-range-".$this->_field->tablecolumn."' ).slider( 'values', 0 , ".$minValue." );";
 		$return[] = "jQuery( '#slider-range-".$this->_field->tablecolumn."' ).slider( 'values', 1 , ".$maxValue." );";
-		// $return[] = "jQuery( '#filterfield_".$this->_field->tablecolumn."' ).val( '".$minValue."|".$maxValue."' );";
 		$return[] = "jQuery( '#filterfield_".$this->_field->tablecolumn."' ).val( '|' );";
 		
 		return implode($return);
@@ -103,7 +102,6 @@ class CollectorField_Number extends CollectorField
 	function submitSearchArea()
 	{
 		$return = "jQuery( '#filterfield_".$this->_field->tablecolumn."' ).val( jQuery( '#filterfield_".$this->_field->tablecolumn."_min' ).val() + '|' + jQuery( '#filterfield_".$this->_field->tablecolumn."_max' ).val() );";
-		// $return = 'form.filterfield_'.$this->_field->tablecolumn.'.value = form.filterfield_'.$this->_field->tablecolumn.'_min.value + \'|\' + form.filterfield_'.$this->_field->tablecolumn.'_max.value;';
 		
 		return $return;
 	}
@@ -149,9 +147,9 @@ class CollectorField_Number extends CollectorField
 			'size'			=> "60",
 			'maxlength'		=> "254",
 			'default'		=> '',
-			'template'		=> $this->_field->attribs['template'],
-			'search_method'	=> $this->_field->attribs['search_method'],
-			'decimal'		=> $this->_field->attribs['decimal']
+			// 'template'		=> $this->_field->attribs['template'],
+			// 'search_method'	=> $this->_field->attribs['search_method'],
+			// 'decimal'		=> $this->_field->attribs['decimal']
 		);
 		
 		return parent::getFieldAttributes($attributes);
@@ -446,6 +444,12 @@ class CollectorField_Number extends CollectorField
 			}
 
 			$return = JString::str_ireplace( '%%', $value, $template );
+			
+			if ( $this->_field->attribs['show_fieldlink'] && ( $this->_field->filter == 1 ) )
+			{
+				$link= 'index.php?option=com_collector&view=collection&id='.$this->_field->collection.'&filterfield_'.$this->_field->tablecolumn.'='.$value.'|'.$value;
+				$return = '<a href="'.JRoute::_($link).'">'.$return.'</a>';
+			}
 		}
 		else
 		{

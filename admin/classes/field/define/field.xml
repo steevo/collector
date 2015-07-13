@@ -34,7 +34,7 @@
 			<field
 				name="show_fieldlink"
 				type="radio"
-				class="btn-group btn-group-yesno"
+				class="btn-group-yesno"
 				default="1"
 				label="COM_COLLECTOR_SHOW_FIELD_LINK"
 				description="COM_COLLECTOR_SHOW_FIELD_LINK_DESC">
@@ -44,7 +44,7 @@
 			<field
 				name="hide_unselected"
 				type="radio"
-				class="btn-group btn-group-yesno"
+				class="btn-group-yesno"
 				default="1"
 				label="COM_COLLECTOR_HIDE_UNSELECTED"
 				description="COM_COLLECTOR_HIDE_UNSELECTED_DESC">

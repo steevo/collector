@@ -526,7 +526,7 @@ class CollectorModelItem extends JModelItem
 
 				$filtervalue = $app->getUserStateFromRequest('com_collector.collection.' . $itemid . '.'.$nameFilterCollection, $nameFilterCollection, $valueFilterMenu);
 				
-				$field->setFilterWhereClause($query,$filtervalue);
+				$field->setFilterWhereClause($query,$filtervalue,$params);
 			}
 			
 			$search_all_value = $this->getState('filter.filter_search_all');

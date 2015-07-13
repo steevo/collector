@@ -31,11 +31,11 @@ $input = $app->input;
 <script language="javascript" type="text/javascript">
 	// type required validation
 	window.addEvent('domready', function(){
-		document.formvalidator.setHandler('typeverify', function (value) { return ($('jform_type').value != '0'); }	);
+		document.formvalidator.setHandler('typeverify', function (value) { return (jQuery('jform_type').value != '0'); }	);
 	});
 	
 	window.addEvent("domready",function(){
-		$('jform_type').addEvent('change',function(){
+		jQuery('jform_type').addEvent('change',function(){
 			var log = $('params').empty().addClass('ajax-loading');
 			var type = this.get('value');
 			
