@@ -72,7 +72,6 @@ class CollectorViewListitem extends JViewLegacy
 			{
 				JToolBarHelper::apply('listitem.apply');
 				JToolBarHelper::save('listitem.save');
-				JToolBarHelper::save2new('listitem.save2new');
 				JToolBarHelper::cancel('listitem.cancel');
 			}
 		}
@@ -87,7 +86,6 @@ class CollectorViewListitem extends JViewLegacy
 			// If checked out, we can still save
 			if ($canDo->get('core.create')) {
 				//JToolBarHelper::save2copy('listitem.save2copy');
-				JToolBarHelper::save2new('listitem.save2new');
 			}
 
 			JToolBarHelper::cancel('listitem.cancel', 'JTOOLBAR_CLOSE');
