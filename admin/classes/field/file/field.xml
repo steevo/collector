@@ -31,12 +31,24 @@
 				description="COM_COLLECTOR_DEFAULT_DESC"
 			/>
 			<field
-				name="directory"
-				type="text"
-				default=""
-				label="COM_COLLECTOR_DIRECTORY_LABEL"
-				description="COM_COLLECTOR_DIRECTORY_DESC"
-			/>
+				name="listing_template"
+				type="list"
+				default="1"
+				label="COM_COLLECTOR_FILE_DOWNLOAD_TEMPLATE_IN_LISTING_LABEL"
+				description="COM_COLLECTOR_FILE_DOWNLOAD_TEMPLATE_IN_LISTING_DESC">
+					<option value="0">COM_COLLECTOR_DEFAULT_TEMPLATE_FROM_PLUGIN</option>
+					<option value="1">COM_COLLECTOR_TEXT_ONLY</option>
+					<option value="2">COM_COLLECTOR_TEXT_WITH_LINK</option>
+			</field>
+			<field
+				name="detail_template"
+				type="list"
+				default="1"
+				label="COM_COLLECTOR_FILE_DOWNLOAD_TEMPLATE_IN_DETAIL_LABEL"
+				description="COM_COLLECTOR_FILE_DOWNLOAD_TEMPLATE_IN_DETAIL_DESC">
+					<option value="0">COM_COLLECTOR_DEFAULT_TEMPLATE_FROM_PLUGIN</option>
+					<option value="2">COM_COLLECTOR_TEXT_WITH_LINK</option>
+			</field>
 		</fields>
 	</config>
 </install>

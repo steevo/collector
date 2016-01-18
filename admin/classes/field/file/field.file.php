@@ -44,21 +44,6 @@ class CollectorField_File extends CollectorField
 		$this->_collection = $collection;
 		$this->_item = $item;
 		$this->_field = $field;
-		
-		// Create a new query object.
-		$db = JFactory::getDBO();
-		$query = $db->getQuery(true);
-		
-		// Select the required fields from the table.
-		$query->select('alias');
-		$query->from('#__collector');
-		
-		// Add the filder on ID
-		$query->where('id = '.$collection);
-		
-		$db->setQuery( $query );
-		
-		$this->directory = 'images/collector/collection/'.$db->loadResult();
 	}
 	
 	/**
@@ -69,11 +54,39 @@ class CollectorField_File extends CollectorField
 	function getFieldAttributes($attributes = array())
 	{
 		$attributes = array(
-			'directory'		=> $this->directory,
-			'size'			=> "60"
 		);
 		
 		return parent::getFieldAttributes($attributes);
+	}
+	
+	/**
+	 * Method to add field to query
+	 *
+	 * Can be overloaded/supplemented by the child class
+	 *
+	 * @param	JDatabaseQuery object		$query
+	 */
+	function setQuery(&$query)
+	{
+		$query->select('jd'.$this->_field->id.'.file_id AS `'.$this->_field->tablecolumn.'`');
+		$query->join('LEFT', '#__jdownloads_files AS jd'.$this->_field->id.' ON jd'.$this->_field->id.'.file_id = h.'.$this->_field->tablecolumn);
+		return;
+	}
+	
+	/**
+	 * Method to add where clause to query on search value
+	 *
+	 * Can be overloaded/supplemented by the child class
+	 *
+	 * @param	JDatabaseQuery object		$query
+	 * @param	string						$search_all_value
+	 */
+	function getSearchWhereClause(&$query,$search_all_value)
+	{
+		$db = JFactory::getDbo();
+		$text = $db->quote('%' . $db->escape($search_all_value, true) . '%', false);
+		$where = 'LOWER(jd'.$this->_field->id.'.file_title) LIKE LOWER(' . $text . ')';
+		return $where;
 	}
 	
 	/**
@@ -87,31 +100,49 @@ class CollectorField_File extends CollectorField
 	 */
 	function display($value,$listing=true,$params=array())
 	{
-		$db = JFactory::getDBO();
-		
-		$fileInfos = explode('|',$value);
-		$fileUrl = $fileInfos[0];
-		
-		if ( $fileUrl == '' )
-		{
-			$return = false;
+		$db = JFactory::getDbo();
+		if ( $value == '' ) {
+			$default = $this->_field->attribs['default'];
+			if ( $default != '' ) {
+				$value = $default;
+			}
 		}
-		else
-		{
-			$filePath = $fileUrl;
-			$fileName = JFile::getName(JPATH_SITE.'/'.$filePath);
-			$fileDesc = $fileInfos[1] ? $fileInfos[1] : $fileName;
-			$fileTitle = $fileInfos[2] ? $fileInfos[1] : $fileName;
+		if ( $value == '' ) {
+			return false;
+		} else {
+			$listing_template = $this->_field->attribs['listing_template'];
+			$detail_template = $this->_field->attribs['detail_template'];
 			
-			$ext = JFile::getExt(JPATH_SITE.'/'.$filePath);
-			$query = 'SELECT ico';
-			$query .= ' FROM #__collector_files_ext';
-			$query .= ' WHERE ext="'.$ext.'"';
-			$db->setQuery( $query );
-			$ico = $db->loadResult();
-			$URLico='./administrator/components/com_collector/assets/images/'.$ico;
-			$return = '<a href="'.$fileUrl.'" target="_blank" title="'.$fileTitle.'" ><img src="'.$URLico.'" /> '. $fileDesc . '</a>';
+			if (( $listing && ( $listing_template == 0 ) ) || ( !$listing && ( $detail_template == 0 ) )) {
+				$return = JHtml::_('content.prepare', '{jd_file file==' .$value. '}');
+			} else if ( $listing && ( $listing_template == 1 ) ) {
+				$query = $db->getQuery(true);
+	
+				// Check file name in jdownloads.
+				$query->select('file_title, file_pic');
+				$query->from('#__jdownloads_files');
+				$query->where('file_id = "'.$value.'"');
+				$db->setQuery($query);
+				$db->execute();
+				$file = $db->loadAssoc();
+				$return = '<img src="'.JURI::base().'components/com_jdownloads/assets/images/jdownloads/fileimages/'.$file['file_pic'].'" style="vertical-align:middle;" border="0" width="32" height="32" alt="" title="" />';
+				$return .= $file['file_title'];
+			} else if (( $listing && ( $listing_template == 2 ) ) || ( !$listing && ( $detail_template == 2 ) )) {
+				$query = $db->getQuery(true);
+	
+				// Check file name in jdownloads.
+				$query->select('file_title, file_alias, file_pic');
+				$query->from('#__jdownloads_files');
+				$query->where('file_id = "'.$value.'"');
+				$db->setQuery($query);
+				$db->execute();
+				$file = $db->loadAssoc();
+				$url = JURI::base().'index.php?option=com_jdownloads&view=download&id='.$value.':'.$file['file_alias'];
+				$return = '<img src="'.JURI::base().'components/com_jdownloads/assets/images/jdownloads/fileimages/'.$file['file_pic'].'" style="vertical-align:middle;" border="0" width="32" height="32" alt="" title="" />';
+				$return .= '<a href="'.$url.'">'.$file['file_title'].'</a>';
+			}
 		}
+		
 		return $return;
 	}
 }
@@ -125,194 +156,98 @@ class JFormFieldCollectorFile extends JFormFieldMedia
 {
 	protected $type = 'CollectorFile';
 	
-	protected static $initialised = false;
-	
 	protected function getInput()
 	{
-		$asset = $this->asset;
-
-		$extensions = $this->getExtensions();
+		$app = JFactory::getApplication();
+		$document = JFactory::getDocument();
 		
-		if ($asset == '')
-		{
-			$asset = JFactory::getApplication()->input->get('option');
-		}
-
-		if (!self::$initialised)
-		{
-			// Load the modal behavior script.
-			JHtml::_('behavior.modal');
-
-			// Build the script.
-			$script = array();
-			$script[] = '	function cInsertFieldValue(value, id) {';
-			$script[] = '		var old_value = document.id(id + "_src").value;';
-			$script[] = '		if (old_value != value) {';
-			$script[] = '			var elem = document.id(id + "_src");';
-			$script[] = '			elem.value = value;';
-			$script[] = '			elem.fireEvent("change");';
-			$script[] = '			if (typeof(elem.onchange) === "function") {';
-			$script[] = '				elem.onchange();';
-			$script[] = '			}';
-			$script[] = '			cMediaRefreshPreview(id);';
-			$script[] = '			setFile(id);';
-			$script[] = '		}';
-			$script[] = '	}';
-
-			$script[] = '	function cMediaRefreshPreview(id) {';
-			$script[] = '		var tab_ext = new Array();';
-			foreach ( $extensions as $ext ) {
-				$script[] = '		tab_ext["'.$ext->ext.'"] = "'.$ext->ico.'";';
-			}
-			$script[] = '		var value = document.id(id + "_src").value;';
-			$script[] = '		var fileExt = value.substring(value.lastIndexOf(".")+1);';
-			$script[] = '		var img = document.id(id + "_preview");';
-			$script[] = '		if (img) {';
-			$script[] = '			if (value) {';
-			$script[] = '				img.src = "' . JUri::root() . '" + "administrator/components/com_collector/assets/images/" + tab_ext[fileExt];';
-			$script[] = '			} else { ';
-			$script[] = '				img.src = ""';
-			$script[] = '			} ';
-			$script[] = '		} ';
-			$script[] = '	}';
-
-			$script[] = '	function cMediaRefreshPreviewTip(tip)';
-			$script[] = '	{';
-			$script[] = '		var img = tip.getElement("img.media-preview");';
-			$script[] = '		tip.getElement("div.tip").setStyle("max-width", "none");';
-			$script[] = '		var id = img.getProperty("id");';
-			$script[] = '		id = id.substring(0, id.length - "_preview".length);';
-			$script[] = '		jMediaRefreshPreview(id);';
-			$script[] = '		tip.setStyle("display", "block");';
-			$script[] = '	}';
-
-			$script[] = '    function setFile(id){';
-			$script[] = '        var path = document.id(id + "_src").value;';
-			$script[] = '        var title = document.id(id + "_title").value;';
-			$script[] = '        document.id(id).value = path + "|" + title;';
-			$script[] = '    }';
-
-			// Add the script to the document head.
-			JFactory::getDocument()->addScriptDeclaration(implode("\n", $script));
-
-			self::$initialised = true;
-		}
-
-		$html = array();
-		$attr = '';
-
-		// Initialize some field attributes.
-		$attr .= !empty($this->class) ? ' class="input-small ' . $this->class . '"' : 'class="input-small"';
-		$attr .= !empty($this->size) ? ' size="' . $this->size . '"' : '';
-
-		// Initialize JavaScript field attributes.
-		$attr .= !empty($this->onchange) ? ' onchange="' . $this->onchange . '"' : '';
+		// Create a new query object.
+		$db = JFactory::getDbo();
+		$query = $db->getQuery(true);
 		
-		// The table
-		$html[] = '<table class="table table-bordered table-striped table-hover">';
-		$html[] = '<tr><td colspan="2" >';
-		
-		// The text field.
-		$html[] = '<div class="input-prepend input-append">';
-
-		// The value
-		if ($this->value == '' ) {
-			$this->value = '|';
-		}
-		$fileInfos = explode('|',$this->value);
-		$value = $fileInfos[0];
-		$title = $fileInfos[1];
-		
-		if ($value && file_exists(JPATH_ROOT . '/' . $value))
-		{
-			$ext = JFile::getExt($value);
-			$ico = JUri::root() . 'administrator/components/com_collector/assets/images/'.$extensions[$ext]->ico;
-		}
-		else
-		{
-			$ico = '';
-		}
-
-		$html[] = '<div class="media-preview add-on">';
-
-		$html[] = '<img id="' . $this->id . '_preview" src="' . $ico . '" >';
-
-		$html[] = '</div>';
-
-		$html[] = '	<input type="text" name="' . $this->name . '_src" id="' . $this->id . '_src" value="'
-			. htmlspecialchars($value, ENT_COMPAT, 'UTF-8') . '" readonly="readonly"' . $attr . ' />';
-
-		if ($this->value && file_exists(JPATH_ROOT . '/' . $this->value))
-		{
-			$folder = explode('/', $this->value);
-			$folder = array_diff_assoc($folder, explode('/', JComponentHelper::getParams('com_collector')->get('file_path', 'images')));
-			array_pop($folder);
-			$folder = implode('/', $folder);
-		}
-		elseif (file_exists(JPATH_ROOT . '/' . JComponentHelper::getParams('com_collector')->get('file_path', 'images') . '/' . $this->directory))
-		{
-			$folder = $this->directory;
-		}
-		else
-		{
-			$folder = '';
-		}
-
-		// The button.
-		if ($this->disabled != true)
-		{
-			JHtml::_('bootstrap.tooltip');
-
-			$html[] = '<a class="modal btn" title="' . JText::_('JLIB_FORM_BUTTON_SELECT') . '" href="'
-				. ($this->readonly ? ''
-				: ($this->link ? $this->link
-					: 'index.php?option=com_collector&amp;view=files&amp;tmpl=component&amp;asset=' . $asset . '&amp;author='
-					. $this->form->getValue($this->authorField)) . '&amp;fieldid=' . $this->id . '&amp;folder=' . $folder) . '"'
-				. ' rel="{handler: \'iframe\', size: {x: 800, y: 500}}">';
-			$html[] = JText::_('JLIB_FORM_BUTTON_SELECT') . '</a><a class="btn hasTooltip" title="' . JText::_('JLIB_FORM_BUTTON_CLEAR') . '" href="#" onclick="';
-			$html[] = 'cInsertFieldValue(\'\', \'' . $this->id . '\');';
-			$html[] = 'return false;';
-			$html[] = '">';
-			$html[] = '<i class="icon-remove"></i></a>';
-		}
-
-		$html[] = '</div>';
-		$html[] = '</td></tr>';
-		
-		// title and alt text
-		$html[] = '<tr><td>';
-		$html[] = '<label id="' . $this->id . '_title-lbl" for="' . $this->id . '_title" class="">' . JText::_('COM_COLLECTOR_FILE_TITLE_LABEL') . '</label>';
-		$html[] = '</td><td nowrap="nowrap">';
-		$html[] = '<input type="text" name="' . $this->name . '_title" id="' . $this->id . '_title" value="' . $title .'" size="4" onchange="setFile(\'' . $this->id . '\')">';
-		$html[] = '</td></tr>';
-		
-		$html[] = '</table>';
-
-		$html[] = '    <input type="hidden" name="'.$this->name.'" id="'.$this->id.'" value="'.htmlspecialchars($this->value, ENT_QUOTES).'" />';
-		
-		return implode("\n", $html);
-	}
-	
-	/**
-	 * Retrieve extensions available
-	 *
-	 * @access	public
-	 * @return	object	Array of extensions objects
-	 */
-	function getExtensions()
-	{
-		$query = 'SELECT e.id, t.text, e.type, e.ext, e.ico, e.state';
-		$query .= ' FROM `#__collector_files_ext` AS e';
-		$query .= ' LEFT JOIN `#__collector_files_type` AS t ON e.type = t.id';
-		$query .= ' WHERE e.state = "1"';
-		
-		$db = JFactory::getDBO();
-		
+		// Check if jdownloads is installed.
+		$query->select('enabled');
+		$query->from('#__extensions');
+		$query->where('type = "component" AND element = "com_jdownloads"');
 		$db->setQuery($query);
 		$db->execute();
+		$num_rows = $db->getNumRows();
 		
-		$this->_ext = $db->loadObjectList ( 'ext' );
+		if ( $num_rows == '0' ) {
+			return JText::_('COM_COLLECTOR_SHOULD_INSTALL_COMPONENT_JDOWNLOADS');
+		} else if ( !$db->loadResult() ) {
+			return JText::_('COM_COLLECTOR_SHOULD_ENABLE_COMPONENT_JDOWNLOADS');
+		}
 		
-		return $this->_ext;
+		$query = $db->getQuery(true);
+		
+		// Check if jdownloads button plugin is installed.
+		$query->select('extension_id');
+		$query->from('#__extensions');
+		$query->where('type = "plugin" AND element = "jdownloads" AND folder = "editors-xtd"');
+		$db->setQuery($query);
+		$db->execute();
+		$num_rows = $db->getNumRows();
+		
+		if ( $num_rows == '0' ) {
+			return JText::_('COM_COLLECTOR_SHOULD_INSTALL_PLUGIN_BUTTON_JDOWNLOADS');
+		}
+		
+		$query = $db->getQuery(true);
+		
+		// Check file name in jdownloads.
+		$query->select('file_title');
+		$query->from('#__jdownloads_files');
+		$query->where('file_id = "'.$this->value.'"');
+		$db->setQuery($query);
+		$db->execute();
+		$file_name = $db->loadResult();
+		
+		$document->addStyleSheet( JURI::root().'plugins/editors-xtd/jdownloads/assets/css/jdownloads.css', 'text/css', null, array() );
+
+		/*
+		 * Javascript to insert the link
+		 * View element calls jSelectDownloadContent when an download is clicked
+		 * jSelectDownload creates the content tag, sends it to the editor,
+		 * and closes the select frame.
+		 */
+		$js = "
+		function jSelectDownload(id, title, catid, object, link, lang)
+		{
+			var vars = {};
+			
+			url = SqueezeBox.url;
+			
+			url.replace( 
+				/[?&]+([^=&]+)=?([^&]*)?/gi, // regexp
+				function( m, key, value ) { // callback
+					vars[key] = value !== undefined ? value : '';
+				}
+			);
+
+			document.getElementById(vars['id_field']).value = id;
+			document.getElementById(vars['id_field']+'_title').value = title;
+			SqueezeBox.close();
+		}";
+		$document->addScriptDeclaration($js);
+
+		$link = 'index.php?option=com_jdownloads&amp;view=list&amp;layout=modallist&amp;tmpl=component&amp;e_name='.$this->name.'&amp;id_field='.$this->id.'&amp;' . JSession::getFormToken() . '=1';
+		$onclick	= ' onclick="document.id(\''.$this->id.'\').value=\'\';document.id(\''.$this->id.'_title\').value=\'\';"';
+
+		$input = '<div class="input-append"><input type="text" id="' . $this->id . '_title" value="' . $file_name . '" readonly="readonly" />';
+		$input .= '<input type="hidden" name="' . $this->name . '" id="' . $this->id . '" value="' . htmlspecialchars($this->value, ENT_COMPAT, 'UTF-8') . '" readonly="readonly" /> <a class="btn btn-primary" title="'.JText::_('COM_COLLECTOR_FIELD_FILE_DELETE_JDOWNLOAD_FILE').'" ' . $onclick . '><span class="icon-cancel"></span></a></div>';
+		
+		JHtml::_('behavior.modal');
+		$button = new JObject;
+		$button->modal = true;
+		$button->class = 'btn';
+		$button->link = $link;
+		$button->text = JText::_('COM_COLLECTOR_SELECT_JDOWNLOADS_BUTTON_TEXT');
+		$button->name = 'file-add';
+		$button->options = "{handler: 'iframe', size: {x: 950, y: 500}}";
+
+		// $buttons = array($button);
+
+		return $input.JLayoutHelper::render('joomla.editors.buttons.button', $button);
 	}
 }
