@@ -78,6 +78,8 @@ CREATE TABLE IF NOT EXISTS `#__collector_fields` (
 	`filter` int(1) NOT NULL default '0',
 	`sort` int(1) NOT NULL default '0',
 	`required` int(1) NOT NULL default '0',
+	`next_sorted_field` varchar(30) NOT NULL default '0',
+	`column_width` varchar(30) NOT NULL default '',
 	`attribs` text NOT NULL default '',
 	PRIMARY KEY (`id`),
 	KEY `fk_collection`(`collection`),

@@ -111,7 +111,7 @@ class com_collectorInstallerScript
 		$msg[] = '<table width="100%" style="border:0px; margin-bottom:10px;">';
 		$msg[] = '<tr>';
 		$msg[] = '<td align="center" colspan="2">';
-		$msg[] = '<img src="' . $imagepath . '" border="0" alt="Collector" /><br />Version 0.6.2';
+		$msg[] = '<img src="' . $imagepath . '" border="0" alt="Collector" /><br />Version 0.6.3';
 		$msg[] = '</td>';
 		$msg[] = '</tr>';
 		$msg[] = '<tr>';
@@ -185,6 +185,30 @@ class com_collectorInstallerScript
 				$db->setQuery( $query );
 				$db->query();
 			}
+		}
+
+		$db = JFactory::getDBO();
+		$query = "SHOW COLUMNS FROM `#__collector_fields` LIKE 'next_sorted_field'";
+		$db->setQuery( $query );
+		$db->execute();
+		$exist = $db->getNumRows();
+
+		if (!$exist) {
+			$query = "ALTER TABLE `#__collector_fields` ADD `next_sorted_field` varchar(30) NOT NULL default '0' after `required`";
+			$db->setQuery( $query );
+			$db->query();
+		}
+
+		$db = JFactory::getDBO();
+		$query = "SHOW COLUMNS FROM `#__collector_fields` LIKE 'column_width'";
+		$db->setQuery( $query );
+		$db->execute();
+		$exist = $db->getNumRows();
+
+		if (!$exist) {
+			$query = "ALTER TABLE `#__collector_fields` ADD `column_width` varchar(30) NOT NULL default '' after `next_sorted_field`";
+			$db->setQuery( $query );
+			$db->query();
 		}
 	}
 	

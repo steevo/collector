@@ -384,22 +384,22 @@ class CollectorField_Define extends CollectorField
 				{
 					if ($largeur < $largeurmax)
 					{
-						$size= ' width="'.$largeur.'"';
+						$size= 'style="width:'.$largeur.';"';
 					}
 					else
 					{
-						$size= ' width="'.$largeurmax.'"';
+						$size= 'style="width:'.$largeurmax.';"';
 					}
 				}
 				else
 				{
 					if ($hauteur < $hauteurmax)
 					{
-						$size= ' height="'.$hauteur.'"';
+						$size= 'style="height:'.$hauteur.';"';
 					}
 					else
 					{
-						$size= ' height="'.$hauteurmax.'"';
+						$size= 'style="height:'.$hauteurmax.';"';
 					}
 				}
 				

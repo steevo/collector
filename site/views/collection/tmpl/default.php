@@ -285,3 +285,9 @@ foreach ( $this->fields as $field )
 		<?php echo JHtml::_( 'form.token' ); ?>
 	</form>
 </div>
+<div align="center">
+	<?php echo JText::_('COM_COLLECTOR_POWERED_BY'); ?>
+	<a href="http://steevo.fr/" target="blank">
+		<img src="components/com_collector/assets/images/collector_logo_mini.png" border="0" alt="Collector Logo" align="top" />
+	</a>
+</div>

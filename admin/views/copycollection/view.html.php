@@ -28,7 +28,35 @@ class CollectorViewCopycollection extends JViewLegacy
 	 */
 	function display($tpl = null)
 	{
+		// Initialise variables.
+		$app = JFactory::getApplication();
+
+		$cid = $app->input->getVar('cid');
+		$this->collection = $cid[0];
+
+		$this->copy_mode = $app->input->getVar('copy_mode');
+		$this->assetgroup_id = $app->input->getVar('assetgroup_id');
+
+		CollectorHelper::addSubmenu('collections');
+
+		// Set the toolbar
+		$this->addToolBar();
+		$this->sidebar = JHtmlSidebar::render();
+ 
+		// Display the template
 		parent::display($tpl);
+	}
+ 
+	/**
+	 * Setting the toolbar
+	 */
+	protected function addToolBar() 
+	{
+		JFactory::getApplication()->input->set('hidemainmenu', true);
+		
+		JToolBarHelper::title(JText::_('COM_COLLECTOR_BATCH_COLLECTION'));
+
+		JToolBarHelper::custom('collections.back','arrow-left-2','','JTOOLBAR_BACK',false);
 	}
 }
 ?>

@@ -96,4 +96,17 @@ class CollectorControllerCollections extends JControllerAdmin
 		// Close the application
 		JFactory::getApplication()->close();
 	}
+
+	/**
+	 * Method to return to Items view.
+	 *
+	 * @return  void
+	 *
+	 * @since   3.0
+	 */
+	public function back()
+	{
+		// Redirect to the list screen.
+		$this->setRedirect(JRoute::_('index.php?option=com_collector&view=collections', false));
+	}
 }

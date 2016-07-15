@@ -35,6 +35,12 @@
 			cols="50"
 			rows="4"
 		/>
+
+		<field name="next_sorted_field" type="nextsortedfield" label="COM_COLLECTOR_FIELD_NEXT_SORTED_FIELD_LABEL"
+			description="COM_COLLECTOR_FIELD_NEXT_SORTED_FIELD_DESC" class="inputbox chzn-done" />
+		
+		<field name="column_width" type="text" label="COM_COLLECTOR_FIELD_COLUMN_WIDTH_LABEL"
+			description="COM_COLLECTOR_FIELD_COLUMN_WIDTH_DESC" size="60" class="inputbox" />
 		
 		<field name="state" type="list" label="JSTATUS"
 			description="JFIELD_PUBLISHED_DESC" class="chzn-color-state"

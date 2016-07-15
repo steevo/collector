@@ -233,15 +233,23 @@ class CollectorModelCollection extends JModelAdmin
 
 		$done = false;
 
-		if (!empty($commands['assetgroup_id']))
-        {
-            if (!$this->batchAccess($commands['assetgroup_id'], $pks, $contexts))
-            {
-                return false;
-            }
- 
-            $done = true;
-        }
+		if (!empty($commands['copy_mode']))
+		{
+			if ( $commands['copy_mode'] == 0 )
+			{
+				if (!empty($commands['assetgroup_id']))
+		        {
+		            if (!$this->batchAccess($commands['assetgroup_id'], $pks, $contexts))
+		            {
+		                return false;
+		            }
+		 
+		            $done = true;
+		        }
+		    } else {
+		    	return "copy";
+		    }
+	    }
 
 		if (!$done)
 		{

@@ -314,39 +314,57 @@ class TableCollector extends JTable
      * Method to copy one collection
      *
      * @param    integer	A primary key value to copy.
-     * @param    string		The name for the new collection
      * @param    integer	Copy mode (	1 only fields,
 	 *									2 fields and items without history,
 	 *									3 fields and items with history)
+     * @param    integer	The Asset Group ID for the new collection
+     * @param    integer	A primary key value destination.
      *
      * @return    boolean    True on success.
      */
-    public function copy($pk, $new_name, $mode = 1)
+    public function copy($pk, $mode = 1, $assetgroup_id, $new_pk = 0)
     {
         $db = JFactory::getDBO();
 		
-		$this->load($pk);
-		$name = $this->_getAssetName();
-		$asset = JTable::getInstance('Asset', 'JTable', array('dbo' => $this->getDbo()));
-		$asset->loadByName($name);
-		
-		$rules = new JAccessRules($asset->rules);
-		$this->setRules($rules);
-		
-		$this->id = 0;
-		$this->asset_id = "";
-		$this->alias = "";
-		$this->name = $new_name;
-		
-		$this->check();
-		$this->store();
+		if ( $new_pk == 0 ) {
+			$this->load($pk);
+			$name = $this->_getAssetName();
+			$asset = JTable::getInstance('Asset', 'JTable', array('dbo' => $this->getDbo()));
+			$asset->loadByName($name);
+			
+			$rules = new JAccessRules($asset->rules);
+			$this->setRules($rules);
+			
+			$table =  JTable::getInstance('Collector','Table');
+			while ($table->load(array('alias' => $this->alias)))
+			{
+				$this->name = JString::increment($this->name);
+				$this->alias = JString::increment($this->alias, 'dash');
+			}
+
+			$this->id = 0;
+			$this->asset_id = "";
+			if ( $assetgroup_id ) {
+				$this->access = $assetgroup_id;
+			}
+			$this->state = 0;
+			$this->home = 0;
+			
+			$this->check();
+			$this->store();
+		} else {
+			$this->load($new_pk);
+		}
 		
 		$limit = 50;
 		
 		$updated_fields = 0;
-		$query = "ALTER TABLE `#__collector_fields` ADD `done` INT NOT NULL DEFAULT '0'";
-		$db->setQuery( $query );
-		$db->execute();
+		$columns = $db->getTableColumns('#__collector_fields');
+		if (!isset($columns['done'])) {
+			$query = "ALTER TABLE `#__collector_fields` ADD `done` INT NOT NULL DEFAULT '0'";
+			$db->setQuery( $query );
+			$db->execute();
+		}
 		
 		$query = "SELECT * FROM `#__collector_fields` WHERE done != '1' AND collection = ".$pk;
 		$db->setQuery( $query );
@@ -354,60 +372,53 @@ class TableCollector extends JTable
 		$remaining_fields = $db->getNumRows();
 		
 		$updated_items = 0;
-		$query = "ALTER TABLE `#__collector_items` ADD `done` INT NOT NULL DEFAULT '0'";
-		$db->setQuery( $query );
-		$db->execute();
+		$columns = $db->getTableColumns('#__collector_items');
+		if (!isset($columns['done'])) {
+			$query = "ALTER TABLE `#__collector_items` ADD `done` INT NOT NULL DEFAULT '0'";
+			$db->setQuery( $query );
+			$db->execute();
+		}
 		
-		$query = "SELECT * FROM `#__collector_items` WHERE done != '1' AND collection = ".$pk;
-		$db->setQuery( $query );
-		$db->execute();
-		$remaining_items = $db->getNumRows();
+		if ( $mode != 1 )
+		{
+			$query = "SELECT * FROM `#__collector_items` WHERE done != '1' AND collection = ".$pk;
+			$db->setQuery( $query );
+			$db->execute();
+			$remaining_items = $db->getNumRows();
+		}
+		else
+		{
+			$remaining_items = 0;
+		}
 		
 		if ($remaining_fields == 0)
 		{
-			$query = "ALTER TABLE `#__collector_fields` DROP `done`";
-			$db->setQuery( $query );
-			$db->execute();
-			
-			if ($mode != 1)
-			{				
-				if ($remaining_items == 0)
+			if (($mode != 1) && ($remaining_items != 0))
+			{
+				$query = "SELECT * FROM `#__collector_items`";
+				$query .= " WHERE done != '1'";
+				$query .= " AND collection = ".$pk;
+				$query .= " LIMIT ".$limit;
+				
+				$db->setQuery( $query );
+				$items = $db->loadObjectList();
+				
+				foreach ($items AS $item)
 				{
-					$query = "ALTER TABLE `#__collector_items` DROP `done`";
-					$db->setQuery( $query );
-					$db->execute();
+					$updated_items = $updated_items + 1;
 					
-					$query = "ALTER TABLE `#__collector_items_history_".$pk."` DROP `done`";
-					$db->setQuery( $query );
-					$db->execute();
-				}
-				else
-				{
-					$query = "SELECT * FROM `#__collector_items`";
-					$query .= " WHERE done != '1'";
-					$query .= " AND collection = ".$pk;
-					$query .= " LIMIT ".$limit;
-					
-					$db->setQuery( $query );
-					$items = $db->loadObjectList();
-					
-					foreach ($items AS $item)
-					{
-						$updated_items = $updated_items + 1;
-						
-						if ($mode == 1) {
-							$copy_mode = 'LAST';
-						} else {
-							$copy_mode = 'FULL';
-						}
-						$itemInstance = & JTable::getInstance('Collector_items','Table');
-					
-						$itemInstance->copy($item->id, $pk, $this->id, $copy_mode);
-						
-						$query = "UPDATE `#__collector_items` SET `done` = '1' WHERE id = '".$item->id."'";
-						$db->setQuery( $query );
-						$db->execute();
+					if ($mode == 2) {
+						$copy_mode = 'LAST';
+					} else {
+						$copy_mode = 'FULL';
 					}
+					$itemInstance = JTable::getInstance('Collector_items','Table');
+				
+					$itemInstance->copy($item->id, $pk, $this->id, $copy_mode);
+					
+					$query = "UPDATE `#__collector_items` SET `done` = '1' WHERE id = '".$item->id."'";
+					$db->setQuery( $query );
+					$db->execute();
 				}
 			}
 		}
@@ -425,7 +436,7 @@ class TableCollector extends JTable
 			{
 				$updated_fields = $updated_fields + 1;
 				
-				$fieldInstance = & JTable::getInstance('Collector_fields','Table');
+				$fieldInstance = JTable::getInstance('Collector_fields','Table');
 			
 				$fieldInstance->copy($field->id, $this->id);
 				
@@ -436,7 +447,16 @@ class TableCollector extends JTable
 		}
 		$remaining_fields = $remaining_fields - $updated_fields;
 		$remaining_items = $remaining_items - $updated_items;
-		$response = array( 'updated_fields' => $updated_fields, 'remaining_fields' => $remaining_fields , 'updated_items' => $updated_items, 'remaining_items' => $remaining_items );
+		if (($remaining_fields == 0) && ($remaining_items == 0)) {
+			$query = "ALTER TABLE `#__collector_fields` DROP `done`";
+			$db->setQuery( $query );
+			$db->execute();
+			
+			$query = "ALTER TABLE `#__collector_items` DROP `done`";
+			$db->setQuery( $query );
+			$db->execute();
+		}
+		$response = array( 'updated_fields' => $updated_fields, 'remaining_fields' => $remaining_fields , 'updated_items' => $updated_items, 'remaining_items' => $remaining_items, 'new_col' => $this->id );
 		
 		return $response;
     }

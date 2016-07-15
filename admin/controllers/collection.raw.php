@@ -33,13 +33,14 @@ class CollectorControllerCollection extends JControllerLegacy
 		
 		$app = JFactory::getApplication();
 		$old_collection_id = $app->input->getVar('id');
-		$new_name = $app->input->getVar('name');
+		$new_collection_id = $app->input->getVar('new_col');
 		$mode = $app->input->getVar('mode');
+		$assetgroup_id = $app->input->getVar('assetgroup_id');
 		
 		JTable::addIncludePath(JPATH_ADMINISTRATOR.'/components/com_collector/tables');
-		$collection = & JTable::getInstance('Collector','Table');
+		$collection = JTable::getInstance('Collector','Table');
 		
-		$response = $collection->copy($old_collection_id, $new_name, $mode);
+		$response = $collection->copy($old_collection_id, $mode, $assetgroup_id, $new_collection_id);
 		
 		echo json_encode( $response );
 

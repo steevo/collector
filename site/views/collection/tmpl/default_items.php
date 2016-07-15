@@ -43,11 +43,29 @@ Joomla.tableOrdering = function( order, dir, task )
 			$row = $this->fieldsDisplayed[$i];
 			if (!(( $row->isFiltered($this->params) == true ) && ($this->params->get('hide_filter'))) || (!$this->params->get('hide_filter')))
 			{
+			if ( (int)$row->_field->column_width != 0 ) {
+				$style = "style='min-width:".(int)$row->_field->column_width."px'";
+			} else {
+				$style = "";
+			}
 				?>
-				<th id="categorylist_header_title">
+				<th id="categorylist_header_title" <?php echo $style; ?>>
 					<?php
 					if ($row->_field->sort == 1) {
-						echo JHTML::_('grid.sort', $row->_field->field, $row->getOrderBy(), $listDirn, $listOrder );
+						$sort = explode('/',$row->_field->next_sorted_field);
+						$order = $row->getOrderBy();
+						if ($sort[0]!='0') {
+							foreach ($sort as $key => $value) {
+								foreach ($this->fields as $field) {
+									if ($field->_field->id == $value) {
+										$next_sorted_field = $field->getOrderBy();
+									}
+								}
+								$order .= '//' . $next_sorted_field;
+							}
+						}
+						echo JHTML::_('grid.sort', $row->_field->field, $order, $listDirn, $listOrder );
+						// echo JHTML::_('grid.sort', $row->_field->field, $row->getOrderBy(), $listDirn, $listOrder );
 					} else {
 						echo $row->_field->field;
 					}
@@ -58,7 +76,7 @@ Joomla.tableOrdering = function( order, dir, task )
 		}
 		?>
 		<?php if (!empty($this->userslists)) : ?>
-		<th style="border-left-width:0;" ></th>
+		<!-- <th style="border-left-width:0;" ></th>-->
 		<?php endif; ?>
 		</tr>
 	</thead>
@@ -96,12 +114,12 @@ for ($i=0, $n=count($this->items);$i<$n;$i++)
 		}
 		?>
 		<?php if (!empty($this->userslists)) : ?>
-		<td class="list-edit" style="border-left-width:0;vertical-align:middle;" >
-			<div id="dropdown<?php echo $row->id; ?>" class="btn-group collector-dropdown">
+		<!-- <td class="list-edit" style="border-left-width:0;vertical-align:middle;" >
+			<div id="dropdown<?php // echo $row->id; ?>" class="btn-group collector-dropdown">
 				<?php // echo JHtml::_('collectorgrid.edit', $item->state, $item->id, 'item.', $canChange); ?>
 				<?php
 				// Create dropdown items
-				foreach ( $this->userslists as $userslist )
+				/* foreach ( $this->userslists as $userslist )
 				{
 					JHtml::_('collectordropdown.add', $row->collection, $row->id, $userslist);
 
@@ -115,10 +133,10 @@ for ($i=0, $n=count($this->items);$i<$n;$i++)
 				}
 
 				// Render dropdown list
-				echo JHtml::_('collectordropdown.render');
+				echo JHtml::_('collectordropdown.render'); */
 				?>
-			</div>
-		</td>
+			<!-- </div>
+		</td> -->
 		<?php endif; ?>
 	</tr>
 <?php

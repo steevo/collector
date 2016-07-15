@@ -124,6 +124,7 @@ class CollectorModelItem extends JModelAdmin
 		else
 		{
 			$return = $table->initVersion($collection);
+			unset($table->history);
 		}
 
 		// Convert to the JObject before adding other data.

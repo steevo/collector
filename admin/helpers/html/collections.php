@@ -35,15 +35,12 @@ class JHtmlCollections
 			'<label id="batch-copy-lbl" for="batch-copy" class="hasTip" title="'.JText::_('COM_COLLECTOR_BATCH_COPY_LABEL').'::'.JText::_('COM_COLLECTOR_BATCH_COPY_LABEL_DESC').'">',
 			JText::_('COM_COLLECTOR_BATCH_COPY_LABEL'),
 			'</label>',
-			'<select name="batch[copy_id]" class="inputbox" id="batch-copy-id">',
+			'<select name="batch[copy_mode]" class="inputbox" id="batch-copy-mode">',
+			'<option value="0">'.JText::_('COM_COLLECTOR_BATCH_NO_COPY').'</option>',
 			'<option value="1">'.JText::_('COM_COLLECTOR_BATCH_COPY_ONLY_FIELDS').'</option>',
 			'<option value="2">'.JText::_('COM_COLLECTOR_BATCH_COPY_FIELDS_AND_ITEMS_WITHOUT_HISTORY').'</option>',
 			'<option value="3">'.JText::_('COM_COLLECTOR_BATCH_COPY_FIELDS_AND_ITEMS_WITH_HISTORY').'</option>',
-			'</select>',
-			'<label id="batch-copy-name-lbl" for="batch-copy-name" class="hasTip" title="'.JText::_('COM_COLLECTOR_BATCH_COPY_NAME_LABEL').'::'.JText::_('COM_COLLECTOR_BATCH_COPY_NAME_LABEL_DESC').'" style="clear:left;" >',
-			JText::_('COM_COLLECTOR_BATCH_COPY_NAME_LABEL'),
-			'</label>',
-			'<input type="text" name="batch[name_id]" class="inputbox" id="batch-copy-name-id" size="60" />'
+			'</select>'
 		);
 
 		return implode("\n", $lines);

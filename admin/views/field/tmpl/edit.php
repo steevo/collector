@@ -22,7 +22,7 @@ JForm::addFieldPath(JPATH_COMPONENT . '/models/fields');
 // Load the tooltip behavior.
 JHtml::_('behavior.formvalidation');
 JHtml::_('behavior.keepalive');
-JHtml::_('formbehavior.chosen', 'select');
+// JHtml::_('formbehavior.chosen', 'select');
 
 $app = JFactory::getApplication();
 $input = $app->input;
@@ -110,6 +110,10 @@ $input = $app->input;
 				<?php echo $this->form->getControlGroup('listing'); ?>
 				<?php echo $this->form->getControlGroup('filter'); ?>
 				<?php echo $this->form->getControlGroup('sort'); ?>
+				<div class="control-group form-inline">
+					<?php echo $this->form->getLabel('next_sorted_field'); ?> <div id="next_sorted_field" ><?php echo $this->form->getInput('next_sorted_field'); ?></div>
+				</div>
+				<?php echo $this->form->getControlGroup('column_width'); ?>
 			</div>
 		</div>
 		<?php echo JHtml::_('bootstrap.endTab'); ?>
@@ -127,7 +131,7 @@ $input = $app->input;
 						<?php
 						if (sizeof($this->form->getGroup('attribs-'.$type->type)) != 0) {
 							foreach($this->form->getGroup('attribs-'.$type->type) as $field): ?>
-							<div class="control-group <?php echo $field->class; ?>">
+							<div class="control-group">
 								<div class="control-label">
 									<?php echo $field->label; ?>
 								</div>

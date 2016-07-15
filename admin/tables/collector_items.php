@@ -14,6 +14,7 @@
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
+require_once(JPATH_ROOT.'/administrator/components/com_collector/classes/field.php');
 require_once(JPATH_ROOT.'/administrator/components/com_collector/tables/collector_items_history_.php');
 
 /**
@@ -82,7 +83,25 @@ class TableCollector_items extends JTable
 		
 		// recuperation des donnees de la version
 		$this->history->loadVersion( $collection, $id, true, $version );
-		$this->id = null;
+
+		// Convert to the JObject before adding other data.
+		$properties = $this->history->getProperties(1);
+		
+		foreach ( $properties as $key => $value )
+		{
+			if ( ($key!='id') && ($key!='state') )
+			{
+				$this->$key = $value;
+			}
+			else
+			{
+				$this->historyId = $value;
+			}
+		}
+		
+		unset($this->history);
+		
+		return true;
 	}
 	
 	/**
@@ -586,51 +605,36 @@ class TableCollector_items extends JTable
     public function copy($pk, $old_collection, $new_collection, $mode)
     {
 		$db = JFactory::getDBO();
-		
-		$updated_history = 0;
-		// $limit = 50;
-		
-		$query = "ALTER TABLE `#__collector_items_history_".$old_collection."` ADD `done` INT NOT NULL DEFAULT '0'";
-		$db->setQuery( $query );
-		$db->execute();
-		
+
 		$query = "SELECT id";
 		$query .= " FROM `#__collector_items_history_".$old_collection."`";
 		$query .= " WHERE item = ".$pk;
-		$query .= " AND done != '1'";
 		
         if ($mode == 'LAST') {
 			$query .= " AND state = 1";
 		}
 		
-		$query .= " ORDER BY modified ASC";
-		
 		$db->setQuery( $query );
 		$db->execute();
 		$remaining_history = $db->getNumRows();
 		
-		if ($remaining_history == 0)
+		if ($remaining_history != 0)
 		{
-			$query = "ALTER TABLE `#__collector_items_history_".$old_collection."` DROP `done`";
-			$db->setQuery( $query );
-			$db->execute();
-		}
-		else
-		{
+			$new_id = 0;
+
 			$query = "SELECT * FROM `#__collector_items_history_".$old_collection."`";
-			$query .= " WHERE done != '1'";
-			$query .= " AND item = ".$pk;
+			$query .= " WHERE item = ".$pk;
+			if ($mode == 'LAST') {
+				$query .= " AND state = 1";
+			}
 			$query .= " ORDER BY modified ASC";
-			// $query .= " LIMIT ".$limit;
 			
 			$db->setQuery( $query );
 			$histories = $db->loadObjectList();
 				
 			foreach ($histories AS $history)
 			{
-				$updated_history = $updated_history + 1;
-				
-				$this->loadVersion( $old_collection, $pk, $history->id );
+				$this->loadCopyVersion( $old_collection, $pk, $history->id );
 				
 				$name = $this->_getAssetName();
 				$asset = JTable::getInstance('Asset', 'JTable', array('dbo' => $this->getDbo()));
@@ -639,17 +643,14 @@ class TableCollector_items extends JTable
 				$rules = new JAccessRules($asset->rules);
 				$this->setRules($rules);
 				
-				$this->id = 0;
+				$this->id = $new_id;
 				$this->asset_id = "";
 				$this->alias = "";
 				$this->collection = $new_collection;
 				
 				$this->checkVersion();
 				$this->storeVersion();
-				
-				$query = "UPDATE `#__collector_items_history_".$old_collection."` SET `done` = '1' WHERE id = '".$history->id."'";
-				$db->setQuery( $query );
-				$db->execute();
+				$new_id = $this->id;
 			}
 		}
 		

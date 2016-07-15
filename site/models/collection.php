@@ -612,7 +612,9 @@ class CollectorModelCollection extends JModelList
 			$this->setState('list.direction', $order_dir_default);
 		}
 		
-		$orderby = $this->getState('list.ordering').' '.$this->getState('list.direction');
+
+
+		$orderby = str_replace('//', ' '.$this->getState('list.direction').',', $this->getState('list.ordering')).' '.$this->getState('list.direction');
 		
 		return $orderby;
 	}
