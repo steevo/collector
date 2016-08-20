@@ -21,6 +21,16 @@ JHtml::_('behavior.modal');
 $app = JFactory::getApplication();
 $Itemid = $app->input->getVar('Itemid', 0, 'get');
 
+if ($this->params->get('comments') != 0)
+{
+	if ( ($this->params->get('comments') == 1) && (file_exists(JPATH_SITE.DS.'components'.DS.'com_jcomments'.DS.'jcomments.php')) )
+	{
+		require_once(JPATH_SITE.DS.'components'.DS.'com_jcomments'.DS.'jcomments.php');
+		$count_comments = JComments::getCommentsCount($this->item->id, 'com_collector');
+	} else {
+		$count_comments = 0;
+	}
+}
 if ( $this->params->get('navigation',1) ) {
 	echo '<div width="100%" align="right">'.$this->navigation.'</div>';
 }
@@ -32,6 +42,13 @@ echo JHtml::_('bootstrap.addTab', 'myTab', '#details', JText::_('COM_COLLECTOR_A
 echo $this->loadTemplate('details');
 
 echo JHtml::_('bootstrap.endTab');
+
+if ( ($this->params->get('comments') != 0) && ($this->params->get('comments_display_mode') == 1) )
+{
+	echo JHtml::_('bootstrap.addTab', 'myTab', '#comments', JText::sprintf('COM_COLLECTOR_COMMENTS',$count_comments));
+	echo $this->loadTemplate('comments');
+	echo JHtml::_('bootstrap.endTab');
+}
 
 if (($this->params->get('allow_front_mod')) && ($this->item->params->get('access-edit')))
 {

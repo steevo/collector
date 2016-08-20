@@ -510,6 +510,13 @@ class TableCollector_items extends JTable
 		$this->_db->setQuery( $query );
 		$this->_db->execute();
 		
+		/* delete comments */
+		$jcomments = JPATH_SITE . DS .'components' . DS . 'com_jcomments' . DS . 'jcomments.php';
+		if (file_exists($jcomments)) {
+			require_once($jcomments);
+			JCommentsModel::deleteComments($pk, 'com_collector');
+		}
+
 		return parent::delete($pk);
 	}
 	

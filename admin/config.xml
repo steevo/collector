@@ -141,6 +141,24 @@
 			<option value="100">J100</option>
 			<option value="0">JALL</option>
 		</field>
+		<field
+			name="comments"
+			type="list"
+			default="0"
+			label="COM_COLLECTOR_COMMENTS_USE"
+			description="COM_COLLECTOR_COMMENTS_USE_DESC">
+			<option value="0">JNO</option>
+			<option value="1">COM_COLLECTOR_COMMENTS_JCOMMENTS</option>
+		</field>
+		<field
+			name="comments_display_mode"
+			type="list"
+			default="0"
+			label="COM_COLLECTOR_COMMENTS_DISPLAY_MODE"
+			description="COM_COLLECTOR_COMMENTS_DISPLAY_MODE_DESC">
+			<option value="0">COM_COLLECTOR_COMMENTS_IN_DETAILS</option>
+			<option value="1">COM_COLLECTOR_COMMENTS_IN_NEW_TAB</option>
+		</field>
 	</fieldset>
 	<fieldset name="item"
 		label="COM_COLLECTOR_ITEM"

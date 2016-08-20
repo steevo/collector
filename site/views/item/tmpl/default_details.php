@@ -38,3 +38,9 @@ defined('_JEXEC') or die( 'Restricted access' );
 	}
 	?>
 </table>
+<?php
+if ( ($this->params->get('comments') != 0) && ($this->params->get('comments_display_mode') == 0) )
+{
+	echo $this->loadTemplate('comments');
+}
+?>

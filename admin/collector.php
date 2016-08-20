@@ -20,6 +20,28 @@ if (!JFactory::getUser()->authorise('core.manage', 'com_collector'))
 	return JError::raiseWarning(404, JText::_('JERROR_ALERTNOAUTHOR'));
 }
 
+// Jcomments integration
+if (JPluginHelper::isEnabled('system', 'jcomments')) {
+	$destpath		= JPATH_SITE.DS.'components'.DS.'com_jcomments'.DS.'plugins';
+	$dest 			= $destpath.DS.'com_collector.plugin.php';
+	$source 		= JPATH_SITE.DS.'components'.DS.'com_collector'.DS.'librairies'.DS.'jcomments'.DS.'com_collector.plugin.php';
+	
+	jimport('joomla.filesystem.file');
+	jimport('joomla.filesystem.folder');
+	if (!JFile::exists($dest)) {
+		if (!JFolder::exists($destpath)) { 
+			if (!JFolder::create($destpath)) { 
+				JError::raiseWarning(100, JText::_('Unable to create jComments plugin folder'));
+			}
+		}
+		if (!JFile::copy($source, $dest)) {
+			JError::raiseWarning(100, JText::_('Unable to copy jComments plugin'));
+		} else {
+			JFactory::getApplication()->enqueueMessage(JText::_('Copied Collector jComments plugin'));
+		}
+	}
+}
+
 $params = JComponentHelper::getParams('com_collector');
 define('COM_COLLECTOR_BASE',    JPATH_ROOT . '/' . $params->get('file_path', 'images/collector'));
 define('COM_COLLECTOR_BASEURL', JUri::root() . $params->get('file_path', 'images/collector'));

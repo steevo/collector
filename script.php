@@ -235,5 +235,18 @@ class com_collectorInstallerScript
 			$db->setQuery( $query );
 			$db->query();
 		}
+
+		/* delete comments */
+		$jcomments = JPATH_SITE . DS .'components' . DS . 'com_jcomments' . DS . 'jcomments.php';
+		if (file_exists($jcomments)) {
+			$query = "DELETE FROM #__jcomments "
+				. " WHERE object_group = " . $db->Quote('com_collector');
+			$db->setQuery($query);
+			$db->execute();
+			$query = "DELETE FROM #__jcomments_objects "
+				. " WHERE object_group = " . $db->Quote('com_collector');
+			$db->setQuery($query);
+			$db->execute();
+		}
 	}
 }
