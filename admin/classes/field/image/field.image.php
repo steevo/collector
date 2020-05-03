@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -168,6 +168,18 @@ class CollectorField_Image extends CollectorField
 		$return .= '<img alt="'.$imageDesc.'" title="'.$imageTitle.'" align="middle" border="1" src="'.$URLimage.'" '.$style.' />';
 		$return .= '</a>';
 		return $return;
+	}
+	
+	/**
+	 * Method to display value in fulltitle
+	 *
+	 * Can be overloaded/supplemented by the child class
+	 *
+	 * @param	string		$value	Field value
+	 */
+	function getImportedValue($value)
+	{	
+		return $value.'||||||';
 	}
 }
 
@@ -362,7 +374,10 @@ class JFormFieldCollectorImage extends JFormFieldMedia
 			}
 		}
 
-		$html[] = '	<input type="text" name="' . $this->name . '_src" id="' . $this->id . '_src" value="'
+		$name = explode(']',$this->name);
+		$name[0] = $name[0].'_src';
+		$name = implode(']',$name);
+		$html[] = '	<input type="text" name="' . $name . '" id="' . $this->id . '_src" value="'
 			. htmlspecialchars($value, ENT_COMPAT, 'UTF-8') . '" readonly="readonly"' . $attr . ' />';
 
 		if ($this->value && file_exists(JPATH_ROOT . '/' . $this->value))
@@ -405,44 +420,62 @@ class JFormFieldCollectorImage extends JFormFieldMedia
 		$disable = ($this->disabled == true) ? 'disabled' : '';
 		
 		// title and alt text
+		$html[] = '</td><td nowrap="nowrap">';
+		$name = explode(']',$this->name);
+		$name[0] = $name[0].'_title';
+		$name = implode(']',$name);
 		$html[] = '<tr><td>';
 		$html[] = '<label class="hasTooltip" title="' . JText::_('COM_COLLECTOR_IMAGE_TITLE_DESC') . '" id="' . $this->id . '_title-lbl" for="' . $this->id . '_title" >' . JText::_('COM_COLLECTOR_IMAGE_TITLE_LABEL') . '</label>';
-		$html[] = '</td><td nowrap="nowrap">';
-		$html[] = '<input type="text" name="' . $this->name . '_title" id="' . $this->id . '_title" value="' . $title .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
+		$html[] = '<input type="text" name="' . $name . '" id="' . $this->id . '_title" value="' . $title .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
 		$html[] = '</td></tr>';
+		$name = explode(']',$this->name);
+		$name[0] = $name[0].'_alt';
+		$name = implode(']',$name);
 		$html[] = '<tr><td>';
 		$html[] = '<label class="hasTooltip" title="' . JText::_('COM_COLLECTOR_IMAGE_ALT_DESC') . '" id="' . $this->id . '_alt-lbl" for="' . $this->id . '_alt" >' . JText::_('COM_COLLECTOR_IMAGE_ALT_LABEL') . '</label>';
 		$html[] = '</td><td nowrap="nowrap">';
-		$html[] = '<input type="text" name="' . $this->name . '_alt" id="' . $this->id . '_alt" value="' . $alt .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
+		$html[] = '<input type="text" name="' . $name . '" id="' . $this->id . '_alt" value="' . $alt .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
 		$html[] = '</td></tr>';
 		
 		// Listing size
+		$name = explode(']',$this->name);
+		$name[0] = $name[0].'_listingmaxwidth';
+		$name = implode(']',$name);
 		$html[] = '<tr><td>';
 		$html[] = '<label class="hasTooltip" title="' . JText::_('COM_COLLECTOR_IMAGE_LISTINGMAXWIDTH_DESC') . '" id="' . $this->id . '_listingmaxwidth-lbl" for="' . $this->id . '_listingmaxwidth" >' . JText::_('COM_COLLECTOR_IMAGE_LISTINGMAXWIDTH_LABEL') . '</label>';
 		$html[] = '</td><td nowrap="nowrap">';
-		$html[] = '<input type="text" name="' . $this->name . '_listingmaxwidth" id="' . $this->id . '_listingmaxwidth" value="' . $listingMaxWidth .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
+		$html[] = '<input type="text" name="' . $name . '" id="' . $this->id . '_listingmaxwidth" value="' . $listingMaxWidth .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
 		$html[] = '</td></tr>';
+		$name = explode(']',$this->name);
+		$name[0] = $name[0].'_listingmaxheight';
+		$name = implode(']',$name);
 		$html[] = '<tr><td>';
 		$html[] = '<label class="hasTooltip" title="' . JText::_('COM_COLLECTOR_IMAGE_LISTINGMAXHEIGHT_DESC') . '" id="' . $this->id . '_listingmaxheight-lbl" for="' . $this->id . '_listingmaxheight" >' . JText::_('COM_COLLECTOR_IMAGE_LISTINGMAXHEIGHT_LABEL') . '</label>';
 		$html[] = '</td><td nowrap="nowrap">';
-		$html[] = '<input type="text" name="' . $this->name . '_listingmaxheight" id="' . $this->id . '_listingmaxheight" value="' . $listingMaxHeight .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
+		$html[] = '<input type="text" name="' . $name . '" id="' . $this->id . '_listingmaxheight" value="' . $listingMaxHeight .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
 		$html[] = '</td></tr>';
 		
 		// Detail size
+		$name = explode(']',$this->name);
+		$name[0] = $name[0].'_detailmaxwidth';
+		$name = implode(']',$name);
 		$html[] = '<tr><td>';
 		$html[] = '<label class="hasTooltip" title="' . JText::_('COM_COLLECTOR_IMAGE_DETAILMAXWIDTH_DESC') . '" id="' . $this->id . '_detailmaxwidth-lbl" for="' . $this->id . '_detailmaxwidth" >' . JText::_('COM_COLLECTOR_IMAGE_DETAILMAXWIDTH_LABEL') . '</label>';
 		$html[] = '</td><td nowrap="nowrap">';
-		$html[] = '<input type="text" name="' . $this->name . '_detailmaxwidth" id="' . $this->id . '_detailmaxwidth" value="' . $detailMaxWidth .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
+		$html[] = '<input type="text" name="' . $name . '" id="' . $this->id . '_detailmaxwidth" value="' . $detailMaxWidth .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
 		$html[] = '</td></tr>';
+		$name = explode(']',$this->name);
+		$name[0] = $name[0].'_detailmaxheight';
+		$name = implode(']',$name);
 		$html[] = '<tr><td>';
 		$html[] = '<label class="hasTooltip" title="' . JText::_('COM_COLLECTOR_IMAGE_LISTINGMAXHEIGHT_DESC') . '" id="' . $this->id . '_detailmaxheight-lbl" for="' . $this->id . '_detailmaxheight" >' . JText::_('COM_COLLECTOR_IMAGE_LISTINGMAXHEIGHT_LABEL') . '</label>';
 		$html[] = '</td><td nowrap="nowrap">';
-		$html[] = '<input type="text" name="' . $this->name . '_detailmaxheight" id="' . $this->id . '_detailmaxheight" value="' . $detailMaxHeight .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
+		$html[] = '<input type="text" name="' . $name . '" id="' . $this->id . '_detailmaxheight" value="' . $detailMaxHeight .'" size="4" onchange="setImage(\'' . $this->id . '\')" '.$disable.'>';
 		$html[] = '</td></tr>';
 		
 		$html[] = '</table>';
 
-		$html[] = '    <input type="hidden" name="'.$this->name.'" id="'.$this->id.'" value="'.htmlspecialchars($this->value, ENT_QUOTES).'" />';
+		$html[] = '    <input type="hidden" name="'.$this->name.'" id="'.$this->id.'" value="'.htmlspecialchars($this->value, ENT_QUOTES).'" '.$disable.'/>';
 		
 		return implode("\n", $html);
 	}

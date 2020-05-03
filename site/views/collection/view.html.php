@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -53,15 +53,15 @@ class CollectorViewCollection extends JViewLegacy
 		
 		// Check for errors.
 		if ($collection->id == 0) {
-			$id = $app->input->getVar( 'id', '', 'default', 'int' );
-			return JError::raiseError(404, JText::sprintf( 'COM_COLLECTOR_COLLECTION_NOT_FOUND', $id ));
+			$id = $app->input->get( 'id', '', 'default', 'int' );
+			return JFactory::getApplication()->enqueueMessage(JText::sprintf( 'COM_COLLECTOR_COLLECTION_NOT_FOUND', $id ),'error');
 		}
 
 		// Check whether category access level allows access.
 		$user	= JFactory::getUser();
 		$groups	= $user->getAuthorisedViewLevels();
 		if (!in_array($collection->access, $groups)) {
-			return JError::raiseError(403, JText::_('COM_COLLECTOR_ALERTNOTAUTH'));
+			return JFactory::getApplication()->enqueueMessage(JText::_('COM_COLLECTOR_ALERTNOTAUTH'),'error');
 		}
 		
 		// Compute the collection slug.

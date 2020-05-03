@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -44,7 +44,7 @@ class CollectorViewCollections extends JViewLegacy
 		
 		// Check for errors.
 		if (count($errors = $this->get('Errors'))) {
-			JError::raiseError(500, implode("\n", $errors));
+			JFactory::getApplication()->enqueueMessage(implode('<br />', $errors),'error');
 			return false;
 		}
 
@@ -93,14 +93,12 @@ class CollectorViewCollections extends JViewLegacy
 		}
 		
 		// Add a batch button
-		if ($user->authorise('core.edit'))
+		if ($this->canDo->get('core.create') && $this->canDo->get('core.edit') && $this->canDo->get('core.edit.state'))
 		{
-			JHtml::_('bootstrap.modal', 'collapseModal');
-			$title = JText::_('JTOOLBAR_BATCH');
-			$dhtml = "<button data-toggle=\"modal\" data-target=\"#collapseModal\" class=\"btn btn-small\">
-						<i class=\"icon-checkbox-partial\" title=\"$title\"></i>
-						$title</button>";
-			$bar->appendButton('Custom', $dhtml, 'batch');
+			// we use a standard Joomla layout to get the html for the batch button
+			$layout = new JLayoutFile('joomla.toolbar.batch');
+			$batchButtonHtml = $layout->render(array('title' => JText::_('JTOOLBAR_BATCH')));
+			$bar->appendButton('Custom', $batchButtonHtml, 'batch');
 		}
 	}
 	

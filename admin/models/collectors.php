@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -75,56 +75,20 @@ class CollectorModelCollectors extends JModelLegacy
 	 * @access	public
 	 * @return	string	Last release
 	 */
-	function getVersions()
+	function getLastVersion()
     {
         //get versions informations
-        ob_start();
-        $url = 'http://joomlacode.org/svn/collector/branches/collector_version.xml';
+		$url = 'http://www.steevo.fr/update/com_collector.xml';
 	
-		if (function_exists('curl_init')) {
-			//curl is the preferred function
-			$crl = curl_init();
-			$timeout = 5;
-			curl_setopt($crl, CURLOPT_URL, $url);
-			curl_setopt($crl, CURLOPT_USERPWD, 'anonymous:');
-			curl_setopt($crl, CURLOPT_RETURNTRANSFER, 1);
-			curl_setopt($crl, CURLOPT_CONNECTTIMEOUT, $timeout);
-			$CollectorVersionRaw = curl_exec($crl);
-			curl_close($crl);
-		} else {
-			//get the file directly if curl is disabled
-			$context = stream_context_create(array(
-				'http' => array(
-					'header'  => "Authorization: Basic " . base64_encode("anonymous:"),
-					'timeout' => 10
-				)
-			));
-			if ( ($CollectorVersionRaw = file_get_contents($url, false, $context)) == false )
-			{
-				//error to load file
-				$CollectorVersionRaw = "<?xml version='1.0' standalone='yes'?>
-					<document>
-						<component>" . JText::_('COM_COLLECTOR_UNKNOWN') . "</component>
-					</document>";
-			}
-			
-			if (!strpos($CollectorVersionRaw, '<document>')) {
-				//file_get_content is often blocked by hosts, return an error message
-				echo JText::_('COM_COLLECTOR_CURL_DISABLED');
-				return;
-			}
+		$xml = '';
+		$CollectorVersion = JText::_('COM_COLLECTOR_UNKNOWN');
+		
+		$xml = simplexml_load_file($url);
+		
+		if ($xml != '') {
+			$CollectorVersion = $xml->update[($xml->count())-1]->version;
 		}
 		
-		if ($xml = JFactory::getXML($CollectorVersionRaw, false)) {
-			if (isset($xml->component)) {
-				$CollectorVersion = (string)$xml->component;
-			} else {
-				echo JText::_('COM_COLLECTOR_CURL_DISABLED');
-				return;
-			}
-		}
-		
-        ob_end_clean();
-        return $CollectorVersion;
+		return $CollectorVersion;
     }
 }

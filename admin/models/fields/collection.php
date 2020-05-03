@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -39,19 +39,18 @@ class JFormFieldCollection extends JFormFieldList
 				var reg1=new RegExp('&id=','g');
 				var tab = action.split(reg1);
 				var itemId = tab[1];
-				var collection = $('jform_request_id').get('value');
+				var collection = jQuery('#jform_request_id').val();
 				var url='index.php?option=com_collector&format=raw&view=menu&tmpl=component&task=menu.listFilter&collection='+collection+'&itemId='+itemId;
-				var myRequest = new Request({
+				jQuery.ajax({
+					type: 'POST',
 					url: url,
-					method:'post',
-					onComplete: function( response ) {
-						$('listFilter').set('html',response);
+					success: function( response ) {
+						jQuery('#listFilter').html(response);
 						jQuery('select').chosen({
 						disable_search_threshold : 10,
 						allow_single_deselect : true});
 					}
 				});
-				myRequest.send();
 			}";
 			$doc->addScriptDeclaration($js);
 		}
@@ -65,17 +64,69 @@ class JFormFieldCollection extends JFormFieldList
 				var reg1=new RegExp('&id=','g');
 				var tab = action.split(reg1);
 				var itemId = tab[1];
-				var collection = $('jform_request_id').get('value');
+				var collection = jQuery('#jform_request_id').val();
 				var url='index.php?option=com_collector&format=raw&view=menu&tmpl=component&task=menu.listRequired&collection='+collection+'&itemId='+itemId;
-				var myRequest = new Request({
+				jQuery.ajax({
+					type: 'POST',
 					url: url,
-					method:'post',
-					onComplete: function( response ) {
-						$('listRequired').set('html',response);
+					success: function( response ) {
+						jQuery('#listRequired').html(response);
+						new Joomla.JMultiSelect('adminForm');
+						
+						jQuery('.radio.btn-group label').addClass('btn');
+						jQuery('.btn-group label:not(.active)').click(function()
+						{
+							var label = jQuery(this);
+							var input = jQuery('#' + label.attr('for'));
+
+							if (!input.prop('checked')) {
+								label.closest('.btn-group').find('label').removeClass('active btn-success btn-danger btn-primary');
+								if (input.val() == '') {
+									label.addClass('active btn-primary');
+								} else if (input.val() == 0) {
+									label.addClass('active btn-danger');
+								} else {
+									label.addClass('active btn-success');
+								}
+								input.prop('checked', true);
+								input.trigger('change');
+							}
+						});
+						jQuery('.btn-group input[checked=checked]').each(function()
+						{
+							if (jQuery(this).val() == '') {
+								jQuery('label[for=' + jQuery(this).attr('id') + ']').addClass('active btn-primary');
+							} else if (jQuery(this).val() == 0) {
+								jQuery('label[for=' + jQuery(this).attr('id') + ']').addClass('active btn-danger');
+							} else {
+								jQuery('label[for=' + jQuery(this).attr('id') + ']').addClass('active btn-success');
+							}
+						});
+					}
+				});
+			}";
+			$doc->addScriptDeclaration($js);
+		}
+		if ( preg_match("/loadUserlists/",$this->element['onchange']) ) {
+			$doc = JFactory::getDocument();
+
+			$js = "
+			function loadUserlists() {
+				var form = document.adminForm;
+				var action = form.action;
+				var reg1=new RegExp('&id=','g');
+				var tab = action.split(reg1);
+				var itemId = tab[1];
+				var collection = jQuery('#jform_request_id').val();
+				var url='index.php?option=com_collector&format=raw&view=menu&tmpl=component&task=menu.loadUserlists&collection='+collection+'&itemId='+itemId;
+				jQuery.ajax({
+					type: 'POST',
+					url: url,
+					success: function( response ) {
+						jQuery('#userslists').html(response);
 						new Joomla.JMultiSelect('adminForm');
 					}
 				});
-				myRequest.send();
 			}";
 			$doc->addScriptDeclaration($js);
 		}
@@ -89,16 +140,15 @@ class JFormFieldCollection extends JFormFieldList
 				var reg1=new RegExp('&id=','g');
 				var tab = action.split(reg1);
 				var itemId = tab[1];
-				var collection = $('jform_request_collection').get('value');
+				var collection = jQuery('jform_request_collection').val();
 				var url='index.php?option=com_collector&format=raw&view=menu&tmpl=component&task=menu.listItems&collection='+collection+'&itemId='+itemId;
-				var myRequest = new Request({
+				jQuery.ajax({
+					type: 'POST',
 					url: url,
-					method:'post',
-					onComplete: function( response ) {
-						$('listItems').set('html',response);
+					success: function( response ) {
+						jQuery('#listItems').html(response);
 					}
 				});
-				myRequest.send();
 			}";
 			$doc->addScriptDeclaration($js);
 		}
@@ -112,7 +162,7 @@ class JFormFieldCollection extends JFormFieldList
 				var reg1=new RegExp('&id=','g');
 				var tab = action.split(reg1);
 				var itemId = tab[1];
-				var collection = $('jform_request_id').get('value');
+				var collection = jQuery('#jform_request_id').val();
 				var url='index.php?option=com_collector&format=raw&view=menu&tmpl=component&task=menu.loadScripts&collection='+collection+'&itemId='+itemId;
 				jQuery.getScript( url );
 			}";
@@ -146,7 +196,7 @@ class JFormFieldCollection extends JFormFieldList
 		}
 		catch (RuntimeException $e)
 		{
-			JError::raiseWarning(500, $e->getMessage());
+			JFactory::getApplication()->enqueueMessage($e->getMessage(),'warning');
 		}
 
 		// Merge any additional options in the XML definition.

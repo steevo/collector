@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -72,7 +72,7 @@ class CollectorModelUserslists extends JModelList
 		$session = JFactory::getSession();
 
 		// Adjust the context to support modal layouts.
-		if ($layout = $app->input->getVar('layout')) {
+		if ($layout = $app->input->get('layout')) {
 			$this->context .= '.'.$layout;
 		}		
 		
@@ -317,14 +317,14 @@ class CollectorModelUserslists extends JModelList
 	function remove()
 	{
 		$app = JFactory::getApplication();
-		$cid = $app->input->getVar( 'cid', array(0), 'post', 'array');
+		$cid = $app->input->get( 'cid', array(0), 'post', 'array');
 		$row = $this->getTable('collector_userslists');
 		
 		foreach ($cid as $id)
 		{
 			if (!($row->delete($id)))
 			{
-				JError::raiseError( 500, $row->getError() );
+				JFactory::getApplication()->enqueueMessage($row->getError(),'error');
 				return false;
 			}
 		}

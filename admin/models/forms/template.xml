@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form>
+	<fieldset>
+		<field name="id"  type="text" class="readonly" label="JGLOBAL_FIELD_ID_LABEL"
+			description ="JGLOBAL_FIELD_ID_DESC" size="10" default="0" 
+			readonly="true"  />
+
+		<field
+			name="name"
+			type="text"
+			label="COM_COLLECTOR_TEMPLATE_NAME_LABEL"
+			description="COM_COLLECTOR_TEMPLATE_NAME_DESC"
+			size="60"
+			class="inputbox input-xxlarge input-large-text"
+			required="true"
+		/>
+		
+		<field name="alias" type="text" label="JFIELD_ALIAS_LABEL"
+			description="JFIELD_ALIAS_DESC"
+			hint="JFIELD_ALIAS_PLACEHOLDER"
+			class="inputbox" size="40" />
+		
+		<field name="collection"  type="collection" label="COM_COLLECTOR_FIELD_COLLECTION_LABEL"
+			description ="COM_COLLECTOR_FIELD_COLLECTION_DESC" default="0" 
+			readonly="true" />
+			
+		<field 
+			name="client"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			label="COM_COLLECTOR_TEMPLATE_CLIENT_LABEL"
+			description="COM_COLLECTOR_TEMPLATE_CLIENT_DESC"
+			default="0"
+		>
+			<option value="0">COM_COLLECTOR_TEMPLATE_CLIENT_LISTING_LABEL</option>
+			<option value="1">COM_COLLECTOR_TEMPLATE_CLIENT_DETAILS_LABEL</option>
+		</field>
+		
+		<field 
+			name="home"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			label="COM_COLLECTOR_TEMPLATE_HOME_LABEL"
+			description="COM_COLLECTOR_TEMPLATE_HOME_DESC"
+			default="0"
+		>
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+		
+		<field
+			name="column"
+			type="integer"
+			default="1"
+			label="COM_COLLECTOR_TEMPLATE_COLUMN_LABEL"
+			description="COM_COLLECTOR_TEMPLATE_COLUMN_DESC"
+			first="1" last="5" step="1"
+		/>
+			
+		<field name="rules" type="rules" label="JFIELD_RULES_LABEL"
+			translate_label="false" class="inputbox" filter="rules"
+			component="com_collector" section="template" validate="rules"
+		/>
+
+	</fieldset>
+	
+	<fields name="attribs" />
+</form>

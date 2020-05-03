@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -72,11 +72,26 @@ class CollectorControllerItems extends JControllerAdmin
 		$app = JFactory::getApplication();
 		
 		// Get some variables from the request
-		$collection = $app->input->getVar( 'collection' );
-		$array = $app->input->getVar('cid', 0, '', 'array');
+		$collection = $app->input->get( 'collection' );
+		$array = $app->input->get('cid', 0, '', 'array');
 		$item = (int)$array[0];
 		
 		$this->setRedirect( 'index.php?option='.$this->option.'&view=itemversions&collection='.$collection.'&item='.$item );
+	}
+	
+	/**
+	 * Method to display item history
+	 *
+	 * @access	public
+	 */
+	function import()
+	{
+		$app = JFactory::getApplication();
+		
+		// Get some variables from the request
+		$collection = $app->input->get( 'collection' );
+		
+		$this->setRedirect( 'index.php?option='.$this->option.'&view=import&collection='.$collection );
 	}
 	
 	/**
@@ -111,7 +126,7 @@ class CollectorControllerItems extends JControllerAdmin
 
 		$app = JFactory::getApplication();
 		$ids = $app->input->post->get('cid', array(), 'array');
-		$collection = $app->input->getVar( 'collection' );
+		$collection = $app->input->get( 'collection' );
 
 		$model = $this->getModel();
 		$return = $model->rebuild($ids);
@@ -145,7 +160,7 @@ class CollectorControllerItems extends JControllerAdmin
 		$app = JFactory::getApplication();
 		
 		// Get some variables from the request
-		$collection = $app->input->getVar( 'collection' );
+		$collection = $app->input->get( 'collection' );
 		
 		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection );
 	}
@@ -162,7 +177,7 @@ class CollectorControllerItems extends JControllerAdmin
 		$app = JFactory::getApplication();
 		
 		// Get some variables from the request
-		$collection = $app->input->getVar( 'collection' );
+		$collection = $app->input->get( 'collection' );
 		
 		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection );
 	}
@@ -178,8 +193,8 @@ class CollectorControllerItems extends JControllerAdmin
         JSession::checkToken() or jexit(JText::_('JINVALID_TOKEN'));
  
         // Get the input
-        $pks		= $app->input->getVar('cid',    null,    'post',    'array');
-        $order		= $app->input->getVar('order',    null,    'post',    'array');
+        $pks		= $app->input->get('cid',    null,    'post',    'array');
+        $order		= $app->input->get('order',    null,    'post',    'array');
 		$collection = $app->input->getCmd( 'collection' );
  
         // Sanitize the input
@@ -218,7 +233,7 @@ class CollectorControllerItems extends JControllerAdmin
         JSession::checkToken() or jexit(JText::_('JINVALID_TOKEN'));
  
         // Initialise variables.
-        $ids    	= $app->input->getVar('cid', null, 'post', 'array');
+        $ids    	= $app->input->get('cid', null, 'post', 'array');
         $inc    	= ($this->getTask() == 'orderup') ? -1 : +1;
 		$collection = $app->input->getCmd( 'collection' );
  

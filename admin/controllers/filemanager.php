@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -16,6 +16,11 @@ defined('_JEXEC') or die( 'Restricted access' );
 
 jimport('joomla.filesystem.file');
 jimport('joomla.filesystem.folder');
+
+$lang = JFactory::getLanguage();
+$extension = 'com_media';
+$base_dir = JPATH_SITE;
+$lang->load($extension, $base_dir);
 
 /**
  * Filemanager Controller
@@ -57,7 +62,7 @@ class CollectorControllerFilemanager extends JControllerAdmin
 			if (!$user->authorise('core.create', 'com_collector.files'))
 			{
 				// User is not authorised to create
-				JError::raiseWarning(403, JText::_('JLIB_APPLICATION_ERROR_CREATE_NOT_PERMITTED'));
+				JFactory::getApplication()->enqueueMessage(JText::_('JLIB_APPLICATION_ERROR_CREATE_NOT_PERMITTED'),'warning');
 
 				return false;
 			}
@@ -87,7 +92,7 @@ class CollectorControllerFilemanager extends JControllerAdmin
 				if (in_array(false, $result, true))
 				{
 					// There are some errors in the plugins
-					JError::raiseWarning(100, JText::plural('COM_COLLECTOR_ERROR_BEFORE_SAVE', count($errors = $object_file->getErrors()), implode('<br />', $errors)));
+					JFactory::getApplication()->enqueueMessage(JText::plural('COM_COLLECTOR_ERROR_BEFORE_SAVE', count($errors = $object_file->getErrors()), implode('<br />', $errors)),'warning');
 
 					return false;
 				}
@@ -108,7 +113,7 @@ class CollectorControllerFilemanager extends JControllerAdmin
 		else
 		{
 			// File name is of zero length (null).
-			JError::raiseWarning(100, JText::_('COM_COLLECTOR_ERROR_UNABLE_TO_CREATE_FOLDER_WARNDIRNAME'));
+			JFactory::getApplication()->enqueueMessage(JText::_('COM_COLLECTOR_ERROR_UNABLE_TO_CREATE_FOLDER_WARNDIRNAME'),'warning');
 
 			return false;
 		}
@@ -203,75 +208,162 @@ class CollectorControllerFilemanager extends JControllerAdmin
 	 */
 	function upload()
 	{
-		$app = JFactory::getApplication();
+		// Check for request forgeries
+		$this->checkToken('request');
 
-		$view = $app->input->getCmd( 'view' );
-		$files		= $this->input->files->get('Filedata', '', 'array');
-		$file 		= $app->input->getVar( 'fileupload', '', 'files', 'array' );
-		$folder		= $app->input->getVar( 'folder', '', '', 'path' );
-		$tmpl		= $app->input->getVar( 'tmpl', '', '', 'cmd');
-		$format		= $app->input->getVar( 'format', 'html', '', 'cmd');
-		$err		= null;
-		$return		= 'index.php?option=com_collector&view='.$view.'&folder='.str_replace('/','\\',$folder).( $tmpl != '' ? '&tmpl='.$tmpl : '' );
-		
-		// Set FTP credentials, if given
-		jimport('joomla.client.helper');
-		JClientHelper::setCredentialsFromRequest('ftp');
+		$params = JComponentHelper::getParams('com_media');
 
-		// Make the filename safe
-		jimport('joomla.filesystem.file');
-		$file['name']	= JFile::makeSafe($file['name']);
+		// Get some data from the request
+		$files		  = $this->input->files->get('Filedata', array(), 'array');
+		$this->folder = $this->input->get('folder', '', 'path');
+		$return		  = 'index.php?option=com_collector&view=filemanager&folder='.str_replace('/','\\',$this->folder);
 
-		if (isset($file['name'])) {
-			$filepath = JPath::clean(JPATH_ROOT.'/'.$folder.'/'.strtolower($file['name']));
+		// Instantiate the media helper
+		$mediaHelper = new JHelperMedia;
 
-			if (JFile::exists($filepath)) {
-				if ($format == 'json') {
-					jimport('joomla.error.log');
-					$log = &JLog::getInstance('upload.error.php');
-					$log->addEntry(array('comment' => 'File already exists: '.$filepath));
-					header('HTTP/1.0 409 Conflict');
-					jexit('Error. File already exists');
-				} else {
-					JError::raiseNotice(100, JText::_('COM_COLLECTOR_ERROR_FILE_ALREADY_EXISTS'));
-					// REDIRECT
-					$app->redirect($return);
-					return;
-				}
+		// First check against unfiltered input.
+		if (!$this->input->files->get('Filedata', null, 'RAW'))
+		{
+			// Total length of post back data in bytes.
+			$contentLength = $this->input->server->get('CONTENT_LENGTH', 0, 'INT');
+
+			// Maximum allowed size of post back data in MB.
+			$postMaxSize = $mediaHelper->toBytes(ini_get('post_max_size'));
+
+			// Maximum allowed size of script execution in MB.
+			$memoryLimit = $mediaHelper->toBytes(ini_get('memory_limit'));
+
+			// Check for the total size of post back data.
+			if (($postMaxSize > 0 && $contentLength > $postMaxSize)
+				|| ($memoryLimit != -1 && $contentLength > $memoryLimit))
+			{
+				// Files are too large.
+				JFactory::getApplication()->enqueueMessage(JText::_('COM_MEDIA_ERROR_WARNUPLOADTOOLARGE'),'warning');
+
+				$this->setRedirect( $return );
 			}
 
-			if (!JFile::upload($file['tmp_name'], $filepath)) {
-				if ($format == 'json') {
-					jimport('joomla.error.log');
-					$log = &JLog::getInstance('upload.error.php');
-					$log->addEntry(array('comment' => 'Cannot upload: '.$filepath));
-					header('HTTP/1.0 400 Bad Request');
-					jexit('Error. Unable to upload file');
-				} else {
-					JError::raiseWarning(100, JText::_('COM_COLLECTOR_ERROR_UNABLE_TO_UPLOAD_FILE'));
-					// REDIRECT
-					$app->redirect($return);
-					return;
-				}
-			} else {
-				if ($format == 'json') {
-					jimport('joomla.error.log');
-					$log = &JLog::getInstance();
-					$log->addEntry(array('comment' => $folder));
-					jexit('Upload complete');
-				} else {
-					if ( $tmpl == '' )
-					{
-						$app->enqueueMessage(JText::_('COM_COLLECTOR_UPLOAD_COMPLETE'));
-					}
-					// REDIRECT
-					$app->redirect($return);
-					return;
-				}
-			}
-		} else {
-			$app->redirect('index.php', 'Invalid Request', 'error');
+			// No files were provided.
+			$this->setMessage(JText::_('COM_MEDIA_ERROR_UPLOAD_INPUT'), 'warning');
+
+			$this->setRedirect( $return );
 		}
+
+		if (!$files)
+		{
+			// Files were provided but are unsafe to upload.
+			$this->setMessage(JText::_('COM_MEDIA_ERROR_WARNFILENOTSAFE'), 'error');
+
+			$this->setRedirect( $return );
+		}
+
+		// Authorize the user
+		if (!JFactory::getUser()->authorise('core.create', 'com_collector'))
+		{
+			// User is not authorised
+			JFactory::getApplication()->enqueueMessage(JText::_('JLIB_APPLICATION_ERROR_CREATE_NOT_PERMITTED'),'warning');
+
+			$this->setRedirect( $return );
+		}
+
+		$uploadMaxSize = $params->get('upload_maxsize', 0) * 1024 * 1024;
+		$uploadMaxFileSize = $mediaHelper->toBytes(ini_get('upload_max_filesize'));
+
+		// Perform basic checks on file info before attempting anything
+		foreach ($files as &$file)
+		{
+			// Make the filename safe
+			$file['name'] = JFile::makeSafe($file['name']);
+
+			// We need a url safe name
+			$fileparts = pathinfo(COM_COLLECTOR_BASE . '/' . $this->folder . '/' . $file['name']);
+
+			if (strpos(realpath($fileparts['dirname']), JPath::clean(realpath(COM_COLLECTOR_BASE))) !== 0)
+			{
+				JFactory::getApplication()->enqueueMessage(JText::_('COM_MEDIA_ERROR_WARNINVALID_FOLDER'),'warning');
+
+				$this->setRedirect( $return );
+			}
+
+			// Transform filename to punycode, check extension and transform it to lowercase
+			$fileparts['filename'] = JStringPunycode::toPunycode($fileparts['filename']);
+			$tempExt = !empty($fileparts['extension']) ? strtolower($fileparts['extension']) : '';
+
+			// Neglect other than non-alphanumeric characters, hyphens & underscores.
+			$safeFileName = preg_replace(array("/[\\s]/", '/[^a-zA-Z0-9_\-]/'), array('_', ''), $fileparts['filename']) . '.' . $tempExt;
+
+			$file['name'] = $safeFileName;
+
+			$file['filepath'] = JPath::clean(implode(DIRECTORY_SEPARATOR, array(COM_COLLECTOR_BASE, $this->folder, $file['name'])));
+
+			if (($file['error'] == 1)
+				|| ($uploadMaxSize > 0 && $file['size'] > $uploadMaxSize)
+				|| ($uploadMaxFileSize > 0 && $file['size'] > $uploadMaxFileSize))
+			{
+				// File size exceed either 'upload_max_filesize' or 'upload_maxsize'.
+				JFactory::getApplication()->enqueueMessage(JText::_('COM_MEDIA_ERROR_WARNFILETOOLARGE'),'warning');
+
+				$this->setRedirect( $return );
+			}
+
+			if (JFile::exists($file['filepath']))
+			{
+				// A file with this name already exists
+				JFactory::getApplication()->enqueueMessage(JText::_('COM_MEDIA_ERROR_FILE_EXISTS'),'warning');
+
+				$this->setRedirect( $return );
+			}
+
+			if (!isset($file['name']))
+			{
+				// No filename (after the name was cleaned by JFile::makeSafe)
+				$this->setRedirect('index.php', JText::_('COM_MEDIA_INVALID_REQUEST'), 'error');
+
+				$this->setRedirect( $return );
+			}
+		}
+
+		// Set FTP credentials, if given
+		JClientHelper::setCredentialsFromRequest('ftp');
+		JPluginHelper::importPlugin('content');
+		$dispatcher = JEventDispatcher::getInstance();
+
+		foreach ($files as &$file)
+		{
+			// The request is valid
+			$err = null;
+
+			if (!$mediaHelper->canUpload($file, 'com_media'))
+			{
+				// The file can't be uploaded
+				$this->setRedirect( $return );
+			}
+
+			// Trigger the onContentBeforeSave event.
+			$object_file = new JObject($file);
+			$result = $dispatcher->trigger('onContentBeforeSave', array('com_media.file', &$object_file, true));
+
+			if (in_array(false, $result, true))
+			{
+				// There are some errors in the plugins
+				JFactory::getApplication()->enqueueMessage(JText::plural('COM_MEDIA_ERROR_BEFORE_SAVE', count($errors = $object_file->getErrors()), implode('<br />', $errors)),'warning');
+
+				$this->setRedirect( $return );
+			}
+
+			if (!JFile::upload($object_file->tmp_name, $object_file->filepath))
+			{
+				// Error in upload
+				JFactory::getApplication()->enqueueMessage(JText::_('COM_MEDIA_ERROR_UNABLE_TO_UPLOAD_FILE'),'warning');
+
+				$this->setRedirect( $return );
+			}
+
+			// Trigger the onContentAfterSave event.
+			$dispatcher->trigger('onContentAfterSave', array('com_media.file', &$object_file, true));
+			$this->setMessage(JText::sprintf('COM_MEDIA_UPLOAD_COMPLETE', substr($object_file->filepath, strlen(COM_COLLECTOR_BASE))));
+		}
+
 		$this->setRedirect( $return );
 	}
 	

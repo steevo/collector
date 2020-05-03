@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -97,7 +97,7 @@ class CollectorModelFilesconfig extends JModelList
 	public function getRow()
 	{
 		$app = JFactory::getApplication();
-		$id = $app->input->getVar( 'id', 'int', 'get', '0');
+		$id = $app->input->get( 'id', 'int', 'get', '0');
 		
 		$row = JTable::getInstance('collector_files_ext','Table');
 		
@@ -127,19 +127,12 @@ class CollectorModelFilesconfig extends JModelList
 		// Load the content if it doesn't already exist
 		$results = $db->loadObjectList();
 		
-		//Check for database error
-		if (!$db->execute())
-		{
-			return JError::raiseWarning( 500, $db->getErrorMsg() );
-		}
-		
 		$select = $init;
 		foreach ( $results as $key => $value )
 		{
 			$value->text=JText::_('COM_COLLECTOR_'.$value->text);
 			$select[$key+1]=$value;
 		}
-		
 		return $select;
 	}
 	
@@ -152,14 +145,14 @@ class CollectorModelFilesconfig extends JModelList
 	function remove()
 	{
 		$app = JFactory::getApplication();
-		$id = $app->input->getVar( 'id', 'int', 'get', '0');
+		$id = $app->input->get( 'id', 'int', 'get', '0');
 		$row = $this->getTable('collector_files_ext');
 		
 		$row->load($id);
 		
 		if (!($row->delete($id)))
 		{
-			JError::raiseError( 500, $row->getError() );
+			JFactory::getApplication()->enqueueMessage($row->getError(),'error');
 			return false;
 		}
 		
@@ -176,23 +169,22 @@ class CollectorModelFilesconfig extends JModelList
 	{
 		$app = JFactory::getApplication();
 		$row = $this->getTable('collector_files_ext');
-		
-		if (!$row->bind($app->input->get('post'))) {
-			//JError::raiseError( 500, $db->stderr() );
+		echo '<pre>';
+		print_r($row);
+		if (!$row->bind($app->input->post)) {
 			return false;
 		}
-		
+		print_r($row);
+		die();
 		// make sure the collector record is valid
 		if ( !$row->check() )
 		{
-			//JError::raiseError( 500, $row->getError() );
 			return false;
 		}
 		
 		// store the record in the database
 		if ( !$row->store() )
 		{
-			//JError::raiseError( 500, $row->getError() );
 			return false;
 		}
 		
@@ -210,7 +202,7 @@ class CollectorModelFilesconfig extends JModelList
 	{
 		$app = JFactory::getApplication();
 		// on initialise les variables
-		$id = $app->input->getVar( 'id', 'int', 'get', '0');
+		$id = $app->input->get( 'id', 'int', 'get', '0');
 		$row = $this->getTable('collector_files_ext');
 		
 		$row->load($id);
@@ -219,14 +211,14 @@ class CollectorModelFilesconfig extends JModelList
 		// on s'assure que l'objet est valide
 		if (!$row->check())
 		{
-			JError::raiseError( 500, $row->getError() );
+			JFactory::getApplication()->enqueueMessage($row->getError(),'error');
 			return false;
 		}
 		
 		// on enregistre le tout
 		if (!$row->store())
 		{
-			JError::raiseError( 500, $row->getError() );
+			JFactory::getApplication()->enqueueMessage($row->getError(),'error');
 			return false;
 		}
 		

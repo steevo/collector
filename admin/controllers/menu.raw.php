@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -29,8 +29,8 @@ class CollectorControllerMenu extends JControllerLegacy
 	{
 		$app = JFactory::getApplication();
 		$db = JFactory::getDBO(); 
-		$collection = $app->input->getVar( 'collection', '', '', 'int');
-		$menuId = $app->input->getVar( 'itemId', '', '', 'int');
+		$collection = $app->input->get( 'collection', '', '', 'int');
+		$menuId = $app->input->get( 'itemId', '', '', 'int');
 		$menuParams = new JRegistry;
 		
 		if ( $menuId != 0 )
@@ -101,8 +101,8 @@ class CollectorControllerMenu extends JControllerLegacy
 	{
 		$app = JFactory::getApplication();
 		$db = JFactory::getDBO(); 
-		$collection = $app->input->getVar( 'collection', '', '', 'int');
-		$menuId = $app->input->getVar( 'itemId', '', '', 'int');
+		$collection = $app->input->get( 'collection', '', '', 'int');
+		$menuId = $app->input->get( 'itemId', '', '', 'int');
 		$menuParams = new JRegistry;
 		$code = array();
 		
@@ -174,8 +174,8 @@ class CollectorControllerMenu extends JControllerLegacy
 	{
 		$app = JFactory::getApplication();
 		$db = JFactory::getDBO(); 
-		$collection = $app->input->getVar( 'collection', '', '', 'int');
-		$menuId = $app->input->getVar( 'itemId', '', '', 'int');
+		$collection = $app->input->get( 'collection', '', '', 'int');
+		$menuId = $app->input->get( 'itemId', '', '', 'int');
 		$menuParams = new JRegistry;
 		
 		if ( $menuId != 0 )
@@ -240,6 +240,69 @@ class CollectorControllerMenu extends JControllerLegacy
 	}
 	
 	/**
+	 * Method to load filter fields in menu edition
+	 */
+	function loadUserlists()
+	{
+		$app = JFactory::getApplication();
+		$db = JFactory::getDBO(); 
+		$collection = $app->input->get( 'collection', '', '', 'int');
+		$menuId = $app->input->get( 'itemId', '', '', 'int');
+		$menuParams = new JRegistry;
+		$default = 0;
+		
+		if ( $menuId != 0 )
+		{
+			$query = 'SELECT params';
+			$query .= ' FROM `#__menu`';
+			$query .= ' WHERE id = \''.$menuId.'\'';
+			
+			$db->setQuery( $query );
+			
+			$params = $db->loadResult();
+			$menuParams->loadString($params);
+			if ( $menuParams != null )
+			{
+				$default = $menuParams->get('userslist');
+			}
+		}
+		
+		if ( $collection == 0 )
+		{
+			$code = JText::_('COM_COLLECTOR_SELECT_COLLECTION');
+		}
+		else
+		{
+			$query = 'SELECT ul.id AS value, ul.name AS text';
+			$query .= ' FROM `#__collector_userslists` AS ul';
+			$query .= ' WHERE collection = \''.$collection.'\'';
+			
+			$db->setQuery( $query );
+			
+			$userlists = $db->loadObjectList();
+			
+			if ($userlists == null)
+			{
+				$code = JText::_('COM_COLLECTOR_NO_USERLIST_AVAILABLE');
+			}
+			else
+			{
+				$init[0] = array('value' => '', 'text' => ' - ' . JText::_('COM_COLLECTOR_SELECT_A_USERLIST').' - ');
+				$select = $init;
+				foreach ( $userlists as $key => $value )
+				{
+					$select[$key+1]=$value;
+				}
+				
+				$code = JHTML::_('select.genericlist', $select, 'jform[request][userslist]', ' class=”inputbox” size="1" ', 'value', 'text', $default, 'jform_request_userslist');
+			}
+		}
+		
+		echo $code;
+		return;
+	}
+	
+	/**
 	 * Method to load items list in menu edition
 	 */
 	function listItems()
@@ -247,7 +310,7 @@ class CollectorControllerMenu extends JControllerLegacy
 		$app = JFactory::getApplication();
 		$db = JFactory::getDBO(); 
 		// recuperation du titre personnalise pour la collection
-		$collection = $app->input->getVar( 'collection', '', '', 'int');
+		$collection = $app->input->get( 'collection', '', '', 'int');
 		$custom = array();
 		$fieldCustom = array();
 		$items = array();
@@ -258,7 +321,7 @@ class CollectorControllerMenu extends JControllerLegacy
 		}
 		else
 		{
-			$menuId = $app->input->getVar( 'itemId', '', '', 'int');
+			$menuId = $app->input->get( 'itemId', '', '', 'int');
 			$menuparams = null;
 			$default = 0;
 

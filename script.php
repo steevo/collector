@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -26,7 +26,7 @@ class com_collectorInstallerScript
 	 *
 	 * @return void
 	 */
-	function install($parent) 
+	public function install($parent) 
 	{
 		$user	= JFactory::getUser();
 		$params   = JComponentHelper::getParams('com_languages');
@@ -111,7 +111,7 @@ class com_collectorInstallerScript
 		$msg[] = '<table width="100%" style="border:0px; margin-bottom:10px;">';
 		$msg[] = '<tr>';
 		$msg[] = '<td align="center" colspan="2">';
-		$msg[] = '<img src="' . $imagepath . '" border="0" alt="Collector" /><br />Version 0.6.3';
+		$msg[] = '<img src="' . $imagepath . '" border="0" alt="Collector" /><br />Version 0.7.0';
 		$msg[] = '</td>';
 		$msg[] = '</tr>';
 		$msg[] = '<tr>';
@@ -130,7 +130,7 @@ class com_collectorInstallerScript
 	 *
 	 * @return void
 	 */
-	function update($parent) 
+	public function update($parent) 
 	{
 		// $parent is the class calling this method
 
@@ -217,7 +217,7 @@ class com_collectorInstallerScript
 	 *
 	 * @return void
 	 */
-	function uninstall($parent) 
+	public function uninstall($parent) 
 	{
 		// $parent is the class calling this method
 		
@@ -237,7 +237,7 @@ class com_collectorInstallerScript
 		}
 
 		/* delete comments */
-		$jcomments = JPATH_SITE . DS .'components' . DS . 'com_jcomments' . DS . 'jcomments.php';
+		$jcomments = JPATH_SITE . DIRECTORY_SEPARATOR .'components' . DIRECTORY_SEPARATOR . 'com_jcomments' . DIRECTORY_SEPARATOR . 'jcomments.php';
 		if (file_exists($jcomments)) {
 			$query = "DELETE FROM #__jcomments "
 				. " WHERE object_group = " . $db->Quote('com_collector');

@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -98,6 +98,9 @@ class CollectorField
 	 */
 	public static function getInstance( $collection, $field, $item = 0 )
 	{
+		// Get a handle to the Joomla! application object
+		$application = JFactory::getApplication();
+		
 		if (!is_object ($field))
 		{
 			$fieldType = JTable::getInstance('Collector_fields_type','Table');
@@ -121,12 +124,12 @@ class CollectorField
 
 				if (!class_exists( $fieldClass ))
 				{
-					return JError::raiseError( 404, 'Field class ' . $fieldClass . ' not found in file.' );
+					return $application->enqueueMessage( 'Field class ' . $fieldClass . ' not found in file.', 'error' );
 				}
 			}
 			else
 			{
-				return JError::raiseError( 404, 'Field type ' . $fieldType->type . ' not supported. File '.$path.' not found.' );
+				return $application->enqueueMessage( 'Field type ' . $fieldType->type . ' not supported. File '.$path.' not found.', 'error' );
 			}
 		}
 
@@ -193,7 +196,7 @@ class CollectorField
 	 */
 	function resetSearchArea($params)
 	{
-		return 'form.filterfield_'.$this->_field->tablecolumn.'.value = \'\';';
+		return "jQuery( '#filterfield_".$this->_field->tablecolumn."' ).val( '' );";
 	}
 	
 	/**
@@ -425,6 +428,19 @@ class CollectorField
 		return $value;
 	}
 	
+	
+	/**
+	 * Method to display value in fulltitle
+	 *
+	 * Can be overloaded/supplemented by the child class
+	 *
+	 * @param	string		$value	Field value
+	 */
+	function getImportedValue($value)
+	{
+		return $value;
+	}
+	
 	/**
 	 * Method to rebuild fulltitle
 	 *
@@ -452,7 +468,7 @@ class CollectorField
 		$xml = '<field
 				name="filterfield_' .$this->_field->tablecolumn. '"
 				type="radio"
-				class="inputbox"
+				class="btn-group btn-group-yesno"
 				default="1"
 				label="'.$this->_field->field.'"
 				description="'.$this->_field->description.'">

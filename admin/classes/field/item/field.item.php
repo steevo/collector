@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -133,7 +133,7 @@ class CollectorField_Item extends CollectorField
 	function displayFilter($params,$value,$menu=false)
 	{
 		// Initiliase variables.
-		$app	= JFactory::getApplication();
+		$application	= JFactory::getApplication();
 		$html = array();
 		$attr = '';
 		
@@ -168,7 +168,7 @@ class CollectorField_Item extends CollectorField
 		}
 		catch (RuntimeException $e)
 		{
-			JError::raiseWarning(500, $e->getMessage());
+			$application->enqueueMessage($e->getMessage(),'warning');
 		}
 		
 		// Filter unselected items
@@ -199,7 +199,7 @@ class CollectorField_Item extends CollectorField
 			}
 			catch (RuntimeException $e)
 			{
-				JError::raiseWarning(500, $e->getMessage());
+				$application->enqueueMessage($e->getMessage(),'warning');
 			}
 			
 			$tempDelete = array();
@@ -338,6 +338,9 @@ class JFormFieldCollectorItem extends JFormFieldList
 	
 	protected function getOptions()
 	{
+		// Get a handle to the Joomla! application object
+		$application = JFactory::getApplication();
+		
 		// Get item title
 		$collection = $this->element['collection'];
 		
@@ -424,7 +427,7 @@ class JFormFieldCollectorItem extends JFormFieldList
 		//Check for database error
 		if (!$db->execute())
 		{
-			return JError::raiseWarning( 500, $db->getErrorMsg() );
+			return $application->enqueueMessage($db->getErrorMsg(),'warning' );
 		}
 		
 		array_unshift($results,array('value' => 0, 'text' => ''));

@@ -5,7 +5,7 @@
  * @version 	$Id: collectorgrid.php 146 2014-03-17 23:42:40Z steevo $
  * @author 		Philippe Ousset steevo@steevo.fr
  * * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.

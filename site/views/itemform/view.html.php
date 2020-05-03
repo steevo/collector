@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -63,8 +63,8 @@ class CollectorViewItemform extends JViewLegacy
 
 		if (($this->collection->id == 0))
 		{
-			$id = $app->input->getVar( 'id', '', 'default', 'int' );
-			return JError::raiseError( 404, JText::sprintf( 'COM_COLLECTOR_COLLECTION_NOT_FOUND', $id ) );
+			$id = $app->input->get( 'id', '', 'default', 'int' );
+			return JFactory::getApplication()->enqueueMessage(JText::sprintf( 'COM_COLLECTOR_COLLECTION_NOT_FOUND', $id ),'error');
 		}
 
 		if (empty($this->item->id))
@@ -78,19 +78,22 @@ class CollectorViewItemform extends JViewLegacy
 		
 		if ($authorised !== true)
 		{
-			JError::raiseError(403, JText::_('JERROR_ALERTNOAUTHOR'));
+			JFactory::getApplication()->enqueueMessage(JText::_('JERROR_ALERTNOAUTHOR'),'error');
 			return false;
 		}
 		
 		// Check for errors.
 		if (count($errors = $this->get('Errors')))
 		{
-			JError::raiseWarning(500, implode("\n", $errors));
+			JFactory::getApplication()->enqueueMessage(implode("\n", $errors),'warning');
 			return false;
 		}
 		
 		// Compute the collection slug.
 		$this->collection->slug = $this->collection->alias ? ($this->collection->id . ':' . $this->collection->alias) : $this->collection->id;
+		
+		//Escape strings for HTML output
+		$this->pageclass_sfx = htmlspecialchars($this->params->get('pageclass_sfx'));
 		
 		$this->_prepareDocument();
 		

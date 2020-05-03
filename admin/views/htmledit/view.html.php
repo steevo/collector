@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -30,10 +30,10 @@ class CollectorsViewHtmledit extends JViewLegacy
 	{
 		$app = JFactory::getApplication();
 		
-		$cid = $app->input->getVar( 'cid', array(0), '', 'array' );
+		$cid = $app->input->get( 'cid', array(0), '', 'array' );
 			
 		JArrayHelper::toInteger($cid, array(0));
-		$id = $app->input->getVar('id', $cid[0], '', 'int' );
+		$id = $app->input->get('id', $cid[0], '', 'int' );
 		
 		// Create and load the content table row
 		JTable::addIncludePath(JPATH_ADMINISTRATOR.'/components/com_collector/tables');

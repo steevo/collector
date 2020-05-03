@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -338,7 +338,7 @@ class CollectorModelFilemanager extends JModelList
 	function remove()
 	{
 		$app = JFactory::getApplication();
-		$cid = $app->input->getVar( 'cid', array(0), '', 'array');
+		$cid = $app->input->get( 'cid', array(0), '', 'array');
 		$deleted = array( "files" => 0 , "folders" => 0 );
 		
 		foreach ($cid as $id)
@@ -411,8 +411,8 @@ class CollectorModelFilemanager extends JModelList
 	function rename()
 	{
 		$app = JFactory::getApplication();
-		$renameElement = $app->input->getVar('renameElement', '', '', 'text');
-		$rename = $app->input->getVar('rename', '', '', 'text');
+		$renameElement = $app->input->get('renameElement', '', '', 'text');
+		$rename = $app->input->get('rename', '', '', 'text');
 		
 		$path = JPath::clean(COM_COLLECTOR_BASE.'/'.$this->_folder.'/');
 		$path_relative = $this->_folder.'/';
@@ -442,7 +442,7 @@ class CollectorModelFilemanager extends JModelList
 	function copy()
 	{
 		$app = JFactory::getApplication();
-		$elements = $app->input->getVar('cid', 0, '', 'array');
+		$elements = $app->input->get('cid', 0, '', 'array');
 		
 		$path = JPath::clean(COM_COLLECTOR_BASE.'/');
 		$path2copy = JPath::clean(COM_COLLECTOR_BASE.'/'.$this->_folder.'/');
@@ -476,7 +476,7 @@ class CollectorModelFilemanager extends JModelList
 	function move()
 	{
 		$app = JFactory::getApplication();
-		$elements = $app->input->getVar('cid', 0, '', 'array');
+		$elements = $app->input->get('cid', 0, '', 'array');
 		
 		$path = JPath::clean(COM_COLLECTOR_BASE.'/');
 		$path2copy = JPath::clean(COM_COLLECTOR_BASE.'/'.$this->_folder.'/');

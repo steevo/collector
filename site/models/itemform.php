@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -82,7 +82,7 @@ class CollectorModelItemform extends JModelAdmin
 	public function getCollection()
 	{
 		$user		= JFactory::getUser();
-		
+
 		if ( empty($this->_collection) )
 		{
 			$collection = $this->getState('collection.id');
@@ -608,7 +608,7 @@ class CollectorModelItemform extends JModelAdmin
 				$this->setError($table->getError());
 				return false;
 			}
-	
+
 			// Trigger the onContentBeforeSave event.
 			$result = $dispatcher->trigger($this->event_before_save, array($this->option.'.'.$this->name, &$table, $isNew));
 			if (in_array(false, $result, true)) {
@@ -812,10 +812,10 @@ class CollectorModelItemform extends JModelAdmin
 			$link_base = 'index.php';
 			$link_back = $link_base;
 
-			$option = $app->input->getVar('option', 0, 'get');
-			$collection = $app->input->getVar('collection', 0, 'get');
-			$item = $app->input->getVar('id', 0, 'get');
-			$Itemid = $app->input->getVar('Itemid', 0, 'get');
+			$option = $app->input->get('option', 0, 'get');
+			$collection = $app->input->get('collection', 0, 'get');
+			$item = $app->input->get('id', 0, 'get');
+			$Itemid = $app->input->get('Itemid', 0, 'get');
 
 			$link_base .= '?option='.$option.'&view=item&collection='.$collection.'&Itemid='.$Itemid;
 			$link_back .= '?option='.$option.'&view=collection&id='.$collection.'&limitstart='.$this->_limitstart.'&Itemid='.$Itemid;

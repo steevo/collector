@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -194,8 +194,16 @@ $sortFields = $this->getSortFields();
 			</table>
 		<?php endif; ?>
 		<?php echo $this->pagination->getListFooter(); ?>
-		<?php //Load the batch processing form. ?>
-		<?php echo $this->loadTemplate('batch'); ?>
+		<?php // load the modal for displaying the batch options
+            echo JHtml::_(
+            'bootstrap.renderModal',
+            'collapseModal',
+            array(
+                'title' => JText::_('COM_COLLECTOR_BATCH_OPTIONS'),
+                'footer' => $this->loadTemplate('batch_footer')
+            ),
+            $this->loadTemplate('batch_body')
+        ); ?>
 		
 		<input type="hidden" name="task" value="" />
 		<input type="hidden" name="boxchecked" value="0" />

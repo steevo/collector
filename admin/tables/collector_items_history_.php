@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -23,7 +23,7 @@ class TableCollector_items_history_ extends JTable
 	/**
 	 * @param database A database connector object
 	 */
-	function TableCollector_items_history_( &$db , $collection )
+	function __construct( &$db , $collection )
 	{
 		$this->tableExist($collection);
 		parent::__construct( '#__collector_items_history_'.$collection , 'id', $db );
@@ -89,7 +89,7 @@ class TableCollector_items_history_ extends JTable
 		
 		$this->_db->setQuery($query);
 		
-		$rows = $this->_db->loadResultArray();
+		$rows = $this->_db->loadColumn();
 		
 		for ($i=0, $n=count($rows);$i<$n;$i++)
 		{

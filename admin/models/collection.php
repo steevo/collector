@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -172,21 +172,21 @@ class CollectorModelCollection extends JModelAdmin
 		
 		if ($table->load($item)) {
 			if ($table->home == 1) {
-				JError::raiseNotice(403, JText::_('COM_COLLECTOR_ERROR_ALREADY_HOME'));
+				JFactory::getApplication()->enqueueMessage(JText::_('COM_COLLECTOR_ERROR_ALREADY_HOME'),'notice');
 			}
 			else {
 				$table->home = 1;
 				if (!$this->canSave($table)) {
 					// Prune items that you can't change.
-					JError::raiseWarning(403, JText::_('JLIB_APPLICATION_ERROR_SAVE_NOT_PERMITTED'));
+					JFactory::getApplication()->enqueueMessage(JText::_('JLIB_APPLICATION_ERROR_SAVE_NOT_PERMITTED'),'warning');
 				}
 				else if (!$table->check()) {
 					// Prune the items that failed pre-save checks.
-					JError::raiseWarning(403, $table->getError());
+					JFactory::getApplication()->enqueueMessage($table->getError(),'warning');
 				}
 				else if (!$table->store()) {
 					// Prune the items that could not be stored.
-					JError::raiseWarning(403, $table->getError());
+					JFactory::getApplication()->enqueueMessage($table->getError(),'warning');
 				}
 				// Clear home field for all other items
 				$query = 'UPDATE #__collector' .
@@ -194,7 +194,7 @@ class CollectorModelCollection extends JModelAdmin
 						' WHERE id<>'.$table->id;
 				$db->setQuery( $query );
 				if ( !$db->execute() ) {
-					JError::raiseWarning(403, $table->getError());
+					JFactory::getApplication()->enqueueMessage($table->getError(),'warning');
 				}
 			}
 		}

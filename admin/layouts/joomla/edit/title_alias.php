@@ -1,10 +1,14 @@
 <?php
 /**
- * @package     Joomla.CMS
- * @subpackage  Layout
+ * Joomla! 3.0 component Collector
  *
- * @copyright   Copyright (C) 2005 - 2013 Philippe Ousset. All rights reserved.
+ * @package 	Collector
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
+ *
+ * Collector is a Multi Purpose Listing Tool.
+ * Originaly developped to list Collections
+ * it can be used for several purpose.
  */
 
 defined('JPATH_BASE') or die;

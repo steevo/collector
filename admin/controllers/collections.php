@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -44,10 +44,10 @@ class CollectorControllerCollections extends JControllerAdmin
 		JSession::checkToken() or die(JText::_('JINVALID_TOKEN'));
 
 		// Get items to publish from the request.
-		$cid	= $app->input->getVar('cid', array(), '', 'array');
+		$cid	= $app->input->get('cid', array(), '', 'array');
 		
 		if (empty($cid)) {
-			JError::raiseWarning(500, JText::_('COM_COLLECTOR_NO_ITEMS_SELECTED'));
+			JFactory::getApplication()->enqueueMessage(JText::_('COM_COLLECTOR_NO_ITEMS_SELECTED'),'warning');
 		} else {
 			// Get the model.
 			$model = $this->getModel();
@@ -57,7 +57,7 @@ class CollectorControllerCollections extends JControllerAdmin
 
 			// Publish the items.
 			if (!$model->setHome($id)) {
-				JError::raiseWarning(500, $model->getError());
+				JFactory::getApplication()->enqueueMessage($model->getError(),'warning');
 			} else {
 				$this->setMessage(JText::_('COM_COLLECTOR_DEFAULT_COLLECTION_SET'));
 			}

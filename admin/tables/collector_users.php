@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -50,7 +50,7 @@ class TableCollector_users extends JTable
 	/**
 	 * @param database A database connector object
 	 */
-	function TableCollector_templates( &$db )
+	function __construct( &$db )
 	{
 		$db = JFactory::getDBO();
 		parent::__construct( '#__collector_users', 'id', $db );

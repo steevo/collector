@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -124,7 +124,7 @@ class CollectorControllerUserslists extends JControllerAdmin
 	{
 		parent::publish();
 		
-		$collection = JFactory::getApplication()->input->getVar( 'collection' );
+		$collection = JFactory::getApplication()->input->get( 'collection' );
 		
 		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection );
 	}
@@ -138,7 +138,7 @@ class CollectorControllerUserslists extends JControllerAdmin
 	{
 		parent::unpublish();
 		
-		$collection = JFactory::getApplication()->input->getVar( 'collection' );
+		$collection = JFactory::getApplication()->input->get( 'collection' );
 		
 		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection );
 	}
@@ -152,7 +152,7 @@ class CollectorControllerUserslists extends JControllerAdmin
 	{
 		parent::trash();
 		
-		$collection = JFactory::getApplication()->input->getVar( 'collection' );
+		$collection = JFactory::getApplication()->input->get( 'collection' );
 		
 		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection );
 	}
@@ -168,7 +168,7 @@ class CollectorControllerUserslists extends JControllerAdmin
         JSession::checkToken() or jexit(JText::_('JINVALID_TOKEN'));
  
         $ids = JFactory::getApplication()->input->post->get('cid', array(), 'array');
-		$collection = JFactory::getApplication()->input->getVar( 'collection' );
+		$collection = JFactory::getApplication()->input->get( 'collection' );
  
         $model = $this->getModel();
         $return = $model->checkin($ids);

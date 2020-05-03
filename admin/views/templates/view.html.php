@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -21,6 +21,10 @@ defined('_JEXEC') or die( 'Restricted access' );
  */
 class CollectorViewTemplates extends JViewLegacy
 {
+	protected $items;
+	protected $pagination;
+	protected $state;
+
 	/**
 	 * Display the view
 	 *
@@ -28,23 +32,42 @@ class CollectorViewTemplates extends JViewLegacy
 	 */
 	public function display($tpl = null)
 	{
-		// What Access Permissions does this user have? What can (s)he do?
-		$this->canDo	= CollectorHelper::getActions();
+		$collection 		= $this->get('Collection');
 		
-		CollectorHelper::addSubmenu('templates');
+		if ( $collection != false )
+		{
+			$this->items         = $this->get('Items');
+			$this->pagination    = $this->get('Pagination');
+			$this->state         = $this->get('State');
+			$this->filterForm    = $this->get('FilterForm');
+			$this->activeFilters = $this->get('ActiveFilters');
+			
+			// What Access Permissions does this user have? What can (s)he do?
+			$this->canDo	= CollectorHelper::getActions($this->state->get('collection_id'));
+			
+			CollectorHelper::addSubmenu('templates');
+			
+			// Check for errors.
+			if (count($errors = $this->get('Errors'))) {
+				JFactory::getApplication()->enqueueMessage(implode('<br />', $errors),'error');
+				return false;
+			}
+			
+			// We don't need toolbar in the modal window.
+			if ($this->getLayout() !== 'modal') {
+				$this->addToolbar();
+				$this->sidebar = JHtmlSidebar::render();
+			}
 		
-		// We don't need toolbar in the modal window.
-		if ($this->getLayout() !== 'modal') {
-			$this->addToolbar();
-			$this->sidebar = JHtmlSidebar::render();
+			parent::display($tpl);
 		}
-		
-		$msg = JText::_( 'COM_COLLECTOR_NOT_AVAILABLE' );
-		$type = 'error';
-		$app = JFactory::getApplication();
-		$app->enqueueMessage($msg,$type);
-		
-		parent::display($tpl);
+		else
+		{
+			$msg = JText::_( 'COM_COLLECTOR_CONF_COL_FIRST' ) . ' <a href="index.php?option=com_collector&view=collections" >' . JText::_( 'COM_COLLECTOR_CONF_COL_MENU' ) . '</a>';
+			$type = 'error';
+			$app = JFactory::getApplication();
+			$app->enqueueMessage($msg,$type);
+		}
 	}
 	
 	/**
@@ -55,30 +78,20 @@ class CollectorViewTemplates extends JViewLegacy
 		$user		= JFactory::getUser();
 		JToolBarHelper::title(JText::_('COM_COLLECTOR_TEMPLATES_MANAGER'), 'thememanager');
 
-		// if ($this->canDo->get('core.create') || (count($user->getAuthorisedCategories('com_collector', 'core.create'))) > 0 ) {
-			// JToolBarHelper::addNew('item.add','JTOOLBAR_NEW');
-		// }
+		if ($this->canDo->get('core.create') || (count($user->getAuthorisedCategories('com_collector', 'core.create'))) > 0 ) {
+			JToolBarHelper::addNew('template.add','JTOOLBAR_NEW');
+		}
 
-		// if (($this->canDo->get('core.edit')) || ($this->canDo->get('core.edit.own'))) {
-			// JToolBarHelper::editList('item.edit','JTOOLBAR_EDIT');
-		// }
+		if (($this->canDo->get('core.edit')) || ($this->canDo->get('core.edit.own'))) {
+			JToolBarHelper::editList('template.edit','JTOOLBAR_EDIT');
+		}
 
-		// JToolBarHelper::custom('items.history', 'preview', 'preview', 'COM_COLLECTOR_HISTORY');
+		if ($this->canDo->get('core.edit.state')) {
+			JToolBarHelper::custom('templates.home', 'featured.png', 'featured_f2.png', 'JDEFAULT', true);
+		}
 
-		// if ($this->canDo->get('core.edit.state')) {
-			// JToolBarHelper::divider();
-			// JToolBarHelper::custom('items.publish', 'publish.png', 'publish_f2.png','JTOOLBAR_PUBLISH', true);
-			// JToolBarHelper::custom('items.unpublish', 'unpublish.png', 'unpublish_f2.png', 'JTOOLBAR_UNPUBLISH', true);
-			// JToolBarHelper::divider();
-			// JToolBarHelper::archiveList('items.archive','JTOOLBAR_ARCHIVE');
-			// JToolBarHelper::custom('items.checkin', 'checkin.png', 'checkin_f2.png', 'JTOOLBAR_CHECKIN', true);
-		// }
-
-		// if ($this->state->get('filter.published') == -2 && $this->canDo->get('core.delete')) {
-			// JToolBarHelper::deleteList('', 'items.delete','JTOOLBAR_EMPTY_TRASH');
-		// }
-		// else if ($this->canDo->get('core.edit.state')) {
-			// JToolBarHelper::trash('items.trash','JTOOLBAR_TRASH');
-		// }
+		if ($this->canDo->get('core.delete')) {
+			JToolBarHelper::deleteList('', 'templates.delete','JTOOLBAR_DELETE');
+		}
 	}
 }

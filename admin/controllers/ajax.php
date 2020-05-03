@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -45,12 +45,12 @@ class CollectorControllerAjax extends JControllerLegacy
 
 				if (!class_exists( $fieldClass ))
 				{
-					return JError::raiseError( 404, 'Field class ' . $fieldClass . ' not found in file.' );
+					return JFactory::getApplication()->enqueueMessage(JText::_('Field class ' . $fieldClass . ' not found in file.'),'error');
 				}
 			}
 			else
 			{
-				return JError::raiseError( 404, 'Field type ' . $fieldType . ' not supported. File '.$path.' not found.' );
+				return JFactory::getApplication()->enqueueMessage(JText::_('Field type ' . $fieldType . ' not supported. File '.$path.' not found.'),'error');
 			}
 		}
 		

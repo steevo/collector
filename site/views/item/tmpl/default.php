@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -19,13 +19,13 @@ JHtml::stylesheet(Juri::base() . 'components/com_collector/assets/css/tabs.css')
 JHtml::_('behavior.modal');
 
 $app = JFactory::getApplication();
-$Itemid = $app->input->getVar('Itemid', 0, 'get');
+$Itemid = $app->input->get('Itemid', 0, 'get');
 
 if ($this->params->get('comments') != 0)
 {
-	if ( ($this->params->get('comments') == 1) && (file_exists(JPATH_SITE.DS.'components'.DS.'com_jcomments'.DS.'jcomments.php')) )
+	if ( ($this->params->get('comments') == 1) && (file_exists(JPATH_SITE.DIRECTORY_SEPARATOR.'components'.DIRECTORY_SEPARATOR.'com_jcomments'.DIRECTORY_SEPARATOR.'jcomments.php')) )
 	{
-		require_once(JPATH_SITE.DS.'components'.DS.'com_jcomments'.DS.'jcomments.php');
+		require_once(JPATH_SITE.DIRECTORY_SEPARATOR.'components'.DIRECTORY_SEPARATOR.'com_jcomments'.DIRECTORY_SEPARATOR.'jcomments.php');
 		$count_comments = JComments::getCommentsCount($this->item->id, 'com_collector');
 	} else {
 		$count_comments = 0;

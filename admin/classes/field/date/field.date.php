@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -56,7 +56,9 @@ class CollectorField_Date extends CollectorField
 		$attributes = array(
 			'class'			=> "inputbox",
 			'size'			=> "22",
-			'format'		=> $this->_field->attribs['format'],
+			// 'format'		=> $this->_field->attribs['format'],
+			// 'format'		=> '%Y-%m-%d %H:%M:%S',
+			'format'		=> '%Y-%m-%d',
 			'filter'		=> "user_utc"
 		);
 		
@@ -81,6 +83,10 @@ class CollectorField_Date extends CollectorField
 		}
 		if ($value != 0) {
 			$format = str_replace('%','',$format);
+			if (DateTime::createFromFormat('Y-m-d H:i:s', $value) === FALSE) {
+				// it's not a datetime format
+				$value = DateTime::createFromFormat($format, $value)->format('Y-m-d H:i:s');
+			}
 			$return = JHTML::_( 'date', $value, $format);
 		}
 		else
@@ -106,10 +112,38 @@ class CollectorField_Date extends CollectorField
 		}
 		if ($value != 0) {
 			$format = str_replace('%','',$format);
+			if (DateTime::createFromFormat('Y-m-d H:i:s', $value) === FALSE) {
+				// it's not a datetime format
+				$value = DateTime::createFromFormat($format, $value)->format('Y-m-d H:i:s');
+			}
 			return JHTML::_( 'date', $value, $format);
 		}
 		
 		return;
+	}
+	
+	/**
+	 * Method to display value in fulltitle
+	 *
+	 * Can be overloaded/supplemented by the child class
+	 *
+	 * @param	string		$value	Field value
+	 */
+	function getImportedValue($value)
+	{	
+		$format = $this->_field->attribs['format'];
+		if ( $format == '' )
+		{
+			$format = '%Y-%m-%d';
+		}
+		if ($value != 0) {
+			$format = str_replace('%','',$format);
+			if (DateTime::createFromFormat('Y-m-d H:i:s', $value) === FALSE) {
+				// it's not a datetime format
+				$value = DateTime::createFromFormat($format, $value)->format('Y-m-d H:i:s');
+			}
+		}
+		return $value;
 	}
 	
 	/**
@@ -128,6 +162,10 @@ class CollectorField_Date extends CollectorField
 		}
 		if ($value != 0) {
 			$format = str_replace('%','',$format);
+			if (DateTime::createFromFormat('Y-m-d H:i:s', $value) === FALSE) {
+				// it's not a datetime format
+				$value = DateTime::createFromFormat($format, $value)->format('Y-m-d H:i:s');
+			}
 			return JHTML::_( 'date', $value, $format);
 		}
 		
@@ -145,4 +183,19 @@ require_once(JPATH_ROOT.'/libraries/joomla/form/fields/calendar.php');
 class JFormFieldCollectorDate extends JFormFieldCalendar
 {
 	protected $type = 'CollectorDate';
+	
+	protected function getInput()
+	{
+		
+		if ($this->value != 0) {
+			$format = str_replace('%','',$this->format);
+			
+			if (DateTime::createFromFormat('Y-m-d H:i:s', $this->value) === FALSE) {
+				// it's not a datetime format
+				$this->value = DateTime::createFromFormat($format, $this->value)->format('Y-m-d H:i:s');
+			}
+		}
+		
+		return parent::getInput();
+	}
 }

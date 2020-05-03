@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -262,8 +262,8 @@ class CollectorControllerFields extends JControllerAdmin
         JSession::checkToken() or jexit(JText::_('JINVALID_TOKEN'));
  
         // Get the input
-        $pks		= $app->input->getVar('cid',    null,    'post',    'array');
-        $order		= $app->input->getVar('order',    null,    'post',    'array');
+        $pks		= $app->input->get('cid',    null,    'post',    'array');
+        $order		= $app->input->get('order',    null,    'post',    'array');
 		$collection = $app->input->getCmd( 'collection' );
  
         // Sanitize the input
@@ -302,7 +302,7 @@ class CollectorControllerFields extends JControllerAdmin
         JSession::checkToken() or jexit(JText::_('JINVALID_TOKEN'));
  
         // Initialise variables.
-        $ids    	= $app->input->getVar('cid', null, 'post', 'array');
+        $ids    	= $app->input->get('cid', null, 'post', 'array');
         $inc    	= ($this->getTask() == 'orderup') ? -1 : +1;
 		$collection = $app->input->getCmd( 'collection' );
  
@@ -334,12 +334,12 @@ class CollectorControllerFields extends JControllerAdmin
 		JSession::checkToken() or die(JText::_('JINVALID_TOKEN'));
 		
 		// Get some variables from the request
-		$cid	= $app->input->getVar( 'cid', array(), '', 'array' );
+		$cid	= $app->input->get( 'cid', array(), '', 'array' );
 		JArrayHelper::toInteger($cid);
-		$collection = $app->input->getVar( 'collection' );
+		$collection = $app->input->get( 'collection' );
 		
 		if (empty($cid)) {
-			JError::raiseWarning(500, JText::_('COM_COLLECTOR_NO_ITEMS_SELECTED'));
+			JFactory::getApplication()->enqueueMessage(JText::_('COM_COLLECTOR_NO_ITEMS_SELECTED'),'warning');
 		} else {
 			// Get the model.
 			$model = $this->getModel();
@@ -349,7 +349,7 @@ class CollectorControllerFields extends JControllerAdmin
 
 			// Publish the items.
 			if (!$model->setHome($id)) {
-				JError::raiseWarning(500, $model->getError());
+				JFactory::getApplication()->enqueueMessage($model->getError(),'warning');
 			} else {
 				$this->setMessage(JText::_('COM_COLLECTOR_DEFAULT_FIELD_SET'));
 			}
@@ -370,41 +370,7 @@ class CollectorControllerFields extends JControllerAdmin
 		parent::publish();
 		
 		// Get some variables from the request
-		$collection = $app->input->getVar( 'collection' );
-		
-		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection );
-	}
-	
-	/**
-	 * Method to unpublish field
-	 *
-	 * @access	public
-	 */
-	public function unpublish()
-	{
-		$app = JFactory::getApplication();
-		
-		parent::unpublish();
-		
-		// Get some variables from the request
-		$collection = $app->input->getVar( 'collection' );
-		
-		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection );
-	}
-	
-	/**
-	 * Method to trash field
-	 *
-	 * @access	public
-	 */
-	public function trash()
-	{
-		$app = JFactory::getApplication();
-		
-		parent::trash();
-		
-		// Get some variables from the request
-		$collection = $app->input->getVar( 'collection' );
+		$collection = $app->input->get( 'collection' );
 		
 		$this->setRedirect( 'index.php?option='.$this->option.'&view='.$this->view_list.'&collection='.$collection );
 	}
@@ -421,8 +387,8 @@ class CollectorControllerFields extends JControllerAdmin
  
         // Initialise variables.
         $user		= JFactory::getUser();
-        $ids		= $app->input->getVar('cid', null, 'post', 'array');
-		$collection = $app->input->getVar( 'collection' );
+        $ids		= $app->input->get('cid', null, 'post', 'array');
+		$collection = $app->input->get( 'collection' );
  
         $model = $this->getModel();
         $return = $model->checkin($ids);

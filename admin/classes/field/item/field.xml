@@ -5,9 +5,9 @@
 	<author>Philippe Ousset</author>
 	<authorEmail>steevo@steevo.fr</authorEmail>
 	<authorUrl>www.steevo.fr</authorUrl>
-	<copyright>Copyright (C) 2010 Philippe Ousset. All rights reserved.</copyright>
+	<copyright>Copyright (C) 2010-2020 Philippe Ousset. All rights reserved.</copyright>
 	<license>http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL</license>
-	<version>0.6.0</version>
+	<version>0.7.0</version>
 	<description>Field type item for Collector</description>
 	<files>
 		<filename>field.item.php</filename>

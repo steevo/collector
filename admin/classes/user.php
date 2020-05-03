@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -106,6 +106,9 @@ class CollectorUser
 	 */
 	function &getInstance( $collection, $type, $user = null )
 	{
+		// Get a handle to the Joomla! application object
+		$application = JFactory::getApplication();
+
 		$this->_type = $type;
 		$collectionClass = 'CollectorUser_'.ucfirst($type);
 
@@ -118,13 +121,13 @@ class CollectorUser
 
 				if (!class_exists( $collectionClass ))
 				{
-					JError::raiseWarning( 0, 'Collection user class ' . $collectionClass . ' not found in file.' );
+					$application->enqueueMessage( 'Collection user class ' . $collectionClass . ' not found in file.', 'warning' );
 					return $false;
 				}
 			}
 			else
 			{
-				JError::raiseWarning( 0, 'Collection user ' . $type . ' not supported. File '.$path.' not found.' );
+				$application->enqueueMessage( 'Collection user ' . $type . ' not supported. File '.$path.' not found.', 'warning' );
 				return $false;
 			}
 		}

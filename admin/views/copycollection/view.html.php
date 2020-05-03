@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -31,11 +31,11 @@ class CollectorViewCopycollection extends JViewLegacy
 		// Initialise variables.
 		$app = JFactory::getApplication();
 
-		$cid = $app->input->getVar('cid');
+		$cid = $app->input->get('cid');
 		$this->collection = $cid[0];
 
-		$this->copy_mode = $app->input->getVar('copy_mode');
-		$this->assetgroup_id = $app->input->getVar('assetgroup_id');
+		$this->copy_mode = $app->input->get('copy_mode');
+		$this->assetgroup_id = $app->input->get('assetgroup_id');
 
 		CollectorHelper::addSubmenu('collections');
 

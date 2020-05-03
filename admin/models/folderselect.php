@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -416,7 +416,7 @@ class CollectorModelFolderselect extends JModelList
 	function remove()
 	{
 		$app = JFactory::getApplication();
-		$cid = $app->input->getVar( 'cid', array(0), '', 'array');
+		$cid = $app->input->get( 'cid', array(0), '', 'array');
 		$deleted = array( "files" => 0 , "folders" => 0 );
 		
 		foreach ($cid as $id)
@@ -489,7 +489,7 @@ class CollectorModelFolderselect extends JModelList
 	function createFolder()
 	{
 		$app = JFactory::getApplication();
-		$folder = $app->input->getVar('foldername', '', '', 'text');
+		$folder = $app->input->get('foldername', '', '', 'text');
 		
 		if (strlen($folder) > 0) {
 			$path = JPath::clean(JPATH_ROOT.'/'.$this->_folder.'/'.$folder);
@@ -532,8 +532,8 @@ class CollectorModelFolderselect extends JModelList
 	function rename()
 	{
 		$app = JFactory::getApplication();
-		$renameElement = $app->input->getVar('renameElement', '', '', 'text');
-		$rename = $app->input->getVar('rename', '', '', 'text');
+		$renameElement = $app->input->get('renameElement', '', '', 'text');
+		$rename = $app->input->get('rename', '', '', 'text');
 		
 		$path = JPath::clean(JPATH_ROOT.'/'.$this->_folder.'/');
 		

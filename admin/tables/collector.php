@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -23,7 +23,7 @@ class TableCollector extends JTable
 	/**
 	 * @param database A database connector object
 	 */
-	function TableCollector( &$db )
+	function __construct( &$db )
 	{
 		parent::__construct( '#__collector', 'id', $db );
 	}
@@ -45,7 +45,7 @@ class TableCollector extends JTable
 
 		// Bind the rules.
 		if (isset($array['rules']) && is_array($array['rules'])) {
-			$rules = new JRules($array['rules']);
+			$rules = new JAccessRules($array['rules']);
 			$this->setRules($rules);
 		}
 		

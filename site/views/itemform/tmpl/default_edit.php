@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -20,6 +20,27 @@ JHtml::_('behavior.formvalidation');
 JHtml::_('formbehavior.chosen', 'select');
 
 ?>
+<script language="javascript" type="text/javascript">
+	<!--
+	Joomla.submitbutton = function(task) {
+		if (task == 'item.cancel' || document.formvalidator.isValid(document.id('item-form'))) {
+			var form = document.adminForm;
+			<?php
+			foreach ( $this->fields as $field )
+			{
+				$field->onSubmit($this->form);
+			}
+			?>
+			Joomla.submitform(task, form);
+			return true;
+		} else {
+			alert('<?php echo $this->escape(JText::_('JGLOBAL_VALIDATION_FORM_FAILED'));?>');
+			return false;
+		}
+	}
+	//-->
+</script>
+
 <div class="edit item-page<?php echo $this->pageclass_sfx; ?>" >
 	<form method="post" action="<?php echo JRoute::_(JFactory::getURI()->toString()); ?>" name="adminForm" id="adminForm" class="form-validate form-vertical">
 		<div class="btn-toolbar">

@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -40,16 +40,16 @@ class CollectorControllerListitems extends JControllerAdmin
 	{
 		$app = JFactory::getApplication();
 		
-		$list = $app->input->getVar('defined');
+		$list = $app->input->get('defined');
 		
 		// Check for request forgeries
 		JSession::checkToken() or die(JText::_('JINVALID_TOKEN'));
 		
 		// Get items to remove from the request.
-		$cid    = $app->input->getVar('cid', array(), '', 'array');
+		$cid    = $app->input->get('cid', array(), '', 'array');
 		
 		if (!is_array($cid) || count($cid) < 1) {
-			JError::raiseWarning(500, JText::_($this->text_prefix.'_NO_ITEM_SELECTED'));
+			JFactory::getApplication()->enqueueMessage(JText::_($this->text_prefix.'_NO_ITEM_SELECTED'),'warning');
 		} else {
 			// Get the model.
 			$model = $this->getModel();

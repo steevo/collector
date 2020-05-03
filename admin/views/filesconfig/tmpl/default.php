@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -37,7 +37,7 @@ $listDirn	= $this->escape($this->state->get('list.direction'));
 	}
 	//-->
 </script>
-
+<div class="container-fluid">
 <form action="<?php echo JRoute::_('index.php?option=com_collector&view=filesconfig'); ?>" method="post" name="adminForm" id="adminForm" >
 	<table class="table table-striped" id="fieldList">
 		<thead>
@@ -103,7 +103,6 @@ $listDirn	= $this->escape($this->state->get('list.direction'));
 		?>
 		</tbody>
 	</table>
-</div>
 
 <input type="hidden" name="task" value="" />
 <input type="hidden" name="tmpl" value="component" />
@@ -136,13 +135,20 @@ $listDirn	= $this->escape($this->state->get('list.direction'));
 		</tr>
 		<tr>
 			<td>
-				<img name="preview" src="components/com_collector/assets/images/<?php echo $this->row->ico; ?>" height="16" width="16" border="0" />
+				<?php
+				if ($this->row->ico == '') {
+					$ico = 'page_white.png';
+				} else {
+					$ico = $this->row->ico;
+				}
+				?>
+				<img name="preview" src="components/com_collector/assets/images/<?php echo $ico; ?>" height="16" width="16" border="0" />
 			</td>
 			<td>
 				<?php echo JHTML::_('list.images',  'ico', $this->row->ico, ' onchange="loadImage();"', 'administrator/components/com_collector/assets/images' ); ?>
 			</td>
 			<td>
-				<input type="submit" value="<?php echo JText::_('COM_COLLECTOR_SAVE'); ?>" />
+				<input type="submit" class="btn btn-success" value="<?php echo JText::_('COM_COLLECTOR_SAVE'); ?>" />
 			</td>
 		</tr>
 	</table>
@@ -152,3 +158,4 @@ $listDirn	= $this->escape($this->state->get('list.direction'));
 <input type="hidden" name="id" value="<?php echo $this->row->id; ?>" />
 </fieldset>
 </form>
+</div>

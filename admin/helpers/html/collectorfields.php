@@ -1,7 +1,14 @@
 <?php
 /**
- * * * @copyright	Copyright (C) 2005 - 2011 Philippe Ousset. All rights reserved.
- * @license		GNU General Public License version 2 or later; see LICENSE.txt
+ * Joomla! 3.0 component Collector
+ *
+ * @package 	Collector
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
+ * @license     GNU General Public License version 2 or later; see LICENSE.txt
+ *
+ * Collector is a Multi Purpose Listing Tool.
+ * Originaly developped to list Collections
+ * it can be used for several purpose.
  */
 
 // no direct access

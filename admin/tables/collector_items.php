@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -26,7 +26,7 @@ class TableCollector_items extends JTable
 	/**
 	 * @param database A database connector object
 	 */
-	function TableCollector_items( &$db )
+	function __construct( &$db )
 	{
 		parent::__construct( '#__collector_items', 'id', $db );
 	}
@@ -178,7 +178,7 @@ class TableCollector_items extends JTable
 
 		// Bind the rules.
 		if (isset($array['rules']) && is_array($array['rules'])) {
-			$rules = new JRules($array['rules']);
+			$rules = new JAccessRules($array['rules']);
 			$this->setRules($rules);
 		}
 		
@@ -511,7 +511,7 @@ class TableCollector_items extends JTable
 		$this->_db->execute();
 		
 		/* delete comments */
-		$jcomments = JPATH_SITE . DS .'components' . DS . 'com_jcomments' . DS . 'jcomments.php';
+		$jcomments = JPATH_SITE . DIRECTORY_SEPARATOR .'components' . DIRECTORY_SEPARATOR . 'com_jcomments' . DIRECTORY_SEPARATOR . 'jcomments.php';
 		if (file_exists($jcomments)) {
 			require_once($jcomments);
 			JCommentsModel::deleteComments($pk, 'com_collector');

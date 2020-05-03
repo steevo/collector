@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -42,10 +42,10 @@ class CollectorsModelHtmledit extends JModelLegacy
 		$app = JFactory::getApplication();
 		
 		// Initialize some variables
-		$option			= $app->input->getCmd('option');
-		$name			= $app->input->getCmd('name');
-		$client			= $app->input->getVar('client', '0', '', 'int');
-		$filecontent	= $app->input->getVar('filecontent', '', 'post', 'string', JREQUEST_ALLOWRAW);
+		$option			= $app->input->get('option');
+		$name			= $app->input->get('name');
+		$client			= $app->input->get('client', '0', '', 'int');
+		$filecontent	= $app->input->post->get('filecontent', '','raw');
 		
 		if ($client == 1)
 		{

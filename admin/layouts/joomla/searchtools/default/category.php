@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -24,7 +24,7 @@ if ($data['view']->getName() == 'listitems') {
 	</div>
 	<?php
 }
-if ( ($data['view']->getName() == 'fields') || ($data['view']->getName() == 'items') || ($data['view']->getName() == 'userslists') ) {
+if ( ($data['view']->getName() == 'fields') || ($data['view']->getName() == 'items') || ($data['view']->getName() == 'templates') || ($data['view']->getName() == 'userslists') ) {
 // We will get the defined filter & remove it from the form filters
 	$collection = $data['view']->filterForm->getField('collection');
 	?>

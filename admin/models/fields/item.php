@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -33,22 +33,21 @@ class JFormFieldItem extends JFormField
 		$doc = JFactory::getDocument();
 
 		$js = "
-		window.addEvent( 'domready', function() {
+		jQuery(document).ready( function() {
 			var form = document.adminForm;
 			var action = form.action;
 			var reg1=new RegExp('&id=','g');
 			var tab = action.split(reg1);
 			var itemId = tab[1];
-			var collection = $('jform_request_collection').get('value');
+			var collection = jQuery('#jform_request_collection').val();
 			var url='index.php?option=com_collector&format=raw&view=menu&tmpl=component&task=menu.listItems&collection='+collection+'&itemId='+itemId;
-			var myRequest = new Request({
+			jQuery.ajax({
+				type: 'POST',
 				url: url,
-				method:'post',
-				onComplete: function( response ) {
-					$('listItems').set('html',response);
+				success: function( response ) {
+					jQuery('#listItems').html(response);
 				}
 			});
-			myRequest.send();
 		});";
 		$doc->addScriptDeclaration($js);
 

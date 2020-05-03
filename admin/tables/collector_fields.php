@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -23,7 +23,7 @@ class TableCollector_fields extends JTable
 	/**
 	 * @param database A database connector object
 	 */
-	function TableCollector_fields( &$db )
+	function __construct( &$db )
 	{
 		parent::__construct( '#__collector_fields', 'id', $db );
 	}
@@ -309,9 +309,11 @@ class TableCollector_fields extends JTable
 			$queryHome = 'SELECT f.id FROM `#__collector_fields` AS f LEFT JOIN `#__collector_fields_type` AS t ON f.type = t.id WHERE t.intitle = 1 AND f.collection = '.$this->collection.' AND f.state IN (0,1) LIMIT 0,1;';
 			$db->setQuery( $queryHome );
 			$result = $db->loadResult();
-			$queryHome = 'UPDATE `#__collector_fields` SET home = 1 WHERE id = '.$result.';';
-			$db->setQuery( $queryHome );
-			$db->execute();
+			if ( $result ) {
+				$queryHome = 'UPDATE `#__collector_fields` SET home = 1 WHERE id = '.$result.';';
+				$db->setQuery( $queryHome );
+				$db->execute();
+			}
 		}
 		
         return true;

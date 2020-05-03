@@ -5,9 +5,9 @@
 	<author>Philippe Ousset</author>
 	<authorEmail>steevo@steevo.fr</authorEmail>
 	<authorUrl>www.steevo.fr</authorUrl>
-	<copyright>Copyright (C) 2010 Philippe Ousset. All rights reserved.</copyright>
+	<copyright>Copyright (C) 2010-2020 Philippe Ousset. All rights reserved.</copyright>
 	<license>http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL</license>
-	<version>0.6.0</version>
+	<version>0.7.0</version>
 	<description>Field type define for Collector</description>
 	<files>
 		<filename>field.define.php</filename>
@@ -26,7 +26,6 @@
 			<field
 				name="list"
 				type="lists"
-				required="true"
 				default=""
 				label="COM_COLLECTOR_LIST_LABEL"
 				description="COM_COLLECTOR_LIST_DESC"
@@ -34,7 +33,7 @@
 			<field
 				name="show_fieldlink"
 				type="radio"
-				class="btn-group-yesno"
+				class="btn-group btn-group-yesno"
 				default="1"
 				label="COM_COLLECTOR_SHOW_FIELD_LINK"
 				description="COM_COLLECTOR_SHOW_FIELD_LINK_DESC">
@@ -44,7 +43,7 @@
 			<field
 				name="hide_unselected"
 				type="radio"
-				class="btn-group-yesno"
+				class="btn-group btn-group-yesno"
 				default="1"
 				label="COM_COLLECTOR_HIDE_UNSELECTED"
 				description="COM_COLLECTOR_HIDE_UNSELECTED_DESC">

@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -32,10 +32,10 @@ class CollectorControllerCollection extends JControllerLegacy
 		$db = JFactory::getDBO();
 		
 		$app = JFactory::getApplication();
-		$old_collection_id = $app->input->getVar('id');
-		$new_collection_id = $app->input->getVar('new_col');
-		$mode = $app->input->getVar('mode');
-		$assetgroup_id = $app->input->getVar('assetgroup_id');
+		$old_collection_id = $app->input->get('id');
+		$new_collection_id = $app->input->get('new_col');
+		$mode = $app->input->get('mode');
+		$assetgroup_id = $app->input->get('assetgroup_id');
 		
 		JTable::addIncludePath(JPATH_ADMINISTRATOR.'/components/com_collector/tables');
 		$collection = JTable::getInstance('Collector','Table');

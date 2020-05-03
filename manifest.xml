@@ -2,13 +2,33 @@
 <extension type="component" version="3.0" method="upgrade">
 	<name>Collector</name>
 	<author>Philippe Ousset</author>
-	<creationDate>2015</creationDate>
-	<copyright>Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.</copyright>
+	<creationDate>2020</creationDate>
+	<copyright>Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.</copyright>
 	<license>http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL</license>
 	<authorEmail>steevo@steevo.fr</authorEmail>
 	<authorUrl>www.steevo.fr</authorUrl>
-	<version>0.6.3</version>
+	<version>0.7.0</version>
 	<description>COLLECTOR</description>
+
+	<scriptfile>script.php</scriptfile>
+	
+	<install>
+		<sql>
+			<file charset="utf8" driver="mysql">sql/install.mysql.utf8.sql</file>
+		</sql>
+	</install>
+
+	<uninstall>
+		<sql>
+			<file charset="utf8" driver="mysql">sql/uninstall.mysql.utf8.sql</file>
+		</sql>
+	</uninstall>
+
+	<update>
+		<schemas>
+			<schemapath type="mysql">sql/updates/mysql</schemapath>
+		</schemas>
+	</update>
 
 	<files folder="site">
 		<filename>controller.php</filename>
@@ -44,7 +64,7 @@
 			<menu link="option=com_collector&amp;view=lists">COM_COLLECTOR_DEFINED</menu>
 			<menu link="option=com_collector&amp;view=fields">COM_COLLECTOR_FIELDS</menu>
 			<menu link="option=com_collector&amp;view=items">COM_COLLECTOR_ITEMS</menu>
-			<!-- <menu link="option=com_collector&amp;view=userslists">COM_COLLECTOR_USERSLISTS</menu> -->
+			<menu link="option=com_collector&amp;view=userslists">COM_COLLECTOR_USERSLISTS</menu>
 			<!-- <menu link="option=com_collector&amp;view=templates">COM_COLLECTOR_TEMPLATES</menu> -->
 		</submenu>
 
@@ -89,21 +109,7 @@
 		</languages>
 	
 	</administration>
-	
-	<scriptfile>script.php</scriptfile>
-	
-	<install folder="admin">
-		<sql>
-			<file charset="utf8" driver="mysql">sql/install.sql</file>
-		</sql>
-	</install>
-	
-	<uninstall folder="admin">
-		<sql>
-			<file charset="utf8" driver="mysql">sql/uninstall.sql</file>
-		</sql>
-	</uninstall>
-	
+
 	<config>
 		<fields name="params">
 			<fieldset name="basic">
@@ -123,7 +129,7 @@
 			</fieldset>
 		</fields>
 	</config>
-	
+
 	<updateservers>
 		<server type="collection">http://www.steevo.fr/update/collector-update.xml</server>
 	</updateservers>

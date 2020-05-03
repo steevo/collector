@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -153,7 +153,7 @@ class CollectorField_Define extends CollectorField
 	function displayFilter($params,$value,$menu=false)
 	{
 		// Initiliase variables.
-		$app	= JFactory::getApplication();
+		$application	= JFactory::getApplication();
 		$html = array();
 		$attr = '';
 		
@@ -195,7 +195,7 @@ class CollectorField_Define extends CollectorField
 		}
 		catch (RuntimeException $e)
 		{
-			JError::raiseWarning(500, $e->getMessage());
+			$application->enqueueMessage($e->getMessage(),'warning');
 		}
 		
 		// Pad the option text with spaces using depth level as a multiplier.
@@ -232,7 +232,7 @@ class CollectorField_Define extends CollectorField
 			}
 			catch (RuntimeException $e)
 			{
-				JError::raiseWarning(500, $e->getMessage());
+				$application->enqueueMessage($e->getMessage(),'warning');
 			}
 			
 			$tempDelete = array();
@@ -384,22 +384,22 @@ class CollectorField_Define extends CollectorField
 				{
 					if ($largeur < $largeurmax)
 					{
-						$size= 'style="width:'.$largeur.';"';
+						$size= 'style="width:'.$largeur.'px;"';
 					}
 					else
 					{
-						$size= 'style="width:'.$largeurmax.';"';
+						$size= 'style="width:'.$largeurmax.'px;"';
 					}
 				}
 				else
 				{
 					if ($hauteur < $hauteurmax)
 					{
-						$size= 'style="height:'.$hauteur.';"';
+						$size= 'style="height:'.$hauteur.'px;"';
 					}
 					else
 					{
-						$size= 'style="height:'.$hauteurmax.';"';
+						$size= 'style="height:'.$hauteurmax.'px;"';
 					}
 				}
 				
@@ -416,6 +416,47 @@ class CollectorField_Define extends CollectorField
 		} else {
 			$return = false;
 		}
+		return $return;
+	}
+	
+	
+	/**
+	 * Method to display value in fulltitle
+	 *
+	 * Can be overloaded/supplemented by the child class
+	 *
+	 * @param	string		$value	Field value
+	 */
+	function getImportedValue($value)
+	{
+		$db = JFactory::getDBO();
+		
+		$query = 'SELECT id';
+		$query .= ' FROM #__collector_defined_content';
+		$query .= ' WHERE defined = "'.$this->_field->attribs['list'].'"';
+		$query .= ' AND LOWER(content) = LOWER("'.$value.'")';
+		
+		$db->setQuery( $query );
+
+		$result = $db->loadResult();
+		
+		if ( !$result ) {
+			$data = array();
+			$data['parent_id'] = 1;
+			$data['content'] = $value;
+			$data['defined'] = $this->_field->attribs['list'];
+			$listitem = JTable::getInstance('Collector_defined_content', 'Table');
+			$listitem->setLocation($data['parent_id'], 'last-child');
+			$listitem->bind($data);
+			$listitem->check();
+			$listitem->store();
+			$listitem->rebuildPath($listitem->id);
+			
+			$return = $listitem->id;
+		} else {
+			$return = $result;
+		}
+		
 		return $return;
 	}
 	
@@ -482,7 +523,7 @@ class CollectorField_Define extends CollectorField
 				// Add the list ordering clause.
 				$query->order($db->escape('c.lft') . ' ' . $db->escape('ASC'));
 				
-				$code = JHTML::_('select.genericlist', $select, 'jform[request][id]', ' class=”inputbox” size="1" ', 'value', 'text', $default, 'jform_request_id');
+				$code = JHTML::_('select.genericlist', $select, 'jform[request][id]', ' class=â€inputboxâ€ size="1" ', 'value', 'text', $default, 'jform_request_id');
 				
 				break;
 		}
@@ -504,6 +545,9 @@ class JFormFieldCollectorDefine extends JFormFieldList
 	
 	protected function getOptions()
 	{
+		// Get a handle to the Joomla! application object
+		$application = JFactory::getApplication();
+
 		// Get defined Id
 		$defined = $this->element['list'];
 		
@@ -530,7 +574,7 @@ class JFormFieldCollectorDefine extends JFormFieldList
 		}
 		catch (RuntimeException $e)
 		{
-			JError::raiseWarning(500, $e->getMessage());
+			$application->enqueueMessage($e->getMessage(),'warning');
 		}
 
 		// Pad the option text with spaces using depth level as a multiplier.

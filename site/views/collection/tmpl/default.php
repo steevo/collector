@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -50,7 +50,7 @@ foreach ( $this->fields as $field )
 			jQuery.ajax({
 				url: jQuery(this).attr('action'), // le nom du fichier indiqué dans le formulaire
 				type: jQuery(this).attr('method'), // la méthode indiquée dans le formulaire (get ou post)
-				data: jQuery(this).serialize(), // je sérialise les données (voir plus loin), ici les $_POST
+				data: jQuery(this).serialize(), // je sérialise les données
 				success: function(response) { // je récupère la réponse du fichier PHP
 					jQuery('#dropdown'+item).html(response);
 					SqueezeBox.initialize({});
@@ -73,7 +73,7 @@ foreach ( $this->fields as $field )
 			jQuery.ajax({
 				url: jQuery(this).attr('action'), // le nom du fichier indiqué dans le formulaire
 				type: jQuery(this).attr('method'), // la méthode indiquée dans le formulaire (get ou post)
-				data: jQuery(this).serialize(), // je sérialise les données (voir plus loin), ici les $_POST
+				data: jQuery(this).serialize(), // je sérialise les données
 				success: function(response) { // je récupère la réponse du fichier PHP
 					jQuery('#dropdown'+item).html(response);
 					SqueezeBox.initialize({});
@@ -103,11 +103,11 @@ foreach ( $this->fields as $field )
 	
 	function initialiser()
 	{
-		var form = document.adminForm;
+		var form = jQuery('#adminForm');
 
-		form.filter_order.value 		= '<?php echo $defaultListOrder; ?>';
-		form.filter_order_Dir.value		= '<?php echo $defaultListDirn; ?>';
-		form.filter_search_all.value	= '';
+		jQuery( "[name='filter_order']" ).val('<?php echo $defaultListOrder; ?>');
+		jQuery( "[name='filter_order_Dir']" ).val('<?php echo $defaultListDirn; ?>');
+		jQuery( "[name='filter_search_all']" ).val('');
 		
 		<?php
 		foreach ( $this->fields as $field )

@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -165,7 +165,7 @@ class JFormFieldCustomTitle extends JFormField
 		$app = JFactory::getApplication();
 		
 		// Get collection Id
-		$collection = $app->input->getVar('id', 0, '', 'int' );
+		$collection = $app->input->get('id', 0, '', 'int' );
 		
 		// Create a new query object.
 		$db = JFactory::getDBO();
@@ -192,11 +192,6 @@ class JFormFieldCustomTitle extends JFormField
 		$db->setQuery( $query );
 		
 		$results = $db->loadObjectList('value');
-		//Check for database error
-		if (!$db->execute())
-		{
-			return JError::raiseWarning( 500, $db->getErrorMsg() );
-		}
 		
 		$selected = array();
 		foreach ($value as $fieldID) {
@@ -210,7 +205,7 @@ class JFormFieldCustomTitle extends JFormField
 		$app = JFactory::getApplication();
 		
 		// Get collection Id
-		$collection = $app->input->getVar('id', 0, '', 'int' );
+		$collection = $app->input->get('id', 0, '', 'int' );
 		
 		// Create a new query object.
 		$db = JFactory::getDBO();
@@ -237,11 +232,6 @@ class JFormFieldCustomTitle extends JFormField
 		$db->setQuery( $query );
 		
 		$results = $db->loadObjectList();
-		//Check for database error
-		if (!$db->execute())
-		{
-			return JError::raiseWarning( 500, $db->getErrorMsg() );
-		}
 		
 		return $results;
 	}

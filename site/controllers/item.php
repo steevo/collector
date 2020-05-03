@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -141,12 +141,49 @@ class CollectorControllerItem extends JControllerForm
 	 *
 	 * @return	object	The model.
 	 */
-	public function getModel($name = 'itemform', $prefix = '', $config = array('ignore_request' => true))
+	public function getModel($name = 'itemform', $prefix = '', $config = array('ignore_request' => false))
 	{
 		$model = parent::getModel($name, $prefix, $config);
 
 		return $model;
 	}
+	
+	/**
+	 * Gets the URL arguments to append to an item redirect.
+	 *
+	 * @param    int        $recordId    The primary key id for the item.
+	 * @param    string    $urlVar        The name of the URL variable for the id.
+	 *
+	 * @return    string    The arguments to append to the redirect URL.
+	 */
+	protected function getRedirectToItemAppend($recordId = null, $urlVar = 'id')
+	{
+		$app = JFactory::getApplication();
+		
+		$append = parent::getRedirectToItemAppend($recordId, $urlVar);
+		
+		$collection = $app->input->get('collection');
+		
+		$item = $app->input->get('id');
+		
+		if (empty($collection))
+		{
+			$form = $app->input->get('jform');
+			
+			$collection = $form['collection'];
+		}
+		
+		if (empty($item))
+		{
+			$form = $app->input->get('jform');
+			
+			$item = $form['id'];
+		}
+		
+		$append .= '$view=item&collection='.$collection.'&id='.$item;
+		
+		return $append;
+    }
 	
 	/**
 	* Gets the URL arguments to append to a list redirect.
@@ -159,9 +196,16 @@ class CollectorControllerItem extends JControllerForm
 		
 		$append = parent::getRedirectToListAppend();
 		
-		$form = $app->input->getVar('jform');
+		$collection = $app->input->get('collection');
 		
-		$append .= '&view=collection&id='.$form['collection'];
+		if (empty($collection))
+		{
+			$form = $app->input->get('jform');
+			
+			$collection = $form['collection'];
+		}
+		
+		$append .= '&view=collection&id='.$collection;
 		
 		return $append;
 	}

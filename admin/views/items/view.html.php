@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -51,7 +51,7 @@ class CollectorViewItems extends JViewLegacy
 			
 			// Check for errors.
 			if (count($errors = $this->get('Errors'))) {
-				JError::raiseError(500, implode("\n", $errors));
+				JFactory::getApplication()->enqueueMessage(implode('<br />', $errors),'error');
 				return false;
 			}
 			
@@ -117,6 +117,23 @@ class CollectorViewItems extends JViewLegacy
 		if ($this->canDo->get('core.admin'))
 		{
 			JToolbarHelper::custom('items.rebuild', 'refresh.png', 'refresh_f2.png', 'COM_COLLECTOR_REBUILD_FULLTITLES', false);
+		}
+		
+		// if ($user->authorise('core.edit'))
+		// {
+			// JHtml::_('bootstrap.modal', 'collapseModal');
+			// $title = JText::_('JTOOLBAR_BATCH');
+			// $dhtml = "<button data-toggle=\"modal\" data-target=\"#collapseModal\" class=\"btn btn-small\">
+						// <i class=\"icon-checkbox-partial\" title=\"$title\"></i>
+						// $title</button>";
+			// $bar->appendButton('Custom', $dhtml, 'batch');
+		// }
+		
+		if (jimport('phpspreadsheet.phpspreadsheet')) {
+			if ($this->canDo->get('core.create') || (count($user->getAuthorisedCategories('com_collector', 'core.create'))) > 0 ) {
+				JToolBarHelper::divider();
+				JToolbarHelper::custom('items.import', 'box-add.png', 'box-add.png', 'COM_COLLECTOR_IMPORT_EXCEL', false);
+			}
 		}
 	}
 

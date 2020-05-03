@@ -3,7 +3,7 @@
  * Joomla! 3.0 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2015 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -33,22 +33,32 @@ class JFormFieldRequiredfilter extends JFormField
 		$doc = JFactory::getDocument();
 
 		$js = "
-		window.addEvent( 'domready', function() {
+		jQuery(document).ready( function() {
 			var form = document.adminForm;
 			var action = form.action;
 			var reg1=new RegExp('&id=','g');
 			var tab = action.split(reg1);
 			var itemId = tab[1];
-			var collection = $('jform_request_id').get('value');
+			var collection = jQuery('#jform_request_id').val();
 			var url='index.php?option=com_collector&format=raw&view=menu&tmpl=component&task=menu.listRequired&collection='+collection+'&itemId='+itemId;
-			var myRequest = new Request({
+			jQuery.ajax({
+				type: 'POST',
 				url: url,
-				method:'post',
-				onComplete: function( response ) {
-					$('listRequired').set('html',response);
+				success: function( response ) {
+					jQuery('#listRequired').html(response);
+					jQuery('.radio.btn-group label').addClass('btn');
+					jQuery('.btn-group input[checked=checked]').each(function()
+						{
+							if (jQuery(this).val() == '') {
+								jQuery('label[for=' + jQuery(this).attr('id') + ']').addClass('active btn-primary');
+							} else if (jQuery(this).val() == 0) {
+								jQuery('label[for=' + jQuery(this).attr('id') + ']').addClass('active btn-danger');
+							} else {
+								jQuery('label[for=' + jQuery(this).attr('id') + ']').addClass('active btn-success');
+							}
+					});
 				}
 			});
-			myRequest.send();
 		});";
 		
 		$doc->addScriptDeclaration($js);
