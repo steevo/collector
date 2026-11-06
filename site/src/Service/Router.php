@@ -91,6 +91,7 @@ class Router extends RouterView
         $collections->setKey('id');
         $this->registerView($collections);
         $collection = new RouterViewConfiguration('collection');
+        $collection->setKey('id');
         $this->registerView($collection);
         $item = new RouterViewConfiguration('item');
         $item->setKey('id')->setParent($collection, 'collection');
@@ -148,14 +149,14 @@ class Router extends RouterView
     }
 
     /**
-     * Method to get the segment(s) for an article
+     * Method to get the segment(s) for a collection
      *
-     * @param   string  $id     ID of the article to retrieve the segments for
+     * @param   string  $id     ID of the collection to retrieve the segments for
      * @param   array   $query  The request that is built right now
      *
-     * @return  array|string  The segments of this item
+     * @return  array|string  The segments of this collection
      */
-    public function getItemSegment($id, $query)
+    public function getCollectionSegment($id, $query)
     {
         if (!strpos($id, ':')) {
             $id      = (int) $id;
@@ -176,6 +177,91 @@ class Router extends RouterView
         }
 
         return [(int) $id => $id];
+    }
+
+    /**
+     * Method to get the id for a collection
+     *
+     * @param   string  $segment  Segment to retrieve the ID for
+     * @param   array   $query    The request that is parsed right now
+     *
+     * @return  mixed   The id of this item or false
+     */
+    public function getCollectionId($segment, $query)
+    {
+        if ($this->noIDs) {
+            $dbquery = $this->db->getQuery(true);
+            $dbquery->select($this->db->quoteName('id'))
+                ->from($this->db->quoteName('#__collector'))
+                ->where($this->db->quoteName('alias') . ' = :alias')
+                ->bind(':alias', $segment);
+            $this->db->setQuery($dbquery);
+
+            return (int) $this->db->loadResult();
+        }
+
+        return (int) $segment;
+    }
+
+    /**
+     * Method to get the segment(s) for an item
+     *
+     * @param   string  $id     ID of the item to retrieve the segments for
+     * @param   array   $query  The request that is built right now
+     *
+     * @return  array|string  The segments of this item
+     */
+    public function getItemSegment($id, $query)
+    {
+        if (!strpos($id, ':')) {
+            $id      = (int) $id;
+            $dbquery = $this->db->getQuery(true);
+            $dbquery->select($this->db->quoteName('alias'))
+                ->from($this->db->quoteName('#__collector_items'))
+                ->where($this->db->quoteName('id') . ' = :id')
+                ->bind(':id', $id, ParameterType::INTEGER);
+            $this->db->setQuery($dbquery);
+
+            $id .= ':' . $this->db->loadResult();
+        }
+
+        if ($this->noIDs) {
+            list($void, $segment) = explode(':', $id, 2);
+
+            return [$void => $segment];
+        }
+
+        return [(int) $id => $id];
+    }
+
+    /**
+     * Method to get the id for an item
+     *
+     * @param   string  $segment  Segment to retrieve the ID for
+     * @param   array   $query    The request that is parsed right now
+     *
+     * @return  mixed   The id of this item or false
+     */
+    public function getItemId($segment, $query)
+    {
+        if ($this->noIDs) {
+            $dbquery = $this->db->getQuery(true);
+            $dbquery->select($this->db->quoteName('id'))
+                ->from($this->db->quoteName('#__collector_items'))
+                ->where(
+                    [
+                        $this->db->quoteName('alias') . ' = :alias',
+                        $this->db->quoteName('collection') . ' = :collection',
+                    ]
+                )
+                ->bind(':alias', $segment)
+                ->bind(':collection', $query['id'], ParameterType::INTEGER);
+            $this->db->setQuery($dbquery);
+
+            return (int) $this->db->loadResult();
+        }
+
+        return (int) $segment;
     }
 
     /**
