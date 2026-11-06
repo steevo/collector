@@ -40,6 +40,7 @@ use Steevo\Component\Collector\Administrator\Classes\Field\Item\CollectorFieldIt
 use Steevo\Component\Collector\Administrator\Classes\Field\Line\CollectorFieldLine;
 use Steevo\Component\Collector\Administrator\Classes\Field\Number\CollectorFieldNumber;
 use Steevo\Component\Collector\Administrator\Classes\Field\Text\CollectorFieldText;
+use Joomla\Database\DatabaseInterface;
 
 /**
  * Collector_items_history_ table
@@ -64,7 +65,7 @@ class CollectorItemsHistoryTable extends Table
 	public static function getInstance($type, $prefix = 'Table', $config = array())
 	{
 		// If a database object was passed in the configuration array use it, otherwise get the global one from Factory.
-		$db = isset($config['dbo']) ? $config['dbo'] : Factory::getDbo();
+		$db = isset($config['dbo']) ? $config['dbo'] : Factory::getContainer()->get(DatabaseInterface::class);
 		
 		$collection = $config['collection'];
 		
@@ -95,7 +96,7 @@ class CollectorItemsHistoryTable extends Table
 		$query .= 'KEY `idx_modifiedby` (`modified_by`)';
 		$query .= ') ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 DEFAULT COLLATE = utf8mb4_unicode_ci;';
 		
-		$db = Factory::getDbo();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$db->setQuery( $query );
 		$db->execute();
 		

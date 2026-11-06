@@ -30,6 +30,8 @@ use Joomla\CMS\MVC\Controller\FormController;
 use Joomla\CMS\Response\JsonResponse;
 use Joomla\CMS\Session\Session;
 use Joomla\Registry\Registry;
+use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\Database\DatabaseInterface;
 
 // phpcs:disable PSR1.Files.SideEffects
 \defined('_JEXEC') or die;
@@ -47,7 +49,7 @@ class MenuController extends FormController
 	function listFilter()
 	{
 		$app = Factory::getApplication();
-		$db = Factory::getDBO(); 
+		$db = Factory::getContainer()->get(DatabaseInterface::class); 
 		$input = $app->getInput();
 		$collection = $input->getint( 'collection', 0);
 		$menuId = $input->getint( 'itemId', '');
@@ -120,7 +122,7 @@ class MenuController extends FormController
 	function loadScripts()
 	{
 		$app = Factory::getApplication();
-		$db = Factory::getDBO(); 
+		$db = Factory::getContainer()->get(DatabaseInterface::class); 
 		$input = $app->getInput();
 		$collection = $input->getint( 'collection', 0);
 		$menuId = $input->getint( 'itemId', '');
@@ -194,7 +196,7 @@ class MenuController extends FormController
 	function listRequired()
 	{
 		$app = Factory::getApplication();
-		$db = Factory::getDBO(); 
+		$db = Factory::getContainer()->get(DatabaseInterface::class); 
 		$input = $app->getInput();
 		$collection = $input->getint( 'collection', 0);
 		$menuId = $input->getint( 'itemId', '');
@@ -267,7 +269,7 @@ class MenuController extends FormController
 	function loadUserlists()
 	{
 		$app = Factory::getApplication();
-		$db = Factory::getDBO(); 
+		$db = Factory::getContainer()->get(DatabaseInterface::class); 
 		$input = $app->getInput();
 		$collection = $input->getint( 'collection', 0);
 		$menuId = $input->getint( 'itemId', '');
@@ -331,7 +333,7 @@ class MenuController extends FormController
 	function listItems()
 	{
 		$app = Factory::getApplication();
-		$db = Factory::getDBO(); 
+		$db = Factory::getContainer()->get(DatabaseInterface::class); 
 		// recuperation du titre personnalise pour la collection
 		$input = $app->getInput();
 		$collection = $input->getint( 'collection', 0);

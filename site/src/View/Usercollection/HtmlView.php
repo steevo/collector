@@ -8,6 +8,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\Router\Route;
+use Joomla\Database\DatabaseInterface;
 
 class HtmlView extends BaseHtmlView
 {
@@ -44,7 +45,7 @@ class HtmlView extends BaseHtmlView
 
         // Nom de l'utilisateur cible
         if (!$this->isOwnProfile) {
-            $db = Factory::getDbo();
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
             $db->setQuery(
                 $db->getQuery(true)
                    ->select('name')

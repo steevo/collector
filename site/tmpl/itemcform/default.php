@@ -14,7 +14,9 @@
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
-HTMLHelper::stylesheet(Juri::base() . 'components/com_collector/assets/css/tabs.css');
+use Joomla\CMS\Uri\Uri;
+
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/tabs.css');
 
 if ( $this->item->id != 0 ) {
 	if ( $this->params->get('navigation',1) ) {

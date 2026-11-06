@@ -16,10 +16,11 @@ namespace Steevo\Component\Collector\Administrator\Classes\Field\Define;
 use Steevo\Component\Collector\Administrator\Classes\CollectorField;
 use Steevo\Component\Collector\Administrator\Table\CollectorDefinedContentTable;
 use Joomla\CMS\Factory;
-use Joomla\CMS\Filesystem\File;
+use Joomla\Filesystem\File;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
+use Joomla\Database\DatabaseInterface;
 
 
 defined('_JEXEC') or die;
@@ -123,7 +124,7 @@ class CollectorFieldDefine extends CollectorField
 	 */
 	function getSearchWhereClause(&$query,$search_all_value)
 	{
-		$db = Factory::getDbo();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$text = $db->quote('%' . $db->escape($search_all_value, true) . '%', false);
 		$where = 'LOWER(d'.$this->_field->id.'.content) LIKE LOWER(' . $text . ')';
 		return $where;
@@ -187,7 +188,7 @@ class CollectorFieldDefine extends CollectorField
 			$suffix = '';
 		}
 		
-		$db = Factory::getDbo();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = $db->getQuery(true)
 			->select('c.id AS value, c.content AS text, c.level')
 			->from('#__collector_defined_content AS c')
@@ -368,7 +369,7 @@ class CollectorFieldDefine extends CollectorField
 	 */
 	function display($value,$listing=true,$params=array(),$itemId=0)
 	{
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$defined = (int) ($this->_field->attribs['list'] ?? 0);
 		
 		$query = 'SELECT id, content, image, defined';
@@ -445,7 +446,7 @@ class CollectorFieldDefine extends CollectorField
 			}
 			
 			if ($params && !$params->get('compare_view')) {
-				if ( $this->_field->attribs['show_fieldlink'] && (!empty($this->_field->filter ?? null)) )
+				if ( ($this->_field->attribs['show_fieldlink'] ?? 0) && (!empty($this->_field->filter ?? null)) )
 				{
 					// $link = 'javascript:setSearchField(\'filter_field_'.$this->_field->tablecolumn.'\',\''.$value.'\')';
 					$link= 'index.php?option=com_collector&view=collection&id='.$this->_field->collection.'&reset=0&filterfield_'.$this->_field->tablecolumn.'='.$result->id;
@@ -508,7 +509,7 @@ class CollectorFieldDefine extends CollectorField
 
 					if ($dbId !== '') {
 						// Vérifier que l'ID existe encore en base
-						$db = Factory::getDbo();
+						$db = Factory::getContainer()->get(DatabaseInterface::class);
 						$db->setQuery($db->getQuery(true)
 							->select('COUNT(*)')
 							->from('#__collector_defined_content')
@@ -537,7 +538,7 @@ class CollectorFieldDefine extends CollectorField
 		}
 
 		// ── 3. Correspondance automatique insensible à la casse ──────────────
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = $db->getQuery(true)
 			->select('id')
 			->from('#__collector_defined_content')
@@ -581,7 +582,7 @@ class CollectorFieldDefine extends CollectorField
 	
 	private function createDefinedValue(string $label): string
 	{
-		$db       = Factory::getDbo();
+		$db       = Factory::getContainer()->get(DatabaseInterface::class);
 		$defined  = $this->_field->attribs['list'] ?? '';
 
 		// Vérifier si existe déjà (race condition)
@@ -623,7 +624,7 @@ class CollectorFieldDefine extends CollectorField
 	 */
 	public function getImportMapping(): ?array
 	{
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = $db->getQuery(true)
 			->select('c.id, c.content, c.level')
 			->from('#__collector_defined_content AS c')
@@ -658,7 +659,7 @@ class CollectorFieldDefine extends CollectorField
 		// Valider les IDs sauvegardés — réinitialiser si l'entrée a été supprimée
 		$defined = $this->_field->attribs['list'] ?? '';
 		if (!empty($savedCol['values'])) {
-			$db = Factory::getDbo();
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
 			foreach ($savedCol['values'] as $idx => &$pair) {
 				$dbId = (string) ($pair['db'] ?? '');
 				if ($dbId === '') continue;
@@ -892,7 +893,7 @@ class CollectorFieldDefine extends CollectorField
 			$label = trim($pair['create_label'] ?? $pair['file'] ?? '');
 			if ($label === '') continue;
 
-			$db = Factory::getDbo();
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
 			$db->setQuery($db->getQuery(true)
 				->select('id')
 				->from('#__collector_defined_content')
@@ -930,7 +931,7 @@ class CollectorFieldDefine extends CollectorField
 	 */
 	function rebuild($value)
 	{
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		
 		$query = 'SELECT content, image, defined';
 		$query .= ' FROM #__collector_defined_content';
@@ -965,7 +966,7 @@ class CollectorFieldDefine extends CollectorField
 				$parent_id		= $input->get('parent_id');
 				$level			= $input->get('level');
 				
-				$db = Factory::getDBO();
+				$db = Factory::getContainer()->get(DatabaseInterface::class);
 				$query = $db->getQuery(true);
 				
 				// Select the required fields from the table.

@@ -8,6 +8,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Toolbar\ToolbarHelper;
 use Steevo\Component\Collector\Administrator\Model\UserliststatsModel;
+use Joomla\Database\DatabaseInterface;
 
 class HtmlView extends BaseHtmlView
 {
@@ -23,7 +24,7 @@ class HtmlView extends BaseHtmlView
         $app          = Factory::getApplication();
         $collectionId = $app->input->getInt('collection', 0);
 
-        $db = Factory::getDbo();
+        $db = Factory::getContainer()->get(DatabaseInterface::class);
         $db->setQuery(
             $db->getQuery(true)
                ->select('*')

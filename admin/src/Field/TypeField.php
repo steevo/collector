@@ -57,7 +57,7 @@ class TypeField extends ListField
 			$extension = 'com_collector';		
 			$basePath = JPATH_ROOT.'/administrator/components/com_collector/classes/field/'.strtolower($option->text);
 			
-			$language = Factory::getLanguage();
+			$language = Factory::getApplication()->getLanguage();
 			$language->load($extension, $basePath);
 			
 			$option->text = Text::_('COM_COLLECTOR_'.$option->text);

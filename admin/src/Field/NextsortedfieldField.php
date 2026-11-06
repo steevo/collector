@@ -16,6 +16,7 @@ namespace Steevo\Component\Collector\Administrator\Field;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\FormField;
 use Joomla\CMS\Language\Text;
+use Joomla\Database\DatabaseInterface;
 
 defined('JPATH_BASE') or die;
 
@@ -158,7 +159,7 @@ class NextSortedFieldField extends FormField
 		$script[] = '    }';
 
 		// Add the script to the document head.
-		Factory::getDocument()->addScriptDeclaration(implode("\n", $script));
+		Factory::getApplication()->getDocument()->addScriptDeclaration(implode("\n", $script));
 		
 		return implode($html);
 	}
@@ -171,7 +172,7 @@ class NextSortedFieldField extends FormField
 		$collection = $app->input->get('collection', 0, '', 'int' );
 		
 		// Create a new query object.
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = $db->getQuery(true);
 		
 		// Select the required fields from the table.
@@ -212,7 +213,7 @@ class NextSortedFieldField extends FormField
 		$fieldID = $app->input->get('id', 0, '', 'int' );
 		
 		// Create a new query object.
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = $db->getQuery(true);
 		
 		// Select the required fields from the table.

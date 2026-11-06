@@ -107,8 +107,6 @@ class HtmlView extends BaseHtmlView
 					$this->addToolbar();
 				}
 				
-				HTMLHelper::register('collectorgrid.rebuild', [CollectorGrid::class, 'rebuild']);
-				
 				parent::display($tpl);
 			}
 			else

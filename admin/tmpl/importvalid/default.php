@@ -15,10 +15,11 @@
 
 defined('_JEXEC') or die('Restricted access');
 
-HTMLHelper::stylesheet(Juri::base() . 'components/com_collector/assets/css/import.css');
-HTMLHelper::stylesheet(JURI::root() . 'media/jui/css/jquery.searchtools.css');
+use Joomla\CMS\Uri\Uri;
 
-HTMLHelper::addIncludePath(JPATH_COMPONENT.'/helpers/html');
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/import.css');
+HTMLHelper::stylesheet(Uri::root() . 'media/jui/css/jquery.searchtools.css');
+
 HTMLHelper::_('jquery.framework');
 HTMLHelper::_('bootstrap.tooltip');
 HTMLHelper::_('behavior.modal');

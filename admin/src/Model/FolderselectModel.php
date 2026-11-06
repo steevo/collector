@@ -21,9 +21,14 @@ use Joomla\CMS\Language\Associations;
 use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
 use Joomla\CMS\MVC\Model\ListModel;
 use Joomla\Database\ParameterType;
+use Joomla\CMS\Object\CMSObject;
+use Joomla\CMS\Router\Route;
+use Joomla\Filesystem\File;
+use Joomla\Filesystem\Folder;
+use Joomla\Filesystem\Path;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\HTML\HTMLHelper;
 
-jimport( 'joomla.filesystem.folder' );
-jimport( 'joomla.filesystem.file' );
 
 /**
  * Folderselect model
@@ -73,7 +78,7 @@ class FolderselectModel extends ListModel
 		$this->_folder = $application->getUserStateFromRequest('collector.filemanager.folder', 'folder', '', 'text');
 		
 		$this->_path = array();
-		$tmp = new JObject();
+		$tmp = new CMSObject();
 		$tmp->name = Text::_( 'COM_COLLECTOR_ROOT' );
 		$tmp->path = '';
 		$this->_path[] = $tmp;
@@ -135,10 +140,9 @@ class FolderselectModel extends ListModel
 		$com_media_base_uni = str_replace(DIRECTORY_SEPARATOR, '/', COM_COLLECTOR_BASE);
 
 		// Get the list of folders
-		jimport('joomla.filesystem.folder');
-		$folders = JFolder::folders($base, '.', true, true);
+		$folders = Folder::folders($base, '.', true, true);
 
-		$document = Factory::getDocument();
+		$document = Factory::getApplication()->getDocument();
 		$document->setTitle(Text::_('COM_MEDIA_INSERT_IMAGE'));
 
 		// Build the array of select options for the folder list
@@ -188,11 +192,11 @@ class FolderselectModel extends ListModel
 				
 				$precFolder = implode ( '/' , explode( '/', $baseFolder, -1 ) );
 				
-				$prec = new JObject();
+				$prec = new CMSObject();
 				$prec->name = Text::_('COM_COLLECTOR_BACK_DIRECTORY');
 				$prec->type = '';
 				$prec->ico = 'components/com_collector/assets/images/folder_back.png';
-				$prec->path = JPath::clean($precFolder);
+				$prec->path = Path::clean($precFolder);
 				if ( $prec->path.'/' == $baseSite )
 				{
 					$prec->path_relative = '';
@@ -215,8 +219,8 @@ class FolderselectModel extends ListModel
 		
 		$extensions = $this->getExtensions();
 		
-		$foldersList = JFolder::folders($baseFolder);
-		$filesList = JFolder::files($baseFolder);
+		$foldersList = Folder::folders($baseFolder);
+		$filesList = Folder::files($baseFolder);
 		
 		$files = array();
 		
@@ -224,13 +228,13 @@ class FolderselectModel extends ListModel
 		{
 			foreach ( $filesList as $file )
 			{
-				$ext = strtolower(JFile::getExt($file));
+				$ext = strtolower(File::getExt($file));
 				
 				if ( array_key_exists( $ext, $extensions ) )
 				{
-					$tmp = new JObject();
+					$tmp = new CMSObject();
 					$tmp->name = $file;
-					$tmp->path = JPath::clean($baseFolder.'/'.$file);
+					$tmp->path = Path::clean($baseFolder.'/'.$file);
 					$tmp->path_relative = str_replace($baseSite, '', $tmp->path);
 					$tmp->size = $this->get_file_size($tmp->path);
 					$tmp->modified = $this->get_file_date($tmp->path);
@@ -247,11 +251,11 @@ class FolderselectModel extends ListModel
 		{
 			foreach ( $foldersList as $folder )
 			{
-				$tmp = new JObject();
+				$tmp = new CMSObject();
 				$tmp->name = basename($folder);
 				$tmp->text = Text::_('COM_COLLECTOR_DIRECTORY');
 				$tmp->ico = 'components/com_collector/assets/images/folder.png';
-				$tmp->path = JPath::clean($baseFolder.'/'.$folder);
+				$tmp->path = Path::clean($baseFolder.'/'.$folder);
 				$tmp->path_relative = str_replace($baseSite, '', $tmp->path);
 				//$count = MediaHelper::countFiles($tmp->path);
 				//$tmp->files = $count[0];
@@ -289,7 +293,7 @@ class FolderselectModel extends ListModel
 				{
 					$cleanPath = array();
 					$this->_path = array();
-					$tmp = new JObject();
+					$tmp = new CMSObject();
 					$tmp->name = Text::_( 'COM_COLLECTOR_ROOT' );
 					$tmp->path = '';
 					$this->_path[] = $tmp;
@@ -306,7 +310,7 @@ class FolderselectModel extends ListModel
 				if ( $folder != '.' )
 				{
 					$cleanPath[] = $folder;
-					$tmp = new JObject();
+					$tmp = new CMSObject();
 					$tmp->name = $folder;
 					$tmp->path = implode('/', $cleanPath);
 					$this->_path[] = $tmp;
@@ -386,7 +390,7 @@ class FolderselectModel extends ListModel
 	 */
 	function get_file_date($filename)
 	{
-		$config = Factory::getConfig();
+		$config = Factory::getApplication()->getConfig();
 		$tzoffset = $config->get('config.offset');
 		$date = Factory::getDate(filemtime($filename), $tzoffset);
 		$modified = $date->toSql();
@@ -406,7 +410,7 @@ class FolderselectModel extends ListModel
 		
 		foreach ($this->_path as $folder)
 		{
-			$navigation .= '<a href="' . JRoute::_( 'index.php?option=com_collector&amp;view=folderselect&amp;tmpl=component&amp;folder='.$folder->path ) . '" >' . $folder->name . '</a>/';
+			$navigation .= '<a href="' . Route::_( 'index.php?option=com_collector&amp;view=folderselect&amp;tmpl=component&amp;folder='.$folder->path ) . '" >' . $folder->name . '</a>/';
 		}
 		
 		return $navigation;
@@ -426,13 +430,13 @@ class FolderselectModel extends ListModel
 		
 		foreach ($cid as $id)
 		{
-			$path = JPath::clean(JPATH_ROOT.'/'.$id);
+			$path = Path::clean(JPATH_ROOT.'/'.$id);
 			
 			if (!is_dir($path))
 			{
 				if (is_file($path))
 				{
-					if ( JFile::delete($path) )
+					if ( File::delete($path) )
 					{
 						$deleted[files]++;
 					}
@@ -440,12 +444,12 @@ class FolderselectModel extends ListModel
 			}
 			else
 			{
-				$filesList = JFolder::files($path,'.',true,true);
+				$filesList = Folder::files($path,'.',true,true);
 				$candelete = 1;
 				
 				foreach ( $filesList as $file )
 				{
-					if ( JFile::getName($file) != 'index.html' )
+					if ( File::getName($file) != 'index.html' )
 					{
 						$candelete = 0;
 						break;
@@ -463,7 +467,7 @@ class FolderselectModel extends ListModel
 				}
 				if ( $candelete == 1 )
 				{
-					if ( JFolder::delete($path) )
+					if ( Folder::delete($path) )
 					{
 						$deleted[folders]++;
 					}
@@ -497,13 +501,13 @@ class FolderselectModel extends ListModel
 		$folder = $app->input->get('foldername', '', '', 'text');
 		
 		if (strlen($folder) > 0) {
-			$path = JPath::clean(JPATH_ROOT.'/'.$this->_folder.'/'.$folder);
+			$path = Path::clean(JPATH_ROOT.'/'.$this->_folder.'/'.$folder);
 			if (!is_dir($path))
 			{
 				if (!is_file($path))
 				{
-					JFolder::create($path);
-					JFile::write($path.'/'."index.html", "<html><body bgcolor=\"#FFFFFF\"></body></html>");
+					Folder::create($path);
+					File::write($path.'/'."index.html", "<html><body bgcolor=\"#FFFFFF\"></body></html>");
 					$msg[0] = '"' . $folder . '" ' . Text::_( 'COM_COLLECTOR_FOLDER_CREATED' );
 					$msg[1] = 'message';
 				}
@@ -540,15 +544,15 @@ class FolderselectModel extends ListModel
 		$renameElement = $app->input->get('renameElement', '', '', 'text');
 		$rename = $app->input->get('rename', '', '', 'text');
 		
-		$path = JPath::clean(JPATH_ROOT.'/'.$this->_folder.'/');
+		$path = Path::clean(JPATH_ROOT.'/'.$this->_folder.'/');
 		
-		if ( JFolder::exists( $path . $renameElement ) )
+		if ( Folder::exists( $path . $renameElement ) )
 		{
-			JFolder::move( $path . $renameElement , $path . $rename );
+			Folder::move( $path . $renameElement , $path . $rename );
 		}
 		else
 		{
-			JFile::move( $path . $renameElement , $path . $rename );
+			File::move( $path . $renameElement , $path . $rename );
 		}
 	}
 }

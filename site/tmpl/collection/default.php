@@ -16,10 +16,12 @@ defined('_JEXEC') or die( 'Restricted access' );
 
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\Uri\Uri;
 
-HTMLHelper::stylesheet(Juri::base() . 'components/com_collector/assets/css/collection.css');
-HTMLHelper::stylesheet(Juri::base() . 'components/com_collector/assets/css/dropdown.css');
-HTMLHelper::stylesheet(Juri::base() . 'components/com_collector/assets/css/icomoon.css');
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/collection.css');
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/dropdown.css');
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/icomoon.css');
 
 HTMLHelper::_('behavior.keepalive');
 // HTMLHelper::_('behavior.calendar');
@@ -193,7 +195,7 @@ foreach ( $this->fields as $field )
 	</div>
 	<?php endif; ?>
 	
-	<form action="<?php echo JRoute::_('index.php?option=com_collector&view=collection&id='.$this->collection->id.'&reset=0'); ?>" method="post" name="adminForm" id="adminForm">
+	<form action="<?php echo Route::_('index.php?option=com_collector&view=collection&id='.$this->collection->id.'&reset=0'); ?>" method="post" name="adminForm" id="adminForm">
 	
 		<fieldset class="filters mb-0">
 		<?php if ($this->params->get('show_search_area', 1)) : ?>
@@ -284,14 +286,14 @@ foreach ( $this->fields as $field )
 		<?php endif; ?>
 	</form>
 	
-	<form action="<?php echo JRoute::_('index.php?option=com_collector&format=raw&tmpl=component&task=useritem.add'); ?>" method="post" name="useritemAddForm" id="useritemAddForm">
+	<form action="<?php echo Route::_('index.php?option=com_collector&format=raw&tmpl=component&task=useritem.add'); ?>" method="post" name="useritemAddForm" id="useritemAddForm">
 		<input type="hidden" id="useritemAddForm_userlist" name="userlist" value="" />
 		<input type="hidden" id="useritemAddForm_item" name="item" value="" />
 		<input type="hidden" id="useritemAddForm_comment" name="comment" value="" />
 		<?php echo HTMLHelper::_( 'form.token' ); ?>
 	</form>
 	
-	<form action="<?php echo JRoute::_('index.php?option=com_collector&format=raw&tmpl=component&task=useritem.delete'); ?>" method="post" name="useritemRemoveForm" id="useritemRemoveForm">
+	<form action="<?php echo Route::_('index.php?option=com_collector&format=raw&tmpl=component&task=useritem.delete'); ?>" method="post" name="useritemRemoveForm" id="useritemRemoveForm">
 		<input type="hidden" id="useritemRemoveForm_userlist" name="userlist" value="" />
 		<input type="hidden" id="useritemRemoveForm_item" name="item" value="" />
 		<!-- <input type="hidden" id="useritemRemoveForm_cid" name="cid[]" value="" /> -->

@@ -22,6 +22,9 @@ use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Toolbar\Toolbar;
 use Joomla\CMS\Toolbar\ToolbarHelper;
+use Joomla\CMS\Table\Table;
+use Joomla\Utilities\ArrayHelper;
+use Joomla\CMS\HTML\HTMLHelper;
 
 /**
  * HTML Htmledit View class for the Collector component
@@ -39,12 +42,12 @@ class HtmlView extends BaseHtmlView
 		
 		$cid = $app->input->get( 'cid', array(0), '', 'array' );
 			
-		JArrayHelper::toInteger($cid, array(0));
+		ArrayHelper::toInteger($cid, array(0));
 		$id = $app->input->get('id', $cid[0], '', 'int' );
 		
 		// Create and load the content table row
-		JTable::addIncludePath(JPATH_ADMINISTRATOR.'/components/com_collector/tables');
-		$row = & JTable::getInstance('collector_templates','Table');
+		Table::addIncludePath(JPATH_ADMINISTRATOR.'/components/com_collector/tables');
+		$row = & Table::getInstance('collector_templates','Table');
 		
 		if (!empty($id))
 		{
@@ -69,7 +72,6 @@ class HtmlView extends BaseHtmlView
 		}
 		
 		// Read the source file
-		jimport('joomla.filesystem.file');
 		$content = file_get_contents($file);
 
 		if ($content !== false)

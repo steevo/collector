@@ -61,7 +61,7 @@ $script[] = '        jQuery(id).value = path + "|" + title + "|" + alt + "|" + l
 $script[] = '    }';
 
 // Add the script to the document head.
-Factory::getDocument()->addScriptDeclaration(implode("\n", $script));
+Factory::getApplication()->getDocument()->addScriptDeclaration(implode("\n", $script));
 
 $attr = '';
 

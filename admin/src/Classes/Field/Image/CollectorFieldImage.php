@@ -110,17 +110,26 @@ class CollectorFieldImage extends CollectorField
 		$imageUrl = $imageInfos->url;
 		$imagePath = $imageUrl;
 		$imageName = basename(JPATH_SITE.'/'.$imagePath);
-		$imageDesc = $this->_field->attribs['imgdesc'];
-		$imageTitle = $this->_field->attribs['imgtitle'];
+		// Champs créés avant la 0.9.0 : leurs attributs ne contiennent pas ces réglages, on reprend les valeurs par défaut de field.xml
+		$attribs = (array) $this->_field->attribs + array(
+			'imgdesc'          => '',
+			'imgtitle'         => '',
+			'maxwidthlisting'  => 100,
+			'maxheightlisting' => 80,
+			'maxwidth'         => 500,
+			'maxheight'        => 400,
+		);
+		$imageDesc = $attribs['imgdesc'];
+		$imageTitle = $attribs['imgtitle'];
 		if ($listing == true)
 		{
-			$largeurmax = $this->_field->attribs['maxwidthlisting'];
-			$hauteurmax = $this->_field->attribs['maxheightlisting'];
+			$largeurmax = (int) $attribs['maxwidthlisting'] ?: 100;
+			$hauteurmax = (int) $attribs['maxheightlisting'] ?: 80;
 		}
 		else
 		{
-			$largeurmax = $this->_field->attribs['maxwidth'];
-			$hauteurmax = $this->_field->attribs['maxheight'];
+			$largeurmax = (int) $attribs['maxwidth'] ?: 500;
+			$hauteurmax = (int) $attribs['maxheight'] ?: 400;
 		}
 		
 		$image = '';

@@ -14,6 +14,8 @@
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
+use Joomla\CMS\Router\Route;
+
 HTMLHelper::_('behavior.keepalive');
 HTMLHelper::_('behavior.calendar');
 HTMLHelper::_('behavior.formvalidation');
@@ -42,7 +44,7 @@ HTMLHelper::_('formbehavior.chosen', 'select');
 </script>
 
 <div class="edit item-page<?php echo $this->pageclass_sfx; ?>" >
-	<form method="post" action="<?php echo JRoute::_(Factory::getURI()->toString()); ?>" name="adminForm" id="adminForm" class="form-validate form-vertical">
+	<form method="post" action="<?php echo Route::_(Factory::getURI()->toString()); ?>" name="adminForm" id="adminForm" class="form-validate form-vertical">
 		<div class="btn-toolbar">
 			<div class="btn-group">
 				<button type="button" class="btn btn-primary" onclick="Joomla.submitbutton('item.save')">

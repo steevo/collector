@@ -22,6 +22,8 @@ use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Toolbar\Toolbar;
 use Joomla\CMS\Toolbar\ToolbarHelper;
+use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\HTML\HTMLHelper;
 
 /**
  * HTML Folderselect View class for the Collector component
@@ -35,7 +37,7 @@ class HtmlView extends BaseHtmlView
 	 */
 	function display($tpl = null)
 	{
-		HTMLHelper::script(Juri::base() . 'components/com_collector/assets/js/popup-filemanager.js', true);
+		HTMLHelper::script(Uri::base() . 'components/com_collector/assets/js/popup-filemanager.js', true);
 		
 		$user = Factory::getApplication()->getIdentity();
 		if (!$user->authorise('com_collector', 'filemanage'))

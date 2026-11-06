@@ -21,9 +21,14 @@ use Joomla\CMS\Language\Associations;
 use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
 use Joomla\CMS\MVC\Model\ListModel;
 use Joomla\Database\ParameterType;
+use Joomla\CMS\Object\CMSObject;
+use Joomla\CMS\Router\Route;
+use Joomla\Filesystem\File;
+use Joomla\Filesystem\Folder;
+use Joomla\Filesystem\Path;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\HTML\HTMLHelper;
 
-jimport('joomla.filesystem.folder');
-jimport('joomla.filesystem.file');
 
 /**
  * Filemanager model
@@ -55,14 +60,14 @@ class FilemanagerModel extends ListModel
 		// Get folder request variables
 		$this->_folder = $this->getUserStateFromRequest($this->context.'.filemanager.folder', 'folder');
 		
-		$path = JPath::clean(COM_COLLECTOR_BASE);
+		$path = Path::clean(COM_COLLECTOR_BASE);
 		if (!is_dir($path))
 		{
-			JFolder::create($path);
+			Folder::create($path);
 		}
 		
 		$this->_path = array();
-		$tmp = new JObject();
+		$tmp = new CMSObject();
 		$tmp->name = Text::_( 'COM_COLLECTOR_ROOT' );
 		$tmp->path = '';
 		$this->_path[] = $tmp;
@@ -93,7 +98,7 @@ class FilemanagerModel extends ListModel
 	 */
 	function getList($baseFolder = null)
 	{
-		$baseSite = JPath::clean(COM_COLLECTOR_BASE.DIRECTORY_SEPARATOR);
+		$baseSite = Path::clean(COM_COLLECTOR_BASE.DIRECTORY_SEPARATOR);
 		
 		$folders = array();
 		$files = array();
@@ -111,12 +116,12 @@ class FilemanagerModel extends ListModel
 				
 				$precFolder = implode ( DIRECTORY_SEPARATOR , explode( DIRECTORY_SEPARATOR, $baseFolder, -1 ) );
 				
-				$prec = new JObject();
+				$prec = new CMSObject();
 				$prec->name = Text::_('COM_COLLECTOR_BACK_DIRECTORY');
 				$prec->type = '';
 				$prec->text = '';
 				$prec->ico = 'components/com_collector/assets/images/folder_back.png';
-				$prec->path = JPath::clean($precFolder);
+				$prec->path = Path::clean($precFolder);
 				if ( $prec->path.DIRECTORY_SEPARATOR == $baseSite )
 				{
 					$prec->path_relative = '';
@@ -139,20 +144,20 @@ class FilemanagerModel extends ListModel
 		
 		$extensions = $this->getExtensions();
 		
-		$foldersList = JFolder::folders($baseFolder);
-		$filesList = JFolder::files($baseFolder);
+		$foldersList = Folder::folders($baseFolder);
+		$filesList = Folder::files($baseFolder);
 		
 		if ( $filesList != null )
 		{
 			foreach ( $filesList as $file )
 			{
-				$ext = strtolower(JFile::getExt($file));
+				$ext = strtolower(File::getExt($file));
 				
 				if ( array_key_exists( $ext, $extensions ) )
 				{
-					$tmp = new JObject();
+					$tmp = new CMSObject();
 					$tmp->name = $file;
-					$tmp->path = JPath::clean($baseFolder.'/'.$file);
+					$tmp->path = Path::clean($baseFolder.'/'.$file);
 					$tmp->path_relative = str_replace($baseSite, '', $tmp->path);
 					$tmp->size = $this->get_file_size($tmp->path);
 					$tmp->modified = $this->get_file_date($tmp->path);
@@ -169,11 +174,11 @@ class FilemanagerModel extends ListModel
 		{
 			foreach ( $foldersList as $folder )
 			{
-				$tmp = new JObject();
+				$tmp = new CMSObject();
 				$tmp->name = basename($folder);
 				$tmp->text = Text::_('COM_COLLECTOR_DIRECTORY');
 				$tmp->ico = 'components/com_collector/assets/images/folder.png';
-				$tmp->path = JPath::clean($baseFolder.'/'.$folder);
+				$tmp->path = Path::clean($baseFolder.'/'.$folder);
 				$tmp->path_relative = str_replace($baseSite, '', $tmp->path);
 				//$count = MediaHelper::countFiles($tmp->path);
 				//$tmp->files = $count[0];
@@ -210,7 +215,7 @@ class FilemanagerModel extends ListModel
 				{
 					$cleanPath = array();
 					$this->_path = array();
-					$tmp = new JObject();
+					$tmp = new CMSObject();
 					$tmp->name = Text::_( 'COM_COLLECTOR_ROOT' );
 					$tmp->path = '';
 					$this->_path[] = $tmp;
@@ -227,7 +232,7 @@ class FilemanagerModel extends ListModel
 				if ( $folder != '.' )
 				{
 					$cleanPath[] = $folder;
-					$tmp = new JObject();
+					$tmp = new CMSObject();
 					$tmp->name = $folder;
 					$tmp->path = implode(DIRECTORY_SEPARATOR, $cleanPath);
 					$this->_path[] = $tmp;
@@ -308,7 +313,7 @@ class FilemanagerModel extends ListModel
 	 */
 	function get_file_date($filename)
 	{
-		$config = Factory::getConfig();
+		$config = Factory::getApplication()->getConfig();
 		$tzoffset = $config->get('config.offset');
 		$date = Factory::getDate(filemtime($filename), $tzoffset);
 		$modified = $date->toSql();
@@ -328,7 +333,7 @@ class FilemanagerModel extends ListModel
 		
 		foreach ($this->_path as $folder)
 		{
-			$navigation .= '<a href="' . JRoute::_( 'index.php?option=com_collector&amp;view=filemanager&amp;folder='.$folder->path ) . '" >' . $folder->name . '</a>/';
+			$navigation .= '<a href="' . Route::_( 'index.php?option=com_collector&amp;view=filemanager&amp;folder='.$folder->path ) . '" >' . $folder->name . '</a>/';
 		}
 		
 		$navigation .= '</big></b>';
@@ -350,13 +355,13 @@ class FilemanagerModel extends ListModel
 		
 		foreach ($cid as $id)
 		{
-			$path = JPath::clean(COM_COLLECTOR_BASE.'/'.$id);
+			$path = Path::clean(COM_COLLECTOR_BASE.'/'.$id);
 			
 			if (!is_dir($path))
 			{
 				if (is_file($path))
 				{
-					if ( JFile::delete($path) )
+					if ( File::delete($path) )
 					{
 						$deleted[files]++;
 					}
@@ -364,12 +369,12 @@ class FilemanagerModel extends ListModel
 			}
 			else
 			{
-				$filesList = JFolder::files($path,'.',true,true);
+				$filesList = Folder::files($path,'.',true,true);
 				$candelete = 1;
 				
 				foreach ( $filesList as $file )
 				{
-					if ( JFile::getName($file) != 'index.html' )
+					if ( File::getName($file) != 'index.html' )
 					{
 						$candelete = 0;
 						break;
@@ -388,7 +393,7 @@ class FilemanagerModel extends ListModel
 				}
 				if ( $candelete == 1 )
 				{
-					if ( JFolder::delete($path) )
+					if ( Folder::delete($path) )
 					{
 						$deleted[folders]++;
 					}
@@ -421,16 +426,16 @@ class FilemanagerModel extends ListModel
 		$renameElement = $app->input->get('renameElement', '', '', 'text');
 		$rename = $app->input->get('rename', '', '', 'text');
 		
-		$path = JPath::clean(COM_COLLECTOR_BASE.'/'.$this->_folder.'/');
+		$path = Path::clean(COM_COLLECTOR_BASE.'/'.$this->_folder.'/');
 		$path_relative = $this->_folder.'/';
 		
-		if ( JFolder::exists( $path . $renameElement ) )
+		if ( Folder::exists( $path . $renameElement ) )
 		{
-			$result = JFolder::move( $path . $renameElement , $path . $rename );
+			$result = Folder::move( $path . $renameElement , $path . $rename );
 		}
 		else
 		{
-			$result = JFile::move( $path . $renameElement , $path . $rename );
+			$result = File::move( $path . $renameElement , $path . $rename );
 		}
 		
 		if ( $result == 1 )
@@ -451,8 +456,8 @@ class FilemanagerModel extends ListModel
 		$app = Factory::getApplication();
 		$elements = $app->input->get('cid', 0, '', 'array');
 		
-		$path = JPath::clean(COM_COLLECTOR_BASE.'/');
-		$path2copy = JPath::clean(COM_COLLECTOR_BASE.'/'.$this->_folder.'/');
+		$path = Path::clean(COM_COLLECTOR_BASE.'/');
+		$path2copy = Path::clean(COM_COLLECTOR_BASE.'/'.$this->_folder.'/');
 		
 		foreach ( $elements as $element )
 		{
@@ -462,13 +467,13 @@ class FilemanagerModel extends ListModel
 			
 			$singleElement = $arrayPath[0];
 			
-			if ( JFolder::exists( $path . $element ) )
+			if ( Folder::exists( $path . $element ) )
 			{
-				JFolder::copy( $path . $element , $path2copy . $singleElement );
+				Folder::copy( $path . $element , $path2copy . $singleElement );
 			}
 			else
 			{
-				JFile::copy( $path . $element , $path2copy . $singleElement );
+				File::copy( $path . $element , $path2copy . $singleElement );
 			}
 		}
 		
@@ -485,8 +490,8 @@ class FilemanagerModel extends ListModel
 		$app = Factory::getApplication();
 		$elements = $app->input->get('cid', 0, '', 'array');
 		
-		$path = JPath::clean(COM_COLLECTOR_BASE.'/');
-		$path2copy = JPath::clean(COM_COLLECTOR_BASE.'/'.$this->_folder.'/');
+		$path = Path::clean(COM_COLLECTOR_BASE.'/');
+		$path2copy = Path::clean(COM_COLLECTOR_BASE.'/'.$this->_folder.'/');
 		$path2copy_relative = $this->_folder.'/';
 		
 		foreach ( $elements as $element )
@@ -497,13 +502,13 @@ class FilemanagerModel extends ListModel
 			
 			$singleElement = $arrayPath[0];
 			
-			if ( JFolder::exists( $path . $element ) )
+			if ( Folder::exists( $path . $element ) )
 			{
-				$result = JFolder::move( $path . $element , $path2copy . $singleElement );
+				$result = Folder::move( $path . $element , $path2copy . $singleElement );
 			}
 			else
 			{
-				$result = JFile::move( $path . $element , $path2copy . $singleElement );
+				$result = File::move( $path . $element , $path2copy . $singleElement );
 			}
 			
 			if ( $result == 1 )
@@ -525,7 +530,7 @@ class FilemanagerModel extends ListModel
 	 */
 	function update_path( $oldPath, $newPath )
 	{
-		$params = JComponentHelper::getParams( 'com_collector' );
+		$params = ComponentHelper::getParams( 'com_collector' );
 		$oldPath = str_replace( '\\', '/', $params->get('file_path', 'images/collector').'/'.$oldPath );
 		$newPath = str_replace( '\\', '/', $params->get('file_path', 'images/collector').'/'.$newPath );
 		

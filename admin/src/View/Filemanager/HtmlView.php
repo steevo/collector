@@ -22,6 +22,8 @@ use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Toolbar\Toolbar;
 use Joomla\CMS\Toolbar\ToolbarHelper;
+use Joomla\CMS\Component\ComponentHelper;
+use Steevo\Component\Collector\Administrator\Helper\CollectorHelper;
 
 /**
  * HTML Filemanager View class for the Collector component
@@ -35,16 +37,16 @@ class HtmlView extends BaseHtmlView
 	 */
 	function display($tpl = null)
 	{
-		$lang = Factory::getLanguage();
+		$lang = Factory::getApplication()->getLanguage();
 		$extension = 'com_media';
 		$base_dir = JPATH_ADMINISTRATOR;
 		$lang->load($extension, $base_dir);
 
 		$user = Factory::getApplication()->getIdentity();
-		$session	= Factory::getSession();
-		$config = JComponentHelper::getParams('com_media');
+		$session	= Factory::getApplication()->getSession();
+		$config = ComponentHelper::getParams('com_media');
 		
-		$document = Factory::getDocument();
+		$document = Factory::getApplication()->getDocument();
 		
 		$model = $this->getModel('filemanager');
 		

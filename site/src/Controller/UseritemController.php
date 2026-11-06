@@ -8,6 +8,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Response\JsonResponse;
 use Joomla\CMS\Session\Session;
+use Joomla\Database\DatabaseInterface;
 
 class UseritemController extends BaseController
 {
@@ -158,7 +159,7 @@ class UseritemController extends BaseController
 		$access     = $app->input->getInt('access');
 
 		// Vérifier que la liste appartient bien à l'utilisateur
-		$db = Factory::getDbo();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$db->setQuery(
 			$db->getQuery(true)
 			   ->select('id')

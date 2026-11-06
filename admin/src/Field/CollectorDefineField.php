@@ -15,6 +15,7 @@ namespace Steevo\Component\Collector\Administrator\Field;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\Field\ListField;
+use Joomla\Database\DatabaseInterface;
 
 defined('_JEXEC') or die;
 
@@ -37,7 +38,7 @@ class CollectorDefineField extends ListField
 		$defined = $this->element['list'];
 		
 		// Create a new query object.
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = $db->getQuery(true);
 		
 		// Select the required fields from the table.

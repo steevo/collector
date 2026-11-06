@@ -275,8 +275,8 @@ class FieldsController extends AdminController
 		$collection = $app->input->getCmd( 'collection' );
  
         // Sanitize the input
-        ArrayHelper::toInteger($pks);
-        ArrayHelper::toInteger($order);
+        $pks = ArrayHelper::toInteger($pks);
+        $order = ArrayHelper::toInteger($order);
  
         // Get the model
         $model = $this->getModel();
@@ -343,7 +343,7 @@ class FieldsController extends AdminController
 		
 		// Get some variables from the request
 		$cid	= $app->input->get( 'cid', array(), '', 'array' );
-		JArrayHelper::toInteger($cid);
+		$cid = ArrayHelper::toInteger($cid);
 		$collection = $app->input->get( 'collection' );
 		
 		if (empty($cid)) {

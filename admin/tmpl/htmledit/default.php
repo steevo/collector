@@ -14,9 +14,12 @@
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
-$db = Factory::getDBO();
+use Joomla\Database\DatabaseInterface;
+use Joomla\CMS\Factory;
+
+$db = Factory::getContainer()->get(DatabaseInterface::class);
 $user = Factory::getApplication()->getIdentity();
-$config = Factory::getConfig();
+$config = Factory::getApplication()->getConfig();
 $now = Factory::getDate();
 
 ?>

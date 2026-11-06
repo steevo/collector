@@ -18,7 +18,7 @@ use Joomla\CMS\Form\Field\ListField;
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
-JFormHelper::loadFieldClass('list');
+use Joomla\Database\DatabaseInterface;
 
 /**
  * Renders a filter field element
@@ -33,8 +33,8 @@ class SearchmethodField extends ListField
 	{
 		// Initialize variables.
 		$html = array();
-		$db = Factory::getDBO();
-		$doc = Factory::getDocument();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
+		$doc = Factory::getApplication()->getDocument();
 
 		$js = "
 		jQuery(document).ready(function(){

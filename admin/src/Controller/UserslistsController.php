@@ -22,6 +22,7 @@ use Joomla\CMS\Response\JsonResponse;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
 use Joomla\Utilities\ArrayHelper;
+use Joomla\Database\DatabaseInterface;
 
 /**
  * Userslists Controller
@@ -68,8 +69,8 @@ class UserslistsController extends AdminController
 		$collection = $this->input->post->get( 'collection' );
 		
         // Sanitize the input
-        ArrayHelper::toInteger($pks);
-        ArrayHelper::toInteger($order);
+        $pks = ArrayHelper::toInteger($pks);
+        $order = ArrayHelper::toInteger($order);
  
         // Get the model
         $model = $this->getModel('userslists');
@@ -158,7 +159,7 @@ class UserslistsController extends AdminController
 
 		$id     = $this->input->getInt('id');
 		$access = $this->input->getInt('access');
-		$db     = Factory::getDbo();
+		$db     = Factory::getContainer()->get(DatabaseInterface::class);
 
 		try {
 			$db->setQuery(

@@ -19,6 +19,11 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Form\Field\MediaField;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Layout\LayoutHelper;
+use Joomla\CMS\Object\CMSObject;
+use Joomla\CMS\Session\Session;
+use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\Database\DatabaseInterface;
 
 /**
  * Form Field class for the Collector.
@@ -32,10 +37,10 @@ class CollectorFileField extends MediaField
 	protected function getInput()
 	{
 		$app = Factory::getApplication();
-		$document = Factory::getDocument();
+		$document = Factory::getApplication()->getDocument();
 		
 		// Create a new query object.
-		$db = Factory::getDbo();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = $db->getQuery(true);
 		
 		// Check if jdownloads is installed.
@@ -76,7 +81,7 @@ class CollectorFileField extends MediaField
 		$db->execute();
 		$file_name = $db->loadResult();
 		
-		$document->addStyleSheet( JURI::root().'plugins/editors-xtd/jdownloads/assets/css/jdownloads.css', 'text/css', null, array() );
+		$document->addStyleSheet( Uri::root().'plugins/editors-xtd/jdownloads/assets/css/jdownloads.css', 'text/css', null, array() );
 
 		/*
 		 * Javascript to insert the link
@@ -104,14 +109,14 @@ class CollectorFileField extends MediaField
 		}";
 		$document->addScriptDeclaration($js);
 
-		$link = 'index.php?option=com_jdownloads&amp;view=list&amp;layout=modallist&amp;tmpl=component&amp;e_name='.$this->name.'&amp;id_field='.$this->id.'&amp;' . JSession::getFormToken() . '=1';
+		$link = 'index.php?option=com_jdownloads&amp;view=list&amp;layout=modallist&amp;tmpl=component&amp;e_name='.$this->name.'&amp;id_field='.$this->id.'&amp;' . Session::getFormToken() . '=1';
 		$onclick	= ' onclick="document.id(\''.$this->id.'\').value=\'\';document.id(\''.$this->id.'_title\').value=\'\';"';
 
 		$input = '<div class="input-append"><input type="text" id="' . $this->id . '_title" value="' . $file_name . '" readonly="readonly" />';
 		$input .= '<input type="hidden" name="' . $this->name . '" id="' . $this->id . '" value="' . htmlspecialchars($this->value, ENT_COMPAT, 'UTF-8') . '" readonly="readonly" /> <a class="btn btn-primary" title="'.Text::_('COM_COLLECTOR_FIELD_FILE_DELETE_JDOWNLOAD_FILE').'" ' . $onclick . '><span class="icon-cancel"></span></a></div>';
 		
 		HTMLHelper::_('behavior.modal');
-		$button = new JObject;
+		$button = new CMSObject;
 		$button->modal = true;
 		$button->class = 'btn';
 		$button->link = $link;

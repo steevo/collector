@@ -22,10 +22,10 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Layout\LayoutHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\Registry\Registry;
+use Joomla\CMS\Form\Form;
 
 // Include the component HTML helpers.
-HTMLHelper::addIncludePath(JPATH_COMPONENT.'/helpers/html');
-JForm::addFieldPath(JPATH_COMPONENT . '/models/fields');
+Form::addFieldPath(JPATH_COMPONENT . '/models/fields');
 
 // Load the tooltip behavior.
 HTMLHelper::_('behavior.formvalidator');

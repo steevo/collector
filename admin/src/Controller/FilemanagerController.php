@@ -16,11 +16,21 @@ namespace Steevo\Component\Collector\Administrator\Controller;
 defined('_JEXEC') or die;
 
 use Joomla\CMS\MVC\Controller\AdminController;
+use Joomla\CMS\Component\ComponentHelper;
+use Joomla\CMS\Object\CMSObject;
+use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\CMS\Session\Session;
+use Joomla\Filesystem\File;
+use Joomla\Filesystem\Folder;
+use Joomla\Filesystem\Path;
+use Joomla\CMS\Client\ClientHelper;
+use Joomla\CMS\Helper\MediaHelper;
+use Joomla\CMS\String\PunycodeHelper;
+use Joomla\CMS\Factory;
+use Joomla\CMS\Language\Text;
 
-jimport('joomla.filesystem.file');
-jimport('joomla.filesystem.folder');
 
-$lang = Factory::getLanguage();
+$lang = Factory::getApplication()->getLanguage();
 $extension = 'com_media';
 $base_dir = JPATH_SITE;
 $lang->load($extension, $base_dir);
@@ -40,7 +50,7 @@ class FilemanagerController extends AdminController
 	function create()
 	{
 		// Check for request forgeries
-		JSession::checkToken() or jexit(Text::_('JINVALID_TOKEN'));
+		Session::checkToken() or jexit(Text::_('JINVALID_TOKEN'));
 
 		$user  = Factory::getApplication()->getIdentity();
 		
@@ -71,7 +81,7 @@ class FilemanagerController extends AdminController
 			}
 			
 			// Set FTP credentials, if given
-			JClientHelper::setCredentialsFromRequest('ftp');
+			ClientHelper::setCredentialsFromRequest('ftp');
 
 			$this->input->set('folder', $parent);
 
@@ -82,15 +92,15 @@ class FilemanagerController extends AdminController
 				return false;
 			}
 			
-			$path = JPath::clean(COM_COLLECTOR_BASE . '/' . $parent . '/' . $folder);
+			$path = Path::clean(COM_COLLECTOR_BASE . '/' . $parent . '/' . $folder);
 			
 			if (!is_dir($path) && !is_file($path))
 			{
 				// Trigger the onContentBeforeSave event.
-				$object_file = new JObject(array('filepath' => $path));
-				JPluginHelper::importPlugin('content');
-				$dispatcher	= JEventDispatcher::getInstance();
-				$result = $dispatcher->trigger('onContentBeforeSave', array('com_collector.folder', &$object_file, true));
+				$object_file = new CMSObject(array('filepath' => $path));
+				PluginHelper::importPlugin('content');
+				$dispatcher	= Factory::getApplication();
+				$result = $dispatcher->triggerEvent('onContentBeforeSave', array('com_collector.folder', &$object_file, true));
 
 				if (in_array(false, $result, true))
 				{
@@ -100,13 +110,13 @@ class FilemanagerController extends AdminController
 					return false;
 				}
 
-				if (JFolder::create($object_file->filepath))
+				if (Folder::create($object_file->filepath))
 				{
 					$data = "<html>\n<body bgcolor=\"#FFFFFF\">\n</body>\n</html>";
-					JFile::write($object_file->filepath . "/index.html", $data);
+					File::write($object_file->filepath . "/index.html", $data);
 
 					// Trigger the onContentAfterSave event.
-					$dispatcher->trigger('onContentAfterSave', array('com_collector.folder', &$object_file, true));
+					$dispatcher->triggerEvent('onContentAfterSave', array('com_collector.folder', &$object_file, true));
 					$this->setMessage(Text::sprintf('COM_COLLECTOR_CREATE_COMPLETE', substr($object_file->filepath, strlen(COM_COLLECTOR_BASE))));
 				}
 			}
@@ -214,7 +224,7 @@ class FilemanagerController extends AdminController
 		// Check for request forgeries
 		$this->checkToken('request');
 
-		$params = JComponentHelper::getParams('com_media');
+		$params = ComponentHelper::getParams('com_media');
 
 		// Get some data from the request
 		$files		  = $this->input->files->get('Filedata', array(), 'array');
@@ -222,7 +232,7 @@ class FilemanagerController extends AdminController
 		$return		  = 'index.php?option=com_collector&view=filemanager&folder='.str_replace('/','\\',$this->folder);
 
 		// Instantiate the media helper
-		$mediaHelper = new JHelperMedia;
+		$mediaHelper = new MediaHelper;
 
 		// First check against unfiltered input.
 		if (!$this->input->files->get('Filedata', null, 'RAW'))
@@ -261,7 +271,7 @@ class FilemanagerController extends AdminController
 		}
 
 		// Authorize the user
-		if (!Factory::getUser()->authorise('core.create', 'com_collector'))
+		if (!Factory::getApplication()->getIdentity()->authorise('core.create', 'com_collector'))
 		{
 			// User is not authorised
 			Factory::getApplication()->enqueueMessage(Text::_('JLIB_APPLICATION_ERROR_CREATE_NOT_PERMITTED'),'warning');
@@ -276,12 +286,12 @@ class FilemanagerController extends AdminController
 		foreach ($files as &$file)
 		{
 			// Make the filename safe
-			$file['name'] = JFile::makeSafe($file['name']);
+			$file['name'] = File::makeSafe($file['name']);
 
 			// We need a url safe name
 			$fileparts = pathinfo(COM_COLLECTOR_BASE . '/' . $this->folder . '/' . $file['name']);
 
-			if (strpos(realpath($fileparts['dirname']), JPath::clean(realpath(COM_COLLECTOR_BASE))) !== 0)
+			if (strpos(realpath($fileparts['dirname']), Path::clean(realpath(COM_COLLECTOR_BASE))) !== 0)
 			{
 				Factory::getApplication()->enqueueMessage(Text::_('COM_MEDIA_ERROR_WARNINVALID_FOLDER'),'warning');
 
@@ -289,7 +299,7 @@ class FilemanagerController extends AdminController
 			}
 
 			// Transform filename to punycode, check extension and transform it to lowercase
-			$fileparts['filename'] = JStringPunycode::toPunycode($fileparts['filename']);
+			$fileparts['filename'] = PunycodeHelper::toPunycode($fileparts['filename']);
 			$tempExt = !empty($fileparts['extension']) ? strtolower($fileparts['extension']) : '';
 
 			// Neglect other than non-alphanumeric characters, hyphens & underscores.
@@ -297,7 +307,7 @@ class FilemanagerController extends AdminController
 
 			$file['name'] = $safeFileName;
 
-			$file['filepath'] = JPath::clean(implode(DIRECTORY_SEPARATOR, array(COM_COLLECTOR_BASE, $this->folder, $file['name'])));
+			$file['filepath'] = Path::clean(implode(DIRECTORY_SEPARATOR, array(COM_COLLECTOR_BASE, $this->folder, $file['name'])));
 
 			if (($file['error'] == 1)
 				|| ($uploadMaxSize > 0 && $file['size'] > $uploadMaxSize)
@@ -309,7 +319,7 @@ class FilemanagerController extends AdminController
 				$this->setRedirect( $return );
 			}
 
-			if (JFile::exists($file['filepath']))
+			if (File::exists($file['filepath']))
 			{
 				// A file with this name already exists
 				Factory::getApplication()->enqueueMessage(Text::_('COM_MEDIA_ERROR_FILE_EXISTS'),'warning');
@@ -327,9 +337,9 @@ class FilemanagerController extends AdminController
 		}
 
 		// Set FTP credentials, if given
-		JClientHelper::setCredentialsFromRequest('ftp');
-		JPluginHelper::importPlugin('content');
-		$dispatcher = JEventDispatcher::getInstance();
+		ClientHelper::setCredentialsFromRequest('ftp');
+		PluginHelper::importPlugin('content');
+		$dispatcher = Factory::getApplication();
 
 		foreach ($files as &$file)
 		{
@@ -343,8 +353,8 @@ class FilemanagerController extends AdminController
 			}
 
 			// Trigger the onContentBeforeSave event.
-			$object_file = new JObject($file);
-			$result = $dispatcher->trigger('onContentBeforeSave', array('com_media.file', &$object_file, true));
+			$object_file = new CMSObject($file);
+			$result = $dispatcher->triggerEvent('onContentBeforeSave', array('com_media.file', &$object_file, true));
 
 			if (in_array(false, $result, true))
 			{
@@ -354,7 +364,7 @@ class FilemanagerController extends AdminController
 				$this->setRedirect( $return );
 			}
 
-			if (!JFile::upload($object_file->tmp_name, $object_file->filepath))
+			if (!File::upload($object_file->tmp_name, $object_file->filepath))
 			{
 				// Error in upload
 				Factory::getApplication()->enqueueMessage(Text::_('COM_MEDIA_ERROR_UNABLE_TO_UPLOAD_FILE'),'warning');
@@ -363,7 +373,7 @@ class FilemanagerController extends AdminController
 			}
 
 			// Trigger the onContentAfterSave event.
-			$dispatcher->trigger('onContentAfterSave', array('com_media.file', &$object_file, true));
+			$dispatcher->triggerEvent('onContentAfterSave', array('com_media.file', &$object_file, true));
 			$this->setMessage(Text::sprintf('COM_MEDIA_UPLOAD_COMPLETE', substr($object_file->filepath, strlen(COM_COLLECTOR_BASE))));
 		}
 

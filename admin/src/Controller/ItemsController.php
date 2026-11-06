@@ -224,8 +224,8 @@ class ItemsController extends AdminController
 		$collection = $app->input->getCmd( 'collection' );
  
         // Sanitize the input
-        ArrayHelper::toInteger($pks);
-        ArrayHelper::toInteger($order);
+        $pks = ArrayHelper::toInteger($pks);
+        $order = ArrayHelper::toInteger($order);
  
         // Get the model
         $model = $this->getModel();

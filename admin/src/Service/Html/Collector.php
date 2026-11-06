@@ -13,13 +13,14 @@ namespace Steevo\Component\Collector\Administrator\Service\Html;
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
-use Joomla\CMS\Filesystem\Path;
+use Joomla\Filesystem\Path;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\LanguageHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Database\ParameterType;
+use Joomla\Database\DatabaseInterface;
 
 /**
  * Extended Utility class for the Users component.
@@ -455,7 +456,7 @@ class Collector
         if (empty($value)) {
             return static::value($value);
         } else {
-            $db    = Factory::getDbo();
+            $db    = Factory::getContainer()->get(DatabaseInterface::class);
             $query = $db->getQuery(true)
                 ->select($db->quoteName('title'))
                 ->from($db->quoteName('#__template_styles'))
@@ -558,8 +559,8 @@ class Collector
         if (empty($value)) {
             return static::value($value);
         } else {
-            $db    = Factory::getDbo();
-            $lang  = Factory::getLanguage();
+            $db    = Factory::getContainer()->get(DatabaseInterface::class);
+            $lang  = Factory::getApplication()->getLanguage();
             $query = $db->getQuery(true)
                 ->select($db->quoteName('name'))
                 ->from($db->quoteName('#__extensions'))

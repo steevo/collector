@@ -23,7 +23,6 @@ use Joomla\CMS\Layout\LayoutHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
 
-HTMLHelper::addIncludePath(JPATH_COMPONENT.'/helpers/html');
 // HTMLHelper::_('bootstrap.tooltip');
 HTMLHelper::_('behavior.multiselect');
 // HTMLHelper::_('formbehavior.chosen', 'select');

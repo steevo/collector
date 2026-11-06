@@ -16,6 +16,9 @@ namespace Steevo\Component\Collector\Administrator\Classes\Field\File;
 use Steevo\Component\Collector\Administrator\Classes\CollectorField;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\Factory;
+use Joomla\Database\DatabaseInterface;
 
 defined('_JEXEC') or die;
 
@@ -88,7 +91,7 @@ class CollectorFieldFile extends CollectorField
 	 */
 	function getSearchWhereClause(&$query,$search_all_value)
 	{
-		$db = Factory::getDbo();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$text = $db->quote('%' . $db->escape($search_all_value, true) . '%', false);
 		$where = 'LOWER(jd'.$this->_field->id.'.file_title) LIKE LOWER(' . $text . ')';
 		return $where;
@@ -105,7 +108,7 @@ class CollectorFieldFile extends CollectorField
 	 */
 	function display($value,$listing=true,$params=array(),$itemId=0)
 	{
-		$db = Factory::getDbo();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		if ( $value == '' ) {
 			$default = $this->_field->attribs['default'];
 			if ( $default != '' ) {
@@ -130,7 +133,7 @@ class CollectorFieldFile extends CollectorField
 				$db->setQuery($query);
 				$db->execute();
 				$file = $db->loadAssoc();
-				$return = '<img src="'.JURI::base().'components/com_jdownloads/assets/images/jdownloads/fileimages/'.$file['file_pic'].'" style="vertical-align:middle;" border="0" width="32" height="32" alt="" title="" />';
+				$return = '<img src="'.Uri::base().'components/com_jdownloads/assets/images/jdownloads/fileimages/'.$file['file_pic'].'" style="vertical-align:middle;" border="0" width="32" height="32" alt="" title="" />';
 				$return .= $file['file_title'];
 			} else if (( $listing && ( $listing_template == 2 ) ) || ( !$listing && ( $detail_template == 2 ) )) {
 				$query = $db->getQuery(true);
@@ -142,8 +145,8 @@ class CollectorFieldFile extends CollectorField
 				$db->setQuery($query);
 				$db->execute();
 				$file = $db->loadAssoc();
-				$url = JURI::base().'index.php?option=com_jdownloads&view=download&id='.$value.':'.$file['file_alias'];
-				$return = '<img src="'.JURI::base().'components/com_jdownloads/assets/images/jdownloads/fileimages/'.$file['file_pic'].'" style="vertical-align:middle;" border="0" width="32" height="32" alt="" title="" />';
+				$url = Uri::base().'index.php?option=com_jdownloads&view=download&id='.$value.':'.$file['file_alias'];
+				$return = '<img src="'.Uri::base().'components/com_jdownloads/assets/images/jdownloads/fileimages/'.$file['file_pic'].'" style="vertical-align:middle;" border="0" width="32" height="32" alt="" title="" />';
 				$return .= '<a href="'.$url.'">'.$file['file_title'].'</a>';
 			}
 		}

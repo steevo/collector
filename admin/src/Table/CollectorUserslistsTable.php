@@ -102,7 +102,7 @@ class CollectorUserslistsTable extends Table
 	{
 		$db = $this->getDbo();
 		
-		ArrayHelper::toInteger($pks);
+		$pks = ArrayHelper::toInteger($pks);
 		
 		if (empty($pks)) {
 			if ($this->id) {

@@ -31,6 +31,7 @@ use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
 use Joomla\CMS\MVC\Model\ListModel;
 use Joomla\Database\ParameterType;
 use Joomla\Registry\Registry;
+use Joomla\Database\DatabaseInterface;
 
 /**
  * Items model
@@ -369,7 +370,7 @@ class ItemsModel extends ListModel
 			$collection = $this->getCollection();
 			
 			// Create a new query object.
-			$db = Factory::getDBO();
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
 			$query = $db->getQuery(true);
 			
 			// Select the required fields from the table.

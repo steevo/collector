@@ -15,7 +15,11 @@
 
 defined('_JEXEC') or die('Restricted access');
 
-HTMLHelper::stylesheet(Juri::base() . 'components/com_collector/assets/css/import.css');
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\Session\Session;
+use Joomla\CMS\Uri\Uri;
+
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/import.css');
 
 ?>
 <script language="javascript" type="text/javascript">
@@ -48,7 +52,7 @@ HTMLHelper::stylesheet(Juri::base() . 'components/com_collector/assets/css/impor
 	//-->
 </script>
 
-<form id="my_form" method="post" action="<?php echo JRoute::_('index.php?option=com_collector&task=import.upload&format=raw');?>&amp;<?php echo JSession::getFormToken();?>=1" enctype="multipart/form-data">
+<form id="my_form" method="post" action="<?php echo Route::_('index.php?option=com_collector&task=import.upload&format=raw');?>&amp;<?php echo Session::getFormToken();?>=1" enctype="multipart/form-data">
 	<input type="file" class="form-control" name="upload" accept="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" >
 	<button type="submit" class="btn btn-primary" ><i class="icon-upload icon-white"></i>Envoyer</button>
 </form>

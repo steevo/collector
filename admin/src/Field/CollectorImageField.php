@@ -117,7 +117,7 @@ class CollectorImageField extends MediaField
 			$script[] = '    }';
 
 			// Add the script to the document head.
-			Factory::getDocument()->addScriptDeclaration(implode("\n", $script));
+			Factory::getApplication()->getDocument()->addScriptDeclaration(implode("\n", $script));
 
 			self::$initialised = true;
 		}

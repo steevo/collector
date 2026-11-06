@@ -128,7 +128,7 @@ class FieldModel extends AdminModel
 	 */
 	protected function canSave($data = array(), $key = 'id')
 	{
-		return Factory::getUser()->authorise('core.edit', 'com_collector');
+		return Factory::getApplication()->getIdentity()->authorise('core.edit', 'com_collector');
 	}
 	
 	/**

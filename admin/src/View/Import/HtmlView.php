@@ -149,10 +149,8 @@ class HtmlView extends BaseHtmlView
 		
 		// Étape 4 : formulaire de publication (champs Joomla natifs)
 		if ($this->step >= 4) {
-			$form = \Joomla\CMS\Form\Form::getInstance(
-				'com_collector.import_publishing',
-				JPATH_ADMINISTRATOR . '/components/com_collector/forms/import_publishing.xml'
-			);
+			$form = Factory::getContainer()->get(\Joomla\CMS\Form\FormFactoryInterface::class)->createForm('com_collector.import_publishing');
+			$form->loadFile(JPATH_ADMINISTRATOR . '/components/com_collector/forms/import_publishing.xml');
 			// Pré-remplir avec les valeurs déjà sauvegardées en session si l'utilisateur revient en arrière
 			$saved = $this->session['publishing'] ?? [];
 			if (!empty($saved)) {

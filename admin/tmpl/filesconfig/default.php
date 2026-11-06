@@ -15,6 +15,9 @@
 
 defined('_JEXEC') or die('Restricted access');
 
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\Uri\Uri;
+
 HTMLHelper::_('behavior.tooltip');
 HTMLHelper::_('behavior.multiselect');
 
@@ -28,17 +31,17 @@ $listDirn	= $this->escape($this->state->get('list.direction'));
 	{
 		var selectedIndex = document.adminForm2.ico.selectedIndex;
 		if (document.adminForm2.ico.options[selectedIndex].value!='') {
-			document.preview.src='<?php echo JURI::root(); ?>administrator/components/com_collector/assets/images/' + document.adminForm2.ico.options[selectedIndex].value;
+			document.preview.src='<?php echo Uri::root(); ?>administrator/components/com_collector/assets/images/' + document.adminForm2.ico.options[selectedIndex].value;
 			document.preview.alt=document.adminForm2.ico.options[selectedIndex].value;
 		} else {
-			document.preview.src='<?php echo JURI::root(); ?>administrator/components/com_collector/assets/images/page_white.png';
+			document.preview.src='<?php echo Uri::root(); ?>administrator/components/com_collector/assets/images/page_white.png';
 			document.preview.alt='';
 		}
 	}
 	//-->
 </script>
 <div class="container-fluid">
-<form action="<?php echo JRoute::_('index.php?option=com_collector&view=filesconfig'); ?>" method="post" name="adminForm" id="adminForm" >
+<form action="<?php echo Route::_('index.php?option=com_collector&view=filesconfig'); ?>" method="post" name="adminForm" id="adminForm" >
 	<table class="table table-striped" id="fieldList">
 		<thead>
 			<tr>
@@ -70,15 +73,15 @@ $listDirn	= $this->escape($this->state->get('list.direction'));
 				$alt = Text::_( 'COM_COLLECTOR_PUBLISH' );
 			}
 			
-			$linkPublish = JRoute::_( 'index.php?option=com_collector&amp;task=filemanager.' . ($item->state ? 'disable' : 'enable') . '&amp;id=' . $item->id );
+			$linkPublish = Route::_( 'index.php?option=com_collector&amp;task=filemanager.' . ($item->state ? 'disable' : 'enable') . '&amp;id=' . $item->id );
 			$publish = '<span class="editlinktip hasTip jgrid" title="' . $alt . '">';
 			$publish .= '<a href="' . $linkPublish . '" ><img src="templates/hathor/images/admin/' . $img . '" width="16" height="16" border="0" alt="' . $alt . '" /></a></span>';
 			
-			$linkDelete = JRoute::_( 'index.php?option=com_collector&amp;task=filemanager.remove_ext&amp;id=' . $item->id );
+			$linkDelete = Route::_( 'index.php?option=com_collector&amp;task=filemanager.remove_ext&amp;id=' . $item->id );
 			$delete = '<span class="editlinktip hasTip" title="' . Text::_('COM_COLLECTOR_DELETE') . '">';
 			$delete .= '<a href="' . $linkDelete . '" ><img src="components/com_collector/assets/images/cross.png" alt="' . Text::_('COM_COLLECTOR_DELETE') . '" /></a></span>';
 			
-			$linkEdit = JRoute::_( 'index.php?option=com_collector&amp;view=filesconfig&amp;tmpl=component&amp;id=' . $item->id );
+			$linkEdit = Route::_( 'index.php?option=com_collector&amp;view=filesconfig&amp;tmpl=component&amp;id=' . $item->id );
 			$edit = '<span class="editlinktip hasTip" title="' . Text::_('COM_COLLECTOR_EDIT') . '">';
 			$edit .= '<a href="' . $linkEdit . '" ><img src="components/com_collector/assets/images/icon-16-edit.png" alt="' . Text::_('COM_COLLECTOR_EDIT') . '" /></a></span>';
 			

@@ -10,6 +10,7 @@ use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Toolbar\ToolbarHelper;
 use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\Database\DatabaseInterface;
 
 class HtmlView extends BaseHtmlView
 {
@@ -30,7 +31,7 @@ class HtmlView extends BaseHtmlView
 		$layout             = $this->getLayout();
 
 		// Charger la collection
-		$db = Factory::getDbo();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$db->setQuery(
 			$db->getQuery(true)
 			   ->select(['id', 'name'])

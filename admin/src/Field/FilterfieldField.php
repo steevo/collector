@@ -16,6 +16,7 @@ namespace Steevo\Component\Collector\Administrator\Field;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\FormField;
 use Joomla\CMS\Language\Text;
+use Joomla\Database\DatabaseInterface;
 
 defined('JPATH_BASE') or die;
 
@@ -32,8 +33,8 @@ class FilterfieldField extends FormField
 	{
 		// Initialize variables.
 		$html = array();
-		$db = Factory::getDBO();
-		$doc = Factory::getDocument();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
+		$doc = Factory::getApplication()->getDocument();
 
 		if ( $this->element['view'] == "collection" ) {
 			$js = "

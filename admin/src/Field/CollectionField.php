@@ -34,7 +34,7 @@ class CollectionField extends ListField
 	{
 		// Initialize JavaScript.
 		if ( preg_match("/loadFilter/",$this->element['onchange']) ) {
-			$doc = Factory::getDocument();
+			$doc = Factory::getApplication()->getDocument();
 
 			$js = "
 			function loadFilter() {
@@ -59,7 +59,7 @@ class CollectionField extends ListField
 			$doc->addScriptDeclaration($js);
 		}
 		if ( preg_match("/loadRequired/",$this->element['onchange']) ) {
-			$doc = Factory::getDocument();
+			$doc = Factory::getApplication()->getDocument();
 
 			$js = "
 			function loadRequired() {
@@ -112,7 +112,7 @@ class CollectionField extends ListField
 			$doc->addScriptDeclaration($js);
 		}
 		if ( preg_match("/loadUserlists/",$this->element['onchange']) ) {
-			$doc = Factory::getDocument();
+			$doc = Factory::getApplication()->getDocument();
 
 			$js = "
 			function loadUserlists() {
@@ -135,7 +135,7 @@ class CollectionField extends ListField
 			$doc->addScriptDeclaration($js);
 		}
 		if ( preg_match("/loadItem/",$this->element['onchange']) ) {
-			$doc = Factory::getDocument();
+			$doc = Factory::getApplication()->getDocument();
 			
 			$js = "
 			function loadItem() {
@@ -157,7 +157,7 @@ class CollectionField extends ListField
 			$doc->addScriptDeclaration($js);
 		}
 		if ( preg_match("/loadScripts/",$this->element['onchange']) ) {
-			$doc = Factory::getDocument();
+			$doc = Factory::getApplication()->getDocument();
 			
 			$js = "
 			function loadScripts() {

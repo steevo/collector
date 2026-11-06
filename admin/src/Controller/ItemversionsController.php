@@ -65,7 +65,7 @@ class ItemversionsController extends AdminController
 			
 			// Make sure the item ids are integers
 			// jimport('joomla.utilities.arrayhelper');
-			ArrayHelper::toInteger($cid);
+			$cid = ArrayHelper::toInteger($cid);
 			
 			// Remove the items.
 			if ($model->delete($item,$cid)) {
@@ -93,7 +93,7 @@ class ItemversionsController extends AdminController
 		}
 
 		$cid = $app->input->get('cid', [], 'ARRAY');
-		ArrayHelper::toInteger($cid);
+		$cid = ArrayHelper::toInteger($cid);
 
 		if (count($cid) !== 1) {
 			$app->enqueueMessage(Text::_('COM_COLLECTOR_ITEM_HISTORY_VALIDATE_ONLY_ONE'), 'warning');
@@ -157,7 +157,7 @@ class ItemversionsController extends AdminController
 		}
 
 		$cid = $app->input->get('cid', [], 'ARRAY');
-		ArrayHelper::toInteger($cid);
+		$cid = ArrayHelper::toInteger($cid);
 
 		if (count($cid) !== 1) {
 			$app->enqueueMessage(Text::_('COM_COLLECTOR_ITEM_HISTORY_RESTORE_ONLY_ONE_ITEM'), 'warning');

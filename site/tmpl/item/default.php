@@ -19,10 +19,11 @@ use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
 use Steevo\Component\Collector\Administrator\Helper\ContactHelper;
 use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\CMS\Uri\Uri;
 
 PluginHelper::importPlugin('collector');
 
-HTMLHelper::stylesheet(Juri::base() . 'components/com_collector/assets/css/tabs.css');
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/tabs.css');
 
 HTMLHelper::_('bootstrap.modal', '.modal');
 

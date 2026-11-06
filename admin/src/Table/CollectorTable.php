@@ -32,6 +32,8 @@ use Joomla\String\StringHelper;
 use Joomla\Utilities\ArrayHelper;
 use Steevo\Component\Collector\Administrator\Table\CollectorItemsHistoryTable;
 use Steevo\Component\Collector\Administrator\Table\CollectorUserslistsTable;
+use Joomla\Database\DatabaseInterface;
+use Joomla\CMS\Table\Asset;
 
 /**
  * Collector table
@@ -104,7 +106,7 @@ class CollectorTable extends Table
 		}
 		
 		// Check home
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$queryHome = $db->getQuery(true);
 		$queryHome->select('id')
 			->from('`#__collector`')
@@ -300,7 +302,7 @@ class CollectorTable extends Table
         $k = $this->_tbl_key;
  
         // Sanitize input.
-        ArrayHelper::toInteger($pks);
+        $pks = ArrayHelper::toInteger($pks);
         $userId = (int) $userId;
         $state  = (int) $state;
  
@@ -358,7 +360,7 @@ class CollectorTable extends Table
         $this->setError('');
  
 		// Check home
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$queryHome = $db->getQuery(true);
 		$queryHome->select('id')
 			->from('`#__collector`')
@@ -396,20 +398,20 @@ class CollectorTable extends Table
      *
      * @return    boolean    True on success.
      */
-    public function copy($pk, $mode = 1, $assetgroup_id, $new_pk = 0)
+    public function copy($pk, $mode, $assetgroup_id, $new_pk = 0)
     {
-        $db = Factory::getDBO();
+        $db = Factory::getContainer()->get(DatabaseInterface::class);
 		
 		if ( $new_pk == 0 ) {
 			$this->load($pk);
 			$name = $this->_getAssetName();
-			$asset = Table::getInstance('Asset', 'Table', array('dbo' => $this->getDbo()));
+			$asset = new Asset($this->getDbo());
 			$asset->loadByName($name);
 			
-			$rules = new JAccessRules($asset->rules);
+			$rules = new Rules($asset->rules);
 			$this->setRules($rules);
 			
-			$table =  Table::getInstance('Collector','Table');
+			$table =  new CollectorTable($this->getDbo());
 			while ($table->load(array('alias' => $this->alias)))
 			{
 				$this->name = StringHelper::increment($this->name);
@@ -486,7 +488,7 @@ class CollectorTable extends Table
 					} else {
 						$copy_mode = 'FULL';
 					}
-					$itemInstance = Table::getInstance('Collector_items','Table');
+					$itemInstance = new CollectorItemsTable($this->getDbo());
 				
 					$itemInstance->copy($item->id, $pk, $this->id, $copy_mode);
 					
@@ -510,7 +512,7 @@ class CollectorTable extends Table
 			{
 				$updated_fields = $updated_fields + 1;
 				
-				$fieldInstance = Table::getInstance('Collector_fields','Table');
+				$fieldInstance = new CollectorFieldsTable($this->getDbo());
 			
 				$fieldInstance->copy($field->id, $this->id);
 				
@@ -566,9 +568,9 @@ class CollectorTable extends Table
 	 * @return	int
 	 * @since	1.6
 	 */
-	protected function _getAssetParentId(Table $table = null, $id = null)
+	protected function _getAssetParentId(?Table $table = null, $id = null)
 	{
-		$asset = Table::getInstance('Asset');
+		$asset = new Asset($this->getDbo());
 		$asset->loadByName('com_collector');
 		return $asset->id;
 	}

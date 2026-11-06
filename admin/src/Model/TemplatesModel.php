@@ -68,7 +68,7 @@ class TemplatesModel extends ListModel
 	{
 		// Initialise variables.
 		$app = Factory::getApplication();
-		$session = Factory::getSession();
+		$session = Factory::getApplication()->getSession();
 
 		// Adjust the context to support modal layouts.
 		if ($layout = $app->input->get('layout')) {

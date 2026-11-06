@@ -22,6 +22,7 @@ use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Toolbar\Toolbar;
 use Joomla\CMS\Toolbar\ToolbarHelper;
+use Joomla\CMS\Object\CMSObject;
 
 /**
  * HTML Folderlist View class for the Collector component
@@ -60,7 +61,7 @@ class HtmlView extends BaseHtmlView
 		}
 		else
 		{
-			$this->_tmp_folder = new JObject;
+			$this->_tmp_folder = new CMSObject;
 		}
 	}
 }

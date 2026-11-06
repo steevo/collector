@@ -7,6 +7,7 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Toolbar\ToolbarHelper;
+use Joomla\Database\DatabaseInterface;
 
 class HtmlView extends BaseHtmlView
 {
@@ -25,7 +26,7 @@ class HtmlView extends BaseHtmlView
         $model = $this->getModel('Files');
 
         // Collections
-        $db = Factory::getDbo();
+        $db = Factory::getContainer()->get(DatabaseInterface::class);
         $db->setQuery(
             $db->getQuery(true)
                ->select('id, name')

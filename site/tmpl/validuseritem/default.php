@@ -14,10 +14,13 @@
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\Uri\Uri;
+
 HTMLHelper::_('behavior.formvalidation');
 HTMLHelper::_('bootstrap.framework');
 
-HTMLHelper::stylesheet(Juri::base() . 'components/com_collector/assets/css/icomoon.css');
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/icomoon.css');
 
 ?>
 <script type="text/javascript">
@@ -37,7 +40,7 @@ HTMLHelper::stylesheet(Juri::base() . 'components/com_collector/assets/css/icomo
 <div class="modal-header"><h3>
 	<?php echo Text::sprintf('COM_COLLECTOR_ADD_TO_USERLIST',$this->list->name); ?>
 </h3></div>
-<form method="post" action="<?php echo JRoute::_(Factory::getURI()->toString()); ?>" name="userlistForm" id="userlistForm" class="form-validate form-vertical" >
+<form method="post" action="<?php echo Route::_(Factory::getURI()->toString()); ?>" name="userlistForm" id="userlistForm" class="form-validate form-vertical" >
 	<div class="modal-body">
 		<fieldset>
 			<legend>

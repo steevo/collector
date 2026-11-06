@@ -30,7 +30,7 @@ class LoadscriptsField extends HiddenField
 	protected function getInput()
 	{
 		// Initialize variables.
-		$doc = Factory::getDocument();
+		$doc = Factory::getApplication()->getDocument();
 		
 		$js = "
 		jQuery(document).ready( function() {

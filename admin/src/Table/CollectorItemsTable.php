@@ -41,6 +41,8 @@ use Steevo\Component\Collector\Administrator\Classes\Field\Item\CollectorFieldIt
 use Steevo\Component\Collector\Administrator\Classes\Field\Line\CollectorFieldLine;
 use Steevo\Component\Collector\Administrator\Classes\Field\Number\CollectorFieldNumber;
 use Steevo\Component\Collector\Administrator\Classes\Field\Text\CollectorFieldText;
+use Joomla\Database\DatabaseInterface;
+use Joomla\CMS\Table\Asset;
 
 /**
  * Collector_items table
@@ -440,7 +442,7 @@ class CollectorItemsTable extends Table
 	 */
 	public function check()
 	{
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		
 		// Check custom title
 		$query = 'SELECT custom FROM `#__collector` WHERE id ="'.$this->collection.'"';
@@ -646,7 +648,7 @@ class CollectorItemsTable extends Table
 		$jcomments = JPATH_SITE . DIRECTORY_SEPARATOR .'components' . DIRECTORY_SEPARATOR . 'com_jcomments' . DIRECTORY_SEPARATOR . 'jcomments.php';
 		if (file_exists($jcomments)) {
 			require_once($jcomments);
-			JCommentsModel::deleteComments($pk, 'com_collector');
+			\JCommentsModel::deleteComments($pk, 'com_collector');
 		}
 
 		return parent::delete($pk);
@@ -670,7 +672,7 @@ class CollectorItemsTable extends Table
         $k = $this->_tbl_key;
  
         // Sanitize input.
-        ArrayHelper::toInteger($pks);
+        $pks = ArrayHelper::toInteger($pks);
         $userId = (int) $userId;
         $state  = (int) $state;
  
@@ -744,7 +746,7 @@ class CollectorItemsTable extends Table
      */
     public function copy($pk, $old_collection, $new_collection, $mode)
     {
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 
 		$query = "SELECT id";
 		$query .= " FROM `#__collector_items_history_".$old_collection."`";
@@ -777,7 +779,7 @@ class CollectorItemsTable extends Table
 				$this->loadCopyVersion( $old_collection, $pk, $history->id );
 				
 				$name = $this->_getAssetName();
-				$asset = Table::getInstance('Asset', 'Table', array('dbo' => $this->getDbo()));
+				$asset = new Asset($this->getDbo());
 				$asset->loadByName($name);
 				
 				$rules = new Rules($asset->rules);
@@ -830,7 +832,7 @@ class CollectorItemsTable extends Table
 	 */
 	protected function _getAssetParentId(?Table $table = null, $id = null)
 	{
-		$asset = Table::getInstance('Asset');
+		$asset = new Asset($this->getDbo());
 		$asset->loadByName('com_collector.collection.'.(int) $this->collection);
 		return $asset->id;
 	}

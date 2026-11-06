@@ -14,6 +14,8 @@
 namespace Steevo\Component\Collector\Administrator\Field;
 
 use Joomla\CMS\Form\Field\ListField;
+use Joomla\CMS\Factory;
+use Joomla\Database\DatabaseInterface;
 
 defined('JPATH_BASE') or die;
 
@@ -46,7 +48,7 @@ class ItemsField extends ListField
 		// Get collection
 		$collection = $app->input->get('collection');
 		
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = $db->getQuery(true);
 		
 		$query->select('id AS value, fulltitle AS text')

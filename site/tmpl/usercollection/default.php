@@ -6,6 +6,7 @@ use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
+use Joomla\CMS\Uri\Uri;
 
 $app        = Factory::getApplication();
 $user       = $app->getIdentity();
@@ -15,7 +16,7 @@ $showMatching = $this->showMatching ?? false;
 $targetUser = $this->targetUser;
 $token      = Session::getFormToken();
 
-HTMLHelper::stylesheet(Juri::base() . 'components/com_collector/assets/css/collection.css');
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/collection.css');
 
 // Champs à afficher en liste
 $fieldsDisplayed = array_filter($this->fields, fn($f) => $f->_field->listing);

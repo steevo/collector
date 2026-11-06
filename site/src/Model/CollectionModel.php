@@ -27,6 +27,7 @@ use Joomla\CMS\Language\Multilanguage;
 use Joomla\CMS\MVC\Model\ListModel;
 use Joomla\CMS\Table\Table;
 use Joomla\Registry\Registry;
+use Joomla\Database\DatabaseInterface;
 
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
@@ -221,7 +222,7 @@ class CollectionModel extends ListModel
 			}
 			
 			// Create a new query object.
-			$db = Factory::getDBO();
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
 			$query = $db->getQuery(true);
 			
 			// Select the required fields from the table.

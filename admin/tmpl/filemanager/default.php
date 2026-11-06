@@ -15,9 +15,16 @@
 
 defined('_JEXEC') or die('Restricted access');
 
-$db = Factory::getDBO();
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\Session\Session;
+use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\Utility\Utility;
+use Joomla\Database\DatabaseInterface;
+use Joomla\CMS\Factory;
+
+$db = Factory::getContainer()->get(DatabaseInterface::class);
 $user = Factory::getApplication()->getIdentity();
-$config = Factory::getConfig();
+$config = Factory::getApplication()->getConfig();
 $now = Factory::getDate();
 $app = Factory::getApplication();
 
@@ -128,14 +135,14 @@ HTMLHelper::_('behavior.modal');
 		<?php if ($user->authorise('core.create', 'com_collector')):?>
 		<!-- File Upload Form -->
 		<div id="collapseUpload" class="collapse">
-			<form action="<?php echo JURI::base(); ?>index.php?option=com_collector&amp;task=filemanager.upload&amp;tmpl=component&amp;<?php echo $this->session->getName().'='.$this->session->getId(); ?>&amp;<?php echo JSession::getFormToken();?>=1&amp;format=html&amp;folder=<?php echo $this->folder; ?>" id="uploadForm" class="form-inline" name="uploadForm" method="post" enctype="multipart/form-data">
+			<form action="<?php echo Uri::base(); ?>index.php?option=com_collector&amp;task=filemanager.upload&amp;tmpl=component&amp;<?php echo $this->session->getName().'='.$this->session->getId(); ?>&amp;<?php echo Session::getFormToken();?>=1&amp;format=html&amp;folder=<?php echo $this->folder; ?>" id="uploadForm" class="form-inline" name="uploadForm" method="post" enctype="multipart/form-data">
 				<div id="uploadform">
 					<fieldset id="upload-noflash" class="actions">
 							<label for="upload-file" class="control-label"><?php echo Text::_('COM_MEDIA_UPLOAD_FILE'); ?></label>
 								<input required type="file" id="upload-file" name="Filedata[]" multiple /> <button class="btn btn-primary" id="upload-submit"><span class="icon-upload icon-white"></span> <?php echo Text::_('COM_MEDIA_START_UPLOAD'); ?></button>
 							<p class="help-block">
 								<?php $cMax    = (int) $this->config->get('upload_maxsize'); ?>
-								<?php $maxSize = JUtility::getMaxUploadSize($cMax . 'MB'); ?>
+								<?php $maxSize = Utility::getMaxUploadSize($cMax . 'MB'); ?>
 								<?php echo Text::sprintf('JGLOBAL_MAXIMUM_UPLOAD_SIZE_LIMIT', HTMLHelper::_('number.bytes', $maxSize)); ?>
 							</p>
 					</fieldset>
@@ -189,17 +196,17 @@ HTMLHelper::_('behavior.modal');
 		{
 			$checked = HTMLHelper::_( 'grid.id', $i, $folder->path_relative );
 
-			$link = JRoute::_( 'index.php?option=com_collector&amp;view=filemanager&amp;folder=' . $folder->path_relative );
+			$link = Route::_( 'index.php?option=com_collector&amp;view=filemanager&amp;folder=' . $folder->path_relative );
 
-			$linkDelete = JRoute::_( 'index.php?option=com_collector&amp;view=filemanager&amp;task=filemanager.remove&amp;cid[]=' . $folder->path_relative );
+			$linkDelete = Route::_( 'index.php?option=com_collector&amp;view=filemanager&amp;task=filemanager.remove&amp;cid[]=' . $folder->path_relative );
 			$delete = '<span class="editlinktip hasTip" title="' . Text::_('COM_COLLECTOR_DELETE') . '">';
 			$delete .= '<a href="' . $linkDelete . '" onclick="return confirm(\'' . Text::_('COM_COLLECTOR_CONFIRM_DEL') . '\');" ><img src="components/com_collector/assets/images/page_white_delete.png"></a></span>';
 
-			$linkMove = JRoute::_( 'index.php?option=com_collector&amp;view=folderselect&amp;tmpl=component&amp;task=move&amp;cid[]=' . $folder->path_relative );
+			$linkMove = Route::_( 'index.php?option=com_collector&amp;view=folderselect&amp;tmpl=component&amp;task=move&amp;cid[]=' . $folder->path_relative );
 			$move = '<span class="editlinktip hasTip" title="' . Text::_('COM_COLLECTOR_MOVE') . '">';
 			$move .= '<a href="' . $linkMove . '" class="modal" rel="{handler: \'iframe\', size: {x: 800, y: 500}}" ><img src="components/com_collector/assets/images/folder_page_white.png"></a></span>';
 
-			$linkCopy = JRoute::_( 'index.php?option=com_collector&amp;view=folderselect&amp;tmpl=component&amp;task=copy&amp;cid[]=' . $folder->path_relative );
+			$linkCopy = Route::_( 'index.php?option=com_collector&amp;view=folderselect&amp;tmpl=component&amp;task=copy&amp;cid[]=' . $folder->path_relative );
 			$copy = '<span class="editlinktip hasTip" title="' . Text::_('COM_COLLECTOR_COPY') . '">';
 			$copy .= '<a href="' . $linkCopy . '" class="modal" rel="{handler: \'iframe\', size: {x: 800, y: 500}}" ><img src="components/com_collector/assets/images/page_white_copy.png"></a></span>';
 
@@ -248,15 +255,15 @@ HTMLHelper::_('behavior.modal');
 
 			$checked = HTMLHelper::_( 'grid.id', $i, $file->path_relative );
 
-			$linkDelete = JRoute::_( 'index.php?option=com_collector&amp;view=filemanager&amp;task=filemanager.remove&amp;cid[]=' . $file->path_relative );
+			$linkDelete = Route::_( 'index.php?option=com_collector&amp;view=filemanager&amp;task=filemanager.remove&amp;cid[]=' . $file->path_relative );
 			$delete = '<span class="editlinktip hasTip" title="' . Text::_('COM_COLLECTOR_DELETE') . '">';
 			$delete .= '<a href="' . $linkDelete . '" onclick="return confirm(\'' . Text::_('COM_COLLECTOR_CONFIRM_DEL') . '\');" ><img src="components/com_collector/assets/images/page_white_delete.png"></a></span>';
 
-			$linkMove = JRoute::_( 'index.php?option=com_collector&amp;view=folderselect&amp;tmpl=component&amp;task=move&amp;cid[]=' . $file->path_relative );
+			$linkMove = Route::_( 'index.php?option=com_collector&amp;view=folderselect&amp;tmpl=component&amp;task=move&amp;cid[]=' . $file->path_relative );
 			$move = '<span class="editlinktip hasTip" title="' . Text::_('COM_COLLECTOR_MOVE') . '">';
 			$move .= '<a href="' . $linkMove . '" class="modal" rel="{handler: \'iframe\', size: {x: 800, y: 500}}" ><img src="components/com_collector/assets/images/folder_page_white.png"></a></span>';
 
-			$linkCopy = JRoute::_( 'index.php?option=com_collector&amp;view=folderselect&amp;tmpl=component&amp;task=copy&amp;cid[]=' . $file->path_relative );
+			$linkCopy = Route::_( 'index.php?option=com_collector&amp;view=folderselect&amp;tmpl=component&amp;task=copy&amp;cid[]=' . $file->path_relative );
 			$copy = '<span class="editlinktip hasTip" title="' . Text::_('COM_COLLECTOR_COPY') . '">';
 			$copy .= '<a href="' . $linkCopy . '" class="modal" rel="{handler: \'iframe\', size: {x: 800, y: 500}}" ><img src="components/com_collector/assets/images/page_white_copy.png"></a></span>';
 
@@ -272,7 +279,7 @@ HTMLHelper::_('behavior.modal');
 					<?php
 					if ( $file->type == 1 )
 					{
-						echo '<div id="element'.$i.'" ><a style="text-decoration: none;" class="modal" href="'.JURI::root().'images/collector/'.$file->path_relative.'" ><img src="'. $file->ico. '">&nbsp;' .$file->name. '</a></div>';
+						echo '<div id="element'.$i.'" ><a style="text-decoration: none;" class="modal" href="'.Uri::root().'images/collector/'.$file->path_relative.'" ><img src="'. $file->ico. '">&nbsp;' .$file->name. '</a></div>';
 					}
 					else
 					{

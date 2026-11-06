@@ -40,7 +40,7 @@ if ($saveOrder)
 $sortFields = $this->getSortFields();
 ?>
 
-<form action="<?php echo JRoute::_('index.php?option=com_collector&view=items');?>" method="post" name="adminForm" id="adminForm" >
+<form action="<?php echo Route::_('index.php?option=com_collector&view=items');?>" method="post" name="adminForm" id="adminForm" >
 	<div class="row">
         <div class="col-md-12">
             <div id="j-main-container" class="j-main-container">

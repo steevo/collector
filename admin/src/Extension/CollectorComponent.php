@@ -31,6 +31,7 @@ use Joomla\CMS\Tag\TagServiceTrait;
 // use Joomla\Component\Weblinks\Administrator\Service\HTML\AdministratorService;
 // use Joomla\Component\Weblinks\Administrator\Service\HTML\Icon;
 use Psr\Container\ContainerInterface;
+use Steevo\Component\Collector\Administrator\Helper\CollectorGrid;
 
 /**
  * Component class for com_collector
@@ -83,6 +84,7 @@ class CollectorComponent extends MVCComponent implements
 		// $this->getRegistry()->register('collectoradministrator', new AdministratorService);
 		// $this->getRegistry()->register('collectoricon', new Icon($container->get(SiteApplication::class)));
 		$this->getRegistry()->register('collector', new Collector());
+		$this->getRegistry()->register('collectorgrid', CollectorGrid::class);
 	}
 
 	/**
@@ -116,7 +118,7 @@ class CollectorComponent extends MVCComponent implements
 	 */
 	public function getContexts(): array
 	{
-		Factory::getLanguage()->load('com_collector', JPATH_ADMINISTRATOR);
+		Factory::getApplication()->getLanguage()->load('com_collector', JPATH_ADMINISTRATOR);
 
 		$contexts = array(
 			'com_collector.collection'    => Text::_('COM_COLLECTOR'),

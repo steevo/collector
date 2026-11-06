@@ -14,11 +14,11 @@
 use Joomla\CMS\Factory;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\Router\Route;
 
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
-HTMLHelper::addIncludePath(JPATH_COMPONENT.'/helpers/html');
 
 // HTMLHelper::Bootstrap::loadCss();
 HTMLHelper::_('bootstrap.tooltip');
@@ -103,7 +103,7 @@ for ($i=0, $n=count($this->items);$i<$n;$i++)
 	$tableentry = 1 + ( $i % 2 );
 	$row = $this->items[$i];
 	//$link = $linkBase.$row->cid;
-	$link = JRoute::_($linkBase.$row->slug);
+	$link = Route::_($linkBase.$row->slug);
 	?>
 
 	<tr class="cat-list-row<?php echo $tableentry; ?>" style="cursor:pointer;cursor:hand;">

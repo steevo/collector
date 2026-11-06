@@ -35,7 +35,7 @@ $listDirn	= $this->escape($this->state->get('list.direction'));
 $sortFields = $this->getSortFields();
 ?>
 
-<form action="<?php echo JRoute::_('index.php?option=com_collector&view=lists'); ?>" method="post" name="adminForm" id="adminForm" >
+<form action="<?php echo Route::_('index.php?option=com_collector&view=lists'); ?>" method="post" name="adminForm" id="adminForm" >
 	<div class="row">
         <div class="col-md-12">
             <div id="j-main-container" class="j-main-container">
@@ -81,7 +81,7 @@ $sortFields = $this->getSortFields();
 						$canCheckin	= $user->authorise('core.manage',		'com_checkin') || $item->checked_out == $userId || $item->checked_out == 0;
 						$canEditOwn	= $user->authorise('core.edit.own',		'com_collector') && $item->created_by == $userId;
 						
-						$linkEdit = JRoute::_( 'index.php?option=com_collector&amp;view=listitems&amp;defined=' . $item->id );
+						$linkEdit = Route::_( 'index.php?option=com_collector&amp;view=listitems&amp;defined=' . $item->id );
 						$editItems = '<span class="editlinktip hasTip" title="' . Text::_('COM_COLLECTOR_EDIT_LIST_ITEMS') . '">';
 						$editItems .= '<a href="' . $linkEdit . '" ><img src="components/com_collector/assets/images/icon-16-edit.png"></a></span>';
 						?>

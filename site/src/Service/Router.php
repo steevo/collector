@@ -25,6 +25,7 @@ use Joomla\CMS\Component\Router\Rules\StandardRules;
 use Joomla\CMS\Menu\AbstractMenu;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Database\ParameterType;
+use Joomla\CMS\Factory;
 
 // phpcs:disable PSR1.Files.SideEffects
 \defined('_JEXEC') or die;
@@ -337,7 +338,7 @@ function CollectorBuildRoute(&$query)
 		if (isset($query['id'])){
 			// Make sure we have the id and the alias
 			if (strpos($query['id'], ':') === false) {
-				$db = Factory::getDbo();
+				$db = Factory::getContainer()->get(DatabaseInterface::class);
 				$aquery = $db->setQuery($db->getQuery(true)
 					->select('alias')
 					->from('#__collector')
@@ -360,7 +361,7 @@ function CollectorBuildRoute(&$query)
 		if (isset($query['collection']) && isset($query['id'])){
 			// Make sure we have the id and the alias
 			if (strpos($query['collection'], ':') === false) {
-				$db = Factory::getDbo();
+				$db = Factory::getContainer()->get(DatabaseInterface::class);
 				$aquery = $db->setQuery($db->getQuery(true)
 					->select('alias')
 					->from('#__collector')
@@ -370,7 +371,7 @@ function CollectorBuildRoute(&$query)
 				$query['collection'] = $query['collection'].':'.$alias;
 			}
 			if (strpos($query['id'], ':') === false) {
-				$db = Factory::getDbo();
+				$db = Factory::getContainer()->get(DatabaseInterface::class);
 				$aquery = $db->setQuery($db->getQuery(true)
 					->select('alias')
 					->from('#__collector_items')
@@ -395,7 +396,7 @@ function CollectorBuildRoute(&$query)
 		if (isset($query['collection'])){
 			// Make sure we have the id and the alias
 			if (strpos($query['collection'], ':') === false) {
-				$db = Factory::getDbo();
+				$db = Factory::getContainer()->get(DatabaseInterface::class);
 				$aquery = $db->setQuery($db->getQuery(true)
 					->select('alias')
 					->from('#__collector')

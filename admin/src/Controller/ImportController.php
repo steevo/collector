@@ -16,6 +16,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\AdminController;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
+use Joomla\Database\DatabaseInterface;
 
 /**
  * Contrôleur d'import Excel/CSV — Joomla 5/6.
@@ -343,10 +344,8 @@ class ImportController extends AdminController
 		if (!$session) { $this->setRedirect($this->getStep1Url()); return; }
 
 		// Charger le form pour bénéficier des filtres (user_utc, UINT, etc.)
-		$form = \Joomla\CMS\Form\Form::getInstance(
-			'com_collector.import_publishing',
-			JPATH_ADMINISTRATOR . '/components/com_collector/forms/import_publishing.xml'
-		);
+		$form = Factory::getContainer()->get(\Joomla\CMS\Form\FormFactoryInterface::class)->createForm('com_collector.import_publishing');
+		$form->loadFile(JPATH_ADMINISTRATOR . '/components/com_collector/forms/import_publishing.xml');
 		$form->bind($this->input->post->getArray());
 		$data = $form->filter($this->input->post->getArray());
 
@@ -1015,7 +1014,7 @@ class ImportController extends AdminController
 
     private function insertRow(int $collection, array $data, object $params, array $publishing = []): array|false
     {
-        $db    = Factory::getDbo();
+        $db    = Factory::getContainer()->get(DatabaseInterface::class);
         $table = new CollectorItemsTable($db);
         $table->initVersion($collection);
 		

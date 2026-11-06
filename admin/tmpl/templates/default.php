@@ -14,13 +14,14 @@
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
-HTMLHelper::addIncludePath(JPATH_COMPONENT.'/helpers/html');
+use Joomla\CMS\Router\Route;
+
 HTMLHelper::_('bootstrap.tooltip');
 HTMLHelper::_('behavior.multiselect');
 HTMLHelper::_('formbehavior.chosen', 'select');
 
 ?>
-<form action="<?php echo JRoute::_('index.php?option=com_collector&view=templates');?>" method="post" name="adminForm" id="adminForm" >
+<form action="<?php echo Route::_('index.php?option=com_collector&view=templates');?>" method="post" name="adminForm" id="adminForm" >
 <?php if (!empty( $this->sidebar)) : ?>
 	<div id="j-sidebar-container" class="span2">
 		<?php echo $this->sidebar; ?>
@@ -91,7 +92,7 @@ HTMLHelper::_('formbehavior.chosen', 'select');
 						<td class="nowrap has-context">
 							<div class="pull-left">
 								<?php if ($canEdit) : ?>
-									<a href="<?php echo JRoute::_('index.php?option=com_collector&task=template.edit&collection='.$item->collection.'&id='.$item->id);?>">
+									<a href="<?php echo Route::_('index.php?option=com_collector&task=template.edit&collection='.$item->collection.'&id='.$item->id);?>">
 										<?php echo $this->escape($item->name); ?></a>
 								<?php else : ?>
 									<?php echo $this->escape($item->name); ?>

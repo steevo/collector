@@ -175,7 +175,7 @@ window.addEventListener('message', function (event) {
 </script>
 
 <div class="container-popup">
-<form action="<?php echo JRoute::_('index.php?option=com_collector&view=itemversion&collection='.$this->collection.'&item='.$this->item);?>" method="post" name="adminForm" id="adminForm" >
+<form action="<?php echo Route::_('index.php?option=com_collector&view=itemversion&collection='.$this->collection.'&item='.$this->item);?>" method="post" name="adminForm" id="adminForm" >
 
 	<div id="system-message-container"></div>
 	<div id="j-main-container">

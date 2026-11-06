@@ -14,6 +14,8 @@
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
+use Joomla\CMS\Router\Route;
+
 $link = 'index.php?option=com_collector&view=collection&id='.$this->item->id;
 $app = Factory::getApplication();
 $Itemid = $app->input->get('Itemid', 0, 'get');
@@ -21,7 +23,7 @@ $Itemid = $app->input->get('Itemid', 0, 'get');
 ?>
 <div class="items-row">
 	<h2>
-		<a href="<?php echo JRoute::_($link.'&Itemid='.$Itemid); ?>"><?php echo $this->escape($this->item->name); ?></a>
+		<a href="<?php echo Route::_($link.'&Itemid='.$Itemid); ?>"><?php echo $this->escape($this->item->name); ?></a>
 	</h2>
 	<?php echo $this->item->description; ?>
 </div>

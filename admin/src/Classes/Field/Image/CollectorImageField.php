@@ -15,6 +15,9 @@ namespace Steevo\Component\Collector\Administrator\Classes\Field\Image;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\Field\MediaField;
+use Joomla\CMS\Uri\Uri;
+use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Language\Text;
 
 defined('_JEXEC') or die;
 
@@ -64,7 +67,7 @@ class CollectorImageField extends MediaField
 			$script[] = '		var img = document.id(id + "_preview");';
 			$script[] = '		if (img) {';
 			$script[] = '			if (value) {';
-			$script[] = '				img.src = "' . JUri::root() . '" + value;';
+			$script[] = '				img.src = "' . Uri::root() . '" + value;';
 			$script[] = '				document.id(id + "_preview_empty").setStyle("display", "none");';
 			$script[] = '				document.id(id + "_preview_img").setStyle("display", "");';
 			$script[] = '			} else { ';
@@ -97,7 +100,7 @@ class CollectorImageField extends MediaField
 			$script[] = '    }';
 
 			// Add the script to the document head.
-			Factory::getDocument()->addScriptDeclaration(implode("\n", $script));
+			Factory::getApplication()->getDocument()->addScriptDeclaration(implode("\n", $script));
 
 			self::$initialised = true;
 		}

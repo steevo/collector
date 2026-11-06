@@ -30,6 +30,7 @@ use Joomla\Database\DatabaseDriver;
 use Joomla\Registry\Registry;
 use Joomla\String\StringHelper;
 use Joomla\Utilities\ArrayHelper;
+use Joomla\Database\DatabaseInterface;
 
 /**
  * Collector_fields table
@@ -106,7 +107,7 @@ class CollectorFieldsTable extends Table
 		}
 		
 		// Check tablecolumn
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$queryTablecolumn = $db->getQuery(true);
 		$queryTablecolumn->select('id')
 			->from('`#__collector_fields`')
@@ -122,7 +123,7 @@ class CollectorFieldsTable extends Table
 		}
 		
 		// Check home
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$queryHome = $db->getQuery(true);
 		$queryHome->select('id')
 			->from('`#__collector_fields`')
@@ -269,7 +270,7 @@ class CollectorFieldsTable extends Table
         $k = $this->_tbl_key;
  
         // Sanitize input.
-        ArrayHelper::toInteger($pks);
+        $pks = ArrayHelper::toInteger($pks);
         $userId = (int) $userId;
         $state  = (int) $state;
  
@@ -327,7 +328,7 @@ class CollectorFieldsTable extends Table
         $this->setError('');
  
 		// Check home
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$queryHome = $db->getQuery(true);
 		$queryHome->select('id')
 			->from('`#__collector_fields`')
@@ -372,7 +373,7 @@ class CollectorFieldsTable extends Table
      */
     public function copy($pk, $collection)
     {
-        $db = Factory::getDBO();
+        $db = Factory::getContainer()->get(DatabaseInterface::class);
 		
 		$this->load($pk);
 		
@@ -380,7 +381,7 @@ class CollectorFieldsTable extends Table
 		$asset = self::getInstance('Asset', 'Table', array('dbo' => $this->getDbo()));
 		$asset->loadByName($name);
 		
-		$rules = new JAccessRules($asset->rules);
+		$rules = new Rules($asset->rules);
 		$this->setRules($rules);
 		
 		$this->id = 0;

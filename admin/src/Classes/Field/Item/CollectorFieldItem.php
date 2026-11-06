@@ -16,6 +16,9 @@ namespace Steevo\Component\Collector\Administrator\Classes\Field\Item;
 use Steevo\Component\Collector\Administrator\Classes\CollectorField;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\Factory;
+use Joomla\Database\DatabaseInterface;
 
 defined('_JEXEC') or die;
 
@@ -90,7 +93,7 @@ class CollectorFieldItem extends CollectorField
 	 */
 	function getSearchWhereClause(&$query,$search_all_value)
 	{
-		$db = Factory::getDbo();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$text = $db->quote('%' . $db->escape($search_all_value, true) . '%', false);
 		$where = 'LOWER(o'.$this->_field->id.'.fulltitle LIKE LOWER(' . $text . ')';
 		return $where;
@@ -153,7 +156,7 @@ class CollectorFieldItem extends CollectorField
 			$suffix = '';
 		}
 		
-		$db = Factory::getDbo();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = $db->getQuery(true)
 			->select('c.id AS value, c.fulltitle AS text')
 			->from('#__collector_items AS c');
@@ -268,7 +271,7 @@ class CollectorFieldItem extends CollectorField
 	 */
 	function display($value,$listing=true,$params=array(),$itemId=0)
 	{
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		
 		$query = 'SELECT id, fulltitle';
 		$query .= ' FROM #__collector_items';
@@ -282,15 +285,15 @@ class CollectorFieldItem extends CollectorField
 		{
 			$return = $result->fulltitle;
 			
-			if ( ( $this->_field->attribs['show_fieldlink'] == 1 ) && ( $this->_field->filter == 1 ) )
+			if ( ( ($this->_field->attribs['show_fieldlink'] ?? 0) == 1 ) && ( $this->_field->filter == 1 ) )
 			{
 				$link= 'index.php?option=com_collector&view=collection&id='.$this->_field->collection.'&filterfield_'.$this->_field->tablecolumn.'='.$result->id;
-				$return = '<a href="'.JRoute::_($link).'">'.$return.'</a>';
+				$return = '<a href="'.Route::_($link).'">'.$return.'</a>';
 			}
-			else if ( $this->_field->attribs['show_fieldlink'] == 2 )
+			else if ( ($this->_field->attribs['show_fieldlink'] ?? 0) == 2 )
 			{
 				$link= 'index.php?option=com_collector&view=item&collection='.$this->_field->attribs['collection'].'&id='.$result->id;
-				$return = '<a href="'.JRoute::_($link).'">'.$return.'</a>';
+				$return = '<a href="'.Route::_($link).'">'.$return.'</a>';
 			}
 		}
 		else
@@ -310,7 +313,7 @@ class CollectorFieldItem extends CollectorField
 	 */
 	function displayInTitle($value)
 	{
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		
 		$query = 'SELECT fulltitle';
 		$query .= ' FROM #__collector_items';

@@ -15,11 +15,16 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Application\ApplicationHelper;
 use Joomla\CMS\Factory;
-use Joomla\CMS\Filesystem\File;
-use Joomla\CMS\Filesystem\Folder;
+use Joomla\Filesystem\File;
+use Joomla\Filesystem\Folder;
 use Joomla\CMS\Installer\InstallerAdapter;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Table\Table;
+use Joomla\CMS\Component\ComponentHelper;
+use Joomla\CMS\Language\Language;
+use Joomla\CMS\Uri\Uri;
+use Joomla\Database\DatabaseInterface;
+use Joomla\CMS\Language\LanguageFactoryInterface;
 
 ignore_user_abort( true ); 
 
@@ -36,14 +41,14 @@ class com_collectorInstallerScript
 	public function install($parent) 
 	{
 		$user	= Factory::getApplication()->getIdentity();
-		$params   = JComponentHelper::getParams('com_languages');
+		$params   = ComponentHelper::getParams('com_languages');
 		$frontend_lang = $params->get('site', 'en-GB');
-		$language = JLanguage::getInstance($frontend_lang);
+		$language = Factory::getContainer()->get(LanguageFactoryInterface::class)->createLanguage($frontend_lang);
 		
 		// get language file for default layouts
-		$language = Factory::getLanguage();
+		$language = Factory::getApplication()->getLanguage();
 		$language->load('com_collector');
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		
 		// check for root item
 		$query = "SELECT id from `#__collector_defined_content` WHERE id=1;";
@@ -111,7 +116,7 @@ class com_collectorInstallerScript
 			$db->execute();
 		}
 		
-		$imagepath = JUri::root().'administrator/components/com_collector/assets/images/collector_logo.png';
+		$imagepath = Uri::root().'administrator/components/com_collector/assets/images/collector_logo.png';
 		
 		$msg = array();
 		$msg[] = '<center>';
@@ -143,7 +148,7 @@ class com_collectorInstallerScript
 
         $this->install($parent);
 		
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = "SHOW COLUMNS FROM `#__collector_userslists` LIKE 'type'";
 		$db->setQuery( $query );
 		$db->execute();
@@ -181,7 +186,7 @@ class com_collectorInstallerScript
 			$db->setQuery( $query );
 			if (!$result = $db->LoadResult())
 			{
-				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 2,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getUser()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 2,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getApplication()->getIdentity()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
 				$db->setQuery( $query );
 				$db->execute();
 			}
@@ -191,7 +196,7 @@ class com_collectorInstallerScript
 			$db->setQuery( $query );
 			if (!$result = $db->LoadResult())
 			{
-				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 0,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getUser()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 0,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getApplication()->getIdentity()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
 				$db->setQuery( $query );
 				$db->execute();
 			}
@@ -201,13 +206,13 @@ class com_collectorInstallerScript
 			$db->setQuery( $query );
 			if (!$result = $db->LoadResult())
 			{
-				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 1,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getUser()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 1,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getApplication()->getIdentity()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
 				$db->setQuery( $query );
 				$db->execute();
 			}
 		}
 
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = "SHOW COLUMNS FROM `#__collector_fields` LIKE 'next_sorted_field'";
 		$db->setQuery( $query );
 		$db->execute();
@@ -219,7 +224,7 @@ class com_collectorInstallerScript
 			$db->execute();
 		}
 
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = "SHOW COLUMNS FROM `#__collector_fields` LIKE 'column_width'";
 		$db->setQuery( $query );
 		$db->execute();
@@ -257,7 +262,7 @@ class com_collectorInstallerScript
 	{
 		// $parent is the class calling this method
 		
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		
 		// foreach collection
 		$query = "SELECT id FROM `#__collector`;";

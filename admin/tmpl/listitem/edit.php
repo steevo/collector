@@ -22,10 +22,10 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Layout\LayoutHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\Registry\Registry;
+use Joomla\CMS\Form\Form;
 
 // Include the component HTML helpers.
-HTMLHelper::addIncludePath(JPATH_COMPONENT.'/helpers/html');
-JForm::addFieldPath(JPATH_COMPONENT . '/models/fields');
+Form::addFieldPath(JPATH_COMPONENT . '/models/fields');
 
 // Load the tooltip behavior.
 HTMLHelper::_('behavior.formvalidator');
@@ -43,7 +43,7 @@ HTMLHelper::_('behavior.formvalidator');
 	}*/
 </script>
 
-<form action="<?php echo JRoute::_('index.php?option=com_collector&layout=edit&id='.(int) $this->item->id); ?>" method="post" name="adminForm" id="item-form" class="form-validate" >
+<form action="<?php echo Route::_('index.php?option=com_collector&layout=edit&id='.(int) $this->item->id); ?>" method="post" name="adminForm" id="item-form" class="form-validate" >
 	<div class="main-card">
 		<?php echo HTMLHelper::_('uitab.startTabSet', 'myTab', array('active' => 'basic')); ?>
 

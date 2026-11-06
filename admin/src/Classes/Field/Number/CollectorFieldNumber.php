@@ -19,6 +19,8 @@ use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\String\StringHelper;
 use Steevo\Component\Collector\Administrator\Classes\Field\Number\Searchmethod;
+use Joomla\CMS\Router\Route;
+use Joomla\Database\DatabaseInterface;
 
 defined('_JEXEC') or die;
 
@@ -222,7 +224,7 @@ class CollectorFieldNumber extends CollectorField
 		if ($this->_minValue == '')
 		{
 			// Get min and max values
-			$db = Factory::getDBO();
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
 			$query = $db->getQuery(true);
 			$query->select('MIN(CAST(h.'.$this->_field->tablecolumn.' AS DECIMAL(18,'.$this->_field->attribs['decimal'].')))');
 			$query->from('#__collector_items_history_'.$this->_collection.' as h');
@@ -370,7 +372,7 @@ class CollectorFieldNumber extends CollectorField
 					}
 				}
 				
-				$doc = Factory::getDocument();
+				$doc = Factory::getApplication()->getDocument();
 
 				$js1 = "
 				jQuery(document).ready(function(){
@@ -454,10 +456,10 @@ class CollectorFieldNumber extends CollectorField
 			
 			if (!isset($params['compare_view'])) {
 				if ($params['compare_view'] != true) {
-					if ( $this->_field->attribs['show_fieldlink'] && ( $this->_field->filter == 1 ) )
+					if ( ($this->_field->attribs['show_fieldlink'] ?? 0) && ( $this->_field->filter == 1 ) )
 					{
 						$link= 'index.php?option=com_collector&view=collection&id='.$this->_field->collection.'&filterfield_'.$this->_field->tablecolumn.'='.$value.'|'.$value;
-						$return = '<a href="'.JRoute::_($link).'">'.$return.'</a>';
+						$return = '<a href="'.Route::_($link).'">'.$return.'</a>';
 					}
 				}
 			}

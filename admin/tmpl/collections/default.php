@@ -28,7 +28,6 @@ $wa = $this->document->getWebAssetManager();
 $wa->useScript('table.columns')
     ->useScript('multiselect');
 
-HTMLHelper::addIncludePath(JPATH_COMPONENT.'/helpers/html');
 // HTMLHelper::_('bootstrap.tooltip');
 HTMLHelper::_('behavior.multiselect');
 // HTMLHelper::_('dropdown.init');
@@ -55,7 +54,7 @@ $sortFields = $this->getSortFields();
 ?>
 
 
-<form action="<?php echo JRoute::_('index.php?option=com_collector&view=collections');?>" method="post" name="adminForm" id="adminForm" >
+<form action="<?php echo Route::_('index.php?option=com_collector&view=collections');?>" method="post" name="adminForm" id="adminForm" >
     <div class="row">
         <div class="col-md-12">
             <div id="j-main-container" class="j-main-container">

@@ -21,6 +21,9 @@ use Joomla\CMS\Language\Associations;
 use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
 use Joomla\CMS\MVC\Model\ListModel;
 use Joomla\Database\ParameterType;
+use Joomla\CMS\Table\Table;
+use Joomla\CMS\Language\Text;
+use Joomla\Database\DatabaseInterface;
 
 /**
  * Filesconfig model
@@ -103,7 +106,7 @@ class FilesconfigModel extends ListModel
 		$app = Factory::getApplication();
 		$id = $app->input->get( 'id', 'int', 'get', '0');
 		
-		$row = JTable::getInstance('collector_files_ext','Table');
+		$row = Table::getInstance('collector_files_ext','Table');
 		
 		if ( $id != 0 )
 		{
@@ -123,7 +126,7 @@ class FilesconfigModel extends ListModel
 		$init[] = array('value' => 0, 'text' => '');
 		
 		// Get list of files types
-		$db = Factory::getDBO(); 
+		$db = Factory::getContainer()->get(DatabaseInterface::class); 
 		$query = 'SELECT id AS value, text ';
 		$query .= ' FROM #__collector_files_type';
 		$db->setQuery( $query );

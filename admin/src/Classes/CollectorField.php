@@ -17,8 +17,8 @@ defined('_JEXEC') or die( 'Restricted access' );
 
 use Joomla\CMS\Application\CMSApplication;
 use Joomla\CMS\Factory;
-use Joomla\CMS\Filesystem\File;
-use Joomla\CMS\Filesystem\Path;
+use Joomla\Filesystem\File;
+use Joomla\Filesystem\Path;
 use Joomla\CMS\Form\Field\RadioField;
 use Joomla\CMS\Form\Form;
 use Joomla\Form\Formfield;
@@ -37,6 +37,7 @@ use Steevo\Component\Collector\Administrator\Classes\Field\Number\CollectorField
 use Steevo\Component\Collector\Administrator\Classes\Field\Text\CollectorFieldText;
 
 use SimpleXMLElement;
+use Joomla\Database\DatabaseInterface;
 
 /**
  * Field abstract class
@@ -164,7 +165,7 @@ class CollectorField
 		$extension = 'com_collector';		
 		$basePath = JPATH_ADMINISTRATOR . '/components/com_collector/src/Classes/Field/' . ucfirst(strtolower($fieldType->type));
 		
-		$language = Factory::getLanguage();
+		$language = Factory::getApplication()->getLanguage();
 		$language->load($extension, $basePath);
 		
 		return $instance;
@@ -288,7 +289,7 @@ class CollectorField
 	 */
 	function getSearchWhereClause(&$query, $search_all_value)
 	{
-		$db = Factory::getDbo();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$text = $db->quote('%' . $db->escape($search_all_value, true) . '%', false);
 		$where = 'LOWER(h.' . $this->_field->tablecolumn . ') LIKE LOWER(' . $text . ')';
 		return $where;

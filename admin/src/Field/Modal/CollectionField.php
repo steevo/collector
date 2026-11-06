@@ -61,7 +61,7 @@ class CollectionField extends FormField
         $languages = LanguageHelper::getContentLanguages([0, 1], false);
 
         // Load language.
-        Factory::getLanguage()->load('com_collector', JPATH_ADMINISTRATOR);
+        Factory::getApplication()->getLanguage()->load('com_collector', JPATH_ADMINISTRATOR);
 
         // The active category id field.
         $value = (int) $this->value ?: '';

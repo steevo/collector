@@ -8,6 +8,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Toolbar\ToolbarHelper;
 use Steevo\Component\Collector\Administrator\Model\FilesModel;
+use Joomla\Database\DatabaseInterface;
 
 class HtmlView extends BaseHtmlView
 {
@@ -68,7 +69,7 @@ class HtmlView extends BaseHtmlView
 		}
 
         // Liste des collections pour le sélecteur
-        $db = Factory::getDbo();
+        $db = Factory::getContainer()->get(DatabaseInterface::class);
         $db->setQuery(
             $db->getQuery(true)
                ->select('id, name')

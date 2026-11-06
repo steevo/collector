@@ -15,6 +15,8 @@ namespace Steevo\Component\Collector\Administrator\Classes\Field;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\Field\ListField;
+use Steevo\Component\Collector\Administrator\Classes\CollectorField;
+use Joomla\Database\DatabaseInterface;
 
 defined('_JEXEC') or die;
 
@@ -36,7 +38,7 @@ class CollectorItemField extends ListField
 		$collection = $this->element['collection'];
 		
 		// Create a new query object.
-		$db = Factory::getDBO();
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$query = $db->getQuery(true);
 		
 		// Select the custom title for items.

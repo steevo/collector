@@ -22,6 +22,7 @@ use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Toolbar\Toolbar;
 use Joomla\CMS\Toolbar\ToolbarHelper;
+use Steevo\Component\Collector\Administrator\Helper\CollectorHelper;
 
 /**
  * HTML Update View class for the Collector component
