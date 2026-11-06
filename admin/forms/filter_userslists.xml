@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<form addfieldprefix="Steevo\Component\Collector\Administrator\Field">
+	<field
+		name="collection"
+		type="collections"
+		label="COM_COLLECTOR_FILTER_COLLECTION"
+		description="JOPTION_FILTER_COLLECTION_DESC"
+		filtermode="selector"
+		layout="joomla.form.field.list-fancy-select"
+		class="js-select-submit-on-change"
+	/>
+	<fields name="list">
+		<field
+			name="fullordering"
+			type="list"
+			label="COM_COLLECTOR_LIST_FULL_ORDERING"
+			description="COM_COLLECTOR_LIST_FULL_ORDERING_DESC"
+			onchange="this.form.submit();"
+			default="cu.ordering ASC"
+			>
+			<option value="">JGLOBAL_SORT_BY</option>
+			<option value="cu.ordering ASC">JGRID_HEADING_ORDERING_ASC</option>
+			<option value="cu.ordering DESC">JGRID_HEADING_ORDERING_DESC</option>
+		</field>
+	</fields>
+</form>

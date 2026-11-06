@@ -1,0 +1,36 @@
+<?php
+/**
+ * Joomla! 3.0 component Collector
+ *
+ * @package 	Collector
+ * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
+ * @license     GNU General Public License version 2 or later; see LICENSE.txt
+ *
+ * Collector is a Multi Purpose Listing Tool.
+ * Originaly developped to list Collections
+ * it can be used for several purpose.
+ */
+
+namespace Steevo\Component\Collector\Administrator\Field;
+
+use Joomla\CMS\Form\FormField;
+use Joomla\CMS\Language\Text;
+
+defined('JPATH_BASE') or die;
+
+/**
+ * Form Field class for the Collector.
+ *
+ * @package		Collector
+ */
+class HitsField extends FormField
+{
+	protected $type			= 'Hits';
+
+	protected function getInput()
+	{
+		$onclick	= ' onclick="document.id(\''.$this->id.'\').value=\'0\';"';
+
+		return '<input class="input-small" type="text" name="' . $this->name . '" id="' . $this->id . '" value="' . htmlspecialchars($this->value, ENT_COMPAT, 'UTF-8') . '" readonly="readonly" /> <a class="btn" ' . $onclick . '><i class="icon-refresh"></i> ' . Text::_('COM_COLLECTOR_RESET_CLICKS') . '</a>';
+	}
+}

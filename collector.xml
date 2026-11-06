@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="component" version="4.0" method="upgrade">
+	<name>com_collector</name>
+	<creationDate>2026</creationDate>
+	<author>Philippe Ousset</author>
+	<copyright>Copyright (C) 2010 - 2023 Philippe Ousset. All rights reserved.</copyright>
+	<license>http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL</license>
+	<authorEmail>steevo@steevo.fr</authorEmail>
+	<authorUrl>www.steevo.fr</authorUrl>
+	<version>0.9.0</version>
+	<description>COM_COLLECTOR_XML_DESCRIPTION</description>
+	<scriptfile>script.php</scriptfile>
+	<namespace path="src/">Steevo\Component\Collector</namespace>
+
+	<install>
+		<sql>
+			<file charset="utf8" driver="mysql">sql/install.mysql.utf8.sql</file>
+		</sql>
+	</install>
+
+	<uninstall>
+		<sql>
+			<file charset="utf8" driver="mysql">sql/uninstall.mysql.utf8.sql</file>
+		</sql>
+	</uninstall>
+
+	<update>
+		<schemas>
+			<schemapath type="mysql">sql/updates/mysql</schemapath>
+		</schemas>
+	</update>
+
+	<files folder="site">
+		<file>controller.php</file>
+		<file>collector.php</file>
+		<file>index.html</file>
+		
+		<folder>assets</folder>
+		<folder>forms</folder>
+		<folder>helpers</folder>
+		<folder>layouts</folder>
+		<folder>librairies</folder>
+		<folder>src</folder>
+		<folder>tmpl</folder>
+	</files>
+	
+	<languages folder="site">
+		<language tag="fr-FR">languages/fr-FR/fr-FR.com_collector.ini</language>
+		<language tag="en-GB">languages/en-GB/en-GB.com_collector.ini</language>
+		<language tag="de-DE">languages/de-DE/de-DE.com_collector.ini</language>
+		<language tag="es-ES">languages/es-ES/es-ES.com_collector.ini</language>
+		<language tag="el-GR">languages/el-GR/el-GR.com_collector.ini</language>
+		<language tag="pl-PL">languages/pl-PL/pl-PL.com_collector.ini</language>
+	</languages>
+	
+	<administration>
+		<!-- Administration Menu Section -->
+		<menu>COM_COLLECTOR</menu>
+		<submenu>
+			<menu link="option=com_collector">COM_COLLECTOR_DASHBOARD</menu>
+			<menu link="option=com_collector&amp;view=filemanager">COM_COLLECTOR_FILEMANAGER</menu>
+			<menu link="option=com_collector&amp;view=collections">COM_COLLECTOR_COLLECTIONS</menu>
+			<menu link="option=com_collector&amp;view=lists">COM_COLLECTOR_DEFINED</menu>
+			<menu link="option=com_collector&amp;view=fields">COM_COLLECTOR_FIELDS</menu>
+			<menu link="option=com_collector&amp;view=items">COM_COLLECTOR_ITEMS</menu>
+			<menu link="option=com_collector&amp;view=userslists">COM_COLLECTOR_USERSLISTS</menu>
+			<menu link="option=com_collector&amp;view=tools">COM_COLLECTOR_TOOLS</menu>
+			<!-- <menu link="option=com_collector&amp;view=templates">COM_COLLECTOR_TEMPLATES</menu> -->
+		</submenu>
+
+		<!-- Administration Main File Copy Section -->
+		<files folder="admin">
+			<file>access.xml</file>
+			<file>config.xml</file>
+			<file>index.html</file>
+			
+			<folder>assets</folder>
+			<folder>forms</folder>
+			<folder>helpers</folder>
+			<folder>layouts</folder>
+			<folder>libraries</folder>
+			<folder>params</folder>
+			<folder>services</folder>
+			<folder>sql</folder>
+			<folder>src</folder>
+			<folder>tmpl</folder>
+		</files>
+		
+		<languages folder="admin">
+			<language tag="fr-FR">languages/fr-FR/fr-FR.com_collector.ini</language>
+			<language tag="fr-FR">languages/fr-FR/fr-FR.com_collector.menu.ini</language>
+			<language tag="fr-FR">languages/fr-FR/fr-FR.com_collector.sys.ini</language>
+			<language tag="en-GB">languages/en-GB/en-GB.com_collector.ini</language>
+			<language tag="en-GB">languages/en-GB/en-GB.com_collector.menu.ini</language>
+			<language tag="en-GB">languages/en-GB/en-GB.com_collector.sys.ini</language>
+			<language tag="es-ES">languages/es-ES/es-ES.com_collector.ini</language>
+			<language tag="es-ES">languages/es-ES/es-ES.com_collector.menu.ini</language>
+			<language tag="es-ES">languages/es-ES/es-ES.com_collector.sys.ini</language>
+			<language tag="de-DE">languages/de-DE/de-DE.com_collector.ini</language>
+			<language tag="de-DE">languages/de-DE/de-DE.com_collector.menu.ini</language>
+			<language tag="de-DE">languages/de-DE/de-DE.com_collector.sys.ini</language>
+			<language tag="el-GR">languages/el-GR/el-GR.com_collector.menu.ini</language>
+			<language tag="el-GR">languages/el-GR/el-GR.com_collector.sys.ini</language>
+			<language tag="pl-PL">languages/pl-PL/pl-PL.com_collector.ini</language>
+			<language tag="pl-PL">languages/pl-PL/pl-PL.com_collector.menu.ini</language>
+			<language tag="pl-PL">languages/pl-PL/pl-PL.com_collector.sys.ini</language>
+		</languages>
+	
+	</administration>
+
+	<media destination="com_collector" folder="media">
+		<folder>css</folder>
+		<folder>js</folder>
+		<filename>joomla.asset.json</filename>
+	</media>
+
+	<updateservers>
+		<server type="collection">http://www.steevo.fr/update/collector-update.xml</server>
+	</updateservers>
+</extension>

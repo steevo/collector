@@ -15,5 +15,5 @@
 defined('_JEXEC') or die( 'Restricted access' );
 
 $controller = JControllerLegacy::getInstance('Collector');
-$controller->execute(JFactory::getApplication()->input->get('task'));
+$controller->execute(Factory::getApplication()->input->get('task'));
 $controller->redirect();

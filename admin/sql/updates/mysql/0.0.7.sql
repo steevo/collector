@@ -6,19 +6,19 @@ CREATE TABLE IF NOT EXISTS `#__collector` (
 	`asset_id` int(10) unsigned NOT NULL DEFAULT '0',
 	`name` varchar(30) NOT NULL default '',
 	`alias` varchar(30) NOT NULL default '',
-	`description` text NOT NULL default '',
+	`description` text NOT NULL,
 	`custom` varchar(30) NOT NULL default '0',
 	`state` tinyint(3) NOT NULL default '0',
 	`ordering` int(11) NOT NULL,
-	`created` datetime NOT NULL default '0000-00-00 00:00:00',
+	`created` datetime NOT NULL default '0000-00-00 00:00:00'
 	`created_by` int(11) unsigned NOT NULL default '0',
 	`created_by_alias` varchar(255) NOT NULL default '',
-	`modified` datetime NOT NULL default '0000-00-00 00:00:00',
+	`modified` datetime NOT NULL default '0000-00-00 00:00:00'
 	`modified_by` int(11) unsigned NOT NULL default '0',
-	`publish_up` datetime NOT NULL default '0000-00-00 00:00:00',
-	`publish_down` datetime NOT NULL default '0000-00-00 00:00:00',
+	`publish_up` datetime NOT NULL default '0000-00-00 00:00:00'
+	`publish_down` datetime NOT NULL default '0000-00-00 00:00:00'
 	`checked_out` int(11) unsigned NOT NULL default '0',
-	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00',
+	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00'
 	`image` text NOT NULL,
 	`access` int(11) unsigned NOT NULL default '0',
 	`home` int(1) NOT NULL default '0',
@@ -56,20 +56,20 @@ CREATE TABLE IF NOT EXISTS `#__collector_fields` (
 	`asset_id` int(10) unsigned NOT NULL DEFAULT '0',
 	`collection` int(11) NOT NULL,
 	`field` varchar(30) NOT NULL,
-	`description` text NOT NULL default '',
+	`description` text NOT NULL,
 	`tablecolumn` text NOT NULL,
 	`type` int(11) NOT NULL,
 	`ordering` int(11) NOT NULL,
 	`state` TINYINT(3) NOT NULL default '0',
-	`created` DATETIME NOT NULL default '0000-00-00 00:00:00',
+	`created` datetime NOT NULL default '0000-00-00 00:00:00'
 	`created_by` INT(11) NOT NULL default '0',
 	`created_by_alias` VARCHAR(255) NOT NULL default '',
-	`modified` DATETIME NOT NULL default '0000-00-00 00:00:00',
+	`modified` datetime NOT NULL default '0000-00-00 00:00:00'
 	`modified_by` INT(11) NOT NULL default '0',
-	`publish_up` DATETIME NOT NULL default '0000-00-00 00:00:00',
-	`publish_down` DATETIME NOT NULL default '0000-00-00 00:00:00',
+	`publish_up` datetime NOT NULL default '0000-00-00 00:00:00'
+	`publish_down` datetime NOT NULL default '0000-00-00 00:00:00'
 	`checked_out` INT(11) NOT NULL default '0',
-	`checked_out_time` DATETIME NOT NULL default '0000-00-00 00:00:00',
+	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00'
 	`access` INT(11) NOT NULL default '0',
 	`home` int(1) NOT NULL default '0',
 	`unik` int(1) NOT NULL default '0',
@@ -80,7 +80,7 @@ CREATE TABLE IF NOT EXISTS `#__collector_fields` (
 	`required` int(1) NOT NULL default '0',
 	`next_sorted_field` varchar(30) NOT NULL default '0',
 	`column_width` varchar(30) NOT NULL default '',
-	`attribs` text NOT NULL default '',
+	`attribs` text NOT NULL,
 	PRIMARY KEY (`id`),
 	KEY `fk_collection`(`collection`),
 	KEY `fk_type`(`type`),
@@ -98,13 +98,13 @@ CREATE TABLE IF NOT EXISTS `#__collector_defined` (
 	`id` int(11) NOT NULL auto_increment,
 	`name` varchar(30) NOT NULL default '',
 	`alias` varchar(30) NOT NULL default '',
-	`created` datetime NOT NULL default '0000-00-00 00:00:00',
+	`created` datetime NOT NULL default '0000-00-00 00:00:00'
 	`created_by` int(11) unsigned NOT NULL default '0',
 	`created_by_alias` varchar(255) NOT NULL default '',
-	`modified` datetime NOT NULL default '0000-00-00 00:00:00',
+	`modified` datetime NOT NULL default '0000-00-00 00:00:00'
 	`modified_by` int(11) unsigned NOT NULL default '0',
 	`checked_out` int(11) unsigned NOT NULL default '0',
-	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00',
+	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00'
 	`access` INT(11) NOT NULL default '0',
 	`width` INT(11) NOT NULL default '0',
 	`height` INT(11) NOT NULL default '0',
@@ -139,20 +139,20 @@ CREATE TABLE IF NOT EXISTS `#__collector_items` (
 	`id` int(11) NOT NULL auto_increment,
 	`asset_id` int(10) unsigned NOT NULL DEFAULT '0',
 	`alias` varchar(100) NOT NULL default '',
-	`fulltitle` text NOT NULL default '',
+	`fulltitle` text NOT NULL,
 	`collection` int(11) NOT NULL,
 	`state` tinyint(3) NOT NULL default '0',
 	`ordering` int(11) NOT NULL,
 	`hits` int(11) NOT NULL default '0',
-	`created` datetime NOT NULL default '0000-00-00 00:00:00',
+	`created` datetime NOT NULL default '0000-00-00 00:00:00'
 	`created_by` int(11) unsigned NOT NULL default '0',
 	`created_by_alias` varchar(255) NOT NULL default '',
-	`modified` datetime NOT NULL default '0000-00-00 00:00:00',
+	`modified` datetime NOT NULL default '0000-00-00 00:00:00'
 	`modified_by` int(11) unsigned NOT NULL default '0',
-	`publish_up` datetime NOT NULL default '0000-00-00 00:00:00',
-	`publish_down` datetime NOT NULL default '0000-00-00 00:00:00',
+	`publish_up` datetime NOT NULL default '0000-00-00 00:00:00'
+	`publish_down` datetime NOT NULL default '0000-00-00 00:00:00'
 	`checked_out` int(11) unsigned NOT NULL default '0',
-	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00',
+	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00'
 	`access` int(11) unsigned NOT NULL default '0',
 	PRIMARY KEY (`id`),
 	KEY `idx_access` (`access`),
@@ -210,18 +210,18 @@ CREATE TABLE IF NOT EXISTS `#__collector_userslists` (
 	`type` int(11) NOT NULL,
 	`name` varchar(30) NOT NULL default '',
 	`alias` varchar(30) NOT NULL default '',
-	`description` text NOT NULL default '',
+	`description` text NOT NULL,
 	`state` tinyint(3) NOT NULL default '0',
 	`ordering` int(11) NOT NULL,
-	`created` datetime NOT NULL default '0000-00-00 00:00:00',
+	`created` datetime NOT NULL default '0000-00-00 00:00:00'
 	`created_by` int(11) unsigned NOT NULL default '0',
 	`created_by_alias` varchar(255) NOT NULL default '',
-	`modified` datetime NOT NULL default '0000-00-00 00:00:00',
+	`modified` datetime NOT NULL default '0000-00-00 00:00:00'
 	`modified_by` int(11) unsigned NOT NULL default '0',
-	`publish_up` datetime NOT NULL default '0000-00-00 00:00:00',
-	`publish_down` datetime NOT NULL default '0000-00-00 00:00:00',
+	`publish_up` datetime NOT NULL default '0000-00-00 00:00:00'
+	`publish_down` datetime NOT NULL default '0000-00-00 00:00:00'
 	`checked_out` int(11) unsigned NOT NULL default '0',
-	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00',
+	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00'
 	`access` int(11) unsigned NOT NULL default '0',
 	PRIMARY KEY (`id`),
 	KEY `idx_access` (`access`),
@@ -253,7 +253,7 @@ CREATE TABLE IF NOT EXISTS `#__collector_usersitems` (
 	`id` int(11) NOT NULL auto_increment,
 	`itemid` int(11) NOT NULL,
 	`userlist` int(11) NOT NULL,
-	`comment` text NOT NULL default '',
+	`comment` text NOT NULL,
 	PRIMARY KEY (`id`),
 	KEY `idx_userlist` (`userlist`)
 ) ENGINE=MyISAM;

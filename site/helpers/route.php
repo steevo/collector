@@ -119,7 +119,7 @@ abstract class CollectorHelperRoute
 	 */
 	protected static function _findItem($needles = null)
 	{
-		$app      = JFactory::getApplication();
+		$app      = Factory::getApplication();
 		$menus    = $app->getMenu('site');
 		$language = isset($needles['language']) ? $needles['language'] : '*';
 

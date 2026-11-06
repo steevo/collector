@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+	<layout title="COM_COLLECTOR_ITEMS_TO_VALIDATE_MENU_TITLE">
+		<message>
+			<![CDATA[COM_COLLECTOR_ITEMS_TO_VALIDATE_MENU_DESC]]>
+		</message>
+	</layout>
+
+	<fields name="request">
+		<fieldset name="request" 
+			addfieldprefix="Steevo\Component\Collector\Administrator\Field">
+			<field
+				name="id"
+				type="modal_collection"
+				label="COM_COLLECTOR_CHOOSE_COLLECTION_LABEL"
+				extension="com_collector"
+				required="true"
+				select="true"
+			/>
+		</fieldset>
+	</fields>
+</metadata>

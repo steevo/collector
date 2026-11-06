@@ -11,8 +11,9 @@
  * it can be used for several purpose.
  */
 
-// Check to ensure this file is included in Joomla!
-defined('_JEXEC') or die( 'Restricted access' );
+defined('_JEXEC') or die;
+
+use Joomla\CMS\Language\Text;
 
 /**
  * Collections HTML class.
@@ -32,14 +33,14 @@ class JHtmlCollections
 	{
 		// Create the batch selector to copy a collection on a selection list.
 		$lines = array(
-			'<label id="batch-copy-lbl" for="batch-copy" class="hasTip" title="'.JText::_('COM_COLLECTOR_BATCH_COPY_LABEL').'::'.JText::_('COM_COLLECTOR_BATCH_COPY_LABEL_DESC').'">',
-			JText::_('COM_COLLECTOR_BATCH_COPY_LABEL'),
+			'<label id="batch-copy-lbl" for="batch-copy" class="hasTip" title="'.Text::_('COM_COLLECTOR_BATCH_COPY_LABEL').'::'.Text::_('COM_COLLECTOR_BATCH_COPY_LABEL_DESC').'">',
+			Text::_('COM_COLLECTOR_BATCH_COPY_LABEL'),
 			'</label>',
 			'<select name="batch[copy_mode]" class="inputbox" id="batch-copy-mode">',
-			'<option value="0">'.JText::_('COM_COLLECTOR_BATCH_NO_COPY').'</option>',
-			'<option value="1">'.JText::_('COM_COLLECTOR_BATCH_COPY_ONLY_FIELDS').'</option>',
-			'<option value="2">'.JText::_('COM_COLLECTOR_BATCH_COPY_FIELDS_AND_ITEMS_WITHOUT_HISTORY').'</option>',
-			'<option value="3">'.JText::_('COM_COLLECTOR_BATCH_COPY_FIELDS_AND_ITEMS_WITH_HISTORY').'</option>',
+			'<option value="0">'.Text::_('COM_COLLECTOR_BATCH_NO_COPY').'</option>',
+			'<option value="1">'.Text::_('COM_COLLECTOR_BATCH_COPY_ONLY_FIELDS').'</option>',
+			'<option value="2">'.Text::_('COM_COLLECTOR_BATCH_COPY_FIELDS_AND_ITEMS_WITHOUT_HISTORY').'</option>',
+			'<option value="3">'.Text::_('COM_COLLECTOR_BATCH_COPY_FIELDS_AND_ITEMS_WITH_HISTORY').'</option>',
 			'</select>'
 		);
 

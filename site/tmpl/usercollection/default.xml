@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<metadata>
+    <layout title="COM_COLLECTOR_USERCOLLECTION_MENU_TITLE">
+        <message>
+            <![CDATA[COM_COLLECTOR_USERCOLLECTION_MENU_DESC]]>
+        </message>
+    </layout>
+
+    <fields name="request">
+        <fieldset name="request"
+            addfieldprefix="Steevo\Component\Collector\Administrator\Field">
+            <field
+                name="collection"
+                type="modal_collection"
+                label="COM_COLLECTOR_CHOOSE_COLLECTION_LABEL"
+                extension="com_collector"
+                required="true"
+                select="true"
+            />
+            <field
+                name="type"
+                type="list"
+                default="2"
+                label="COM_COLLECTOR_USERCOLLECTION_DEFAULT_TYPE">
+                <option value="2">COM_COLLECTOR_USERLIST_TYPE_2</option>
+                <option value="0">COM_COLLECTOR_USERLIST_TYPE_0</option>
+                <option value="1">COM_COLLECTOR_USERLIST_TYPE_1</option>
+            </field>
+        </fieldset>
+    </fields>
+
+    <fields name="params">
+        <fieldset name="basic" label="COM_COLLECTOR_USERCOLLECTION_PARAMS">
+            <field
+                name="default_order"
+                type="list"
+                default="added"
+                label="COM_COLLECTOR_USERCOLLECTION_DEFAULT_ORDER">
+                <option value="added">COM_COLLECTOR_USERCOLLECTION_ORDER_ADDED</option>
+                <option value="i.ordering">COM_COLLECTOR_USERCOLLECTION_ORDER_DEFAULT</option>
+                <option value="i.modified">COM_COLLECTOR_USERCOLLECTION_ORDER_MODIFIED</option>
+            </field>
+            <field
+                name="default_order_dir"
+                type="list"
+                default="DESC"
+                label="COM_COLLECTOR_USERCOLLECTION_DEFAULT_ORDER_DIR">
+                <option value="DESC">JDESCENDING</option>
+                <option value="ASC">JASCENDING</option>
+            </field>
+        </fieldset>
+    </fields>
+</metadata>

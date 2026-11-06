@@ -19,7 +19,7 @@ defined('_JEXEC') or die( 'Restricted access' );
  *
  * @package     Collector
  */
-abstract class JHtmlCollectorDropdown
+abstract class HTMLHelper::CollectorDropdown
 {
 	/**
 	 * @var    string  HTML markup for the dropdown list
@@ -45,7 +45,7 @@ abstract class JHtmlCollectorDropdown
 
 		if ($item)
 		{
-			$html[] = '<span class="element-invisible">' . JText::sprintf('JACTIONS', $item) . '</span>';
+			$html[] = '<span class="element-invisible">' . Text::sprintf('JACTIONS', $item) . '</span>';
 		}
 
 		$html[] = '</button>';
@@ -71,7 +71,7 @@ abstract class JHtmlCollectorDropdown
 	public static function add($collection, $id, $userlist, $prefix = '')
 	{
 		$task = ($prefix ? $prefix . '.' : '') . 'add';
-		static::addCustomItem(JText::sprintf('COM_COLLECTOR_DROPDOWN_ADD_ITEM', $userlist->name), 'new', $collection, $id, $userlist->id, $task);
+		static::addCustomItem(Text::sprintf('COM_COLLECTOR_DROPDOWN_ADD_ITEM', $userlist->name), 'new', $collection, $id, $userlist->id, $task);
 	}
 
 	/**
@@ -87,7 +87,7 @@ abstract class JHtmlCollectorDropdown
 	public static function remove($collection, $id, $userlist, $prefix = '')
 	{
 		$task = ($prefix ? $prefix . '.' : '') . 'remove';
-		static::addCustomItem(JText::sprintf('COM_COLLECTOR_DROPDOWN_REMOVE_ITEM', $userlist->name), 'delete', $collection, $id, $userlist->id, $task);
+		static::addCustomItem(Text::sprintf('COM_COLLECTOR_DROPDOWN_REMOVE_ITEM', $userlist->name), 'delete', $collection, $id, $userlist->id, $task);
 	}
 
 	/**

@@ -1,0 +1,15 @@
+{
+    "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
+    "name": "com_collector",
+    "version": "0.9.0",
+    "description": "Collector Web Assets",
+    "license": "GPL-2.0-or-later",
+    "assets": [
+        {
+            "name": "com_collector.versionscompare",
+            "type": "style",
+            "uri": "com_collector/css/versionscompare.css",
+            "version": "0.9.0"
+        }
+    ]
+}

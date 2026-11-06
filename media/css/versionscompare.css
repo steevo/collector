@@ -1,0 +1,31 @@
+/* Ligne validée (Oui) — fond vert léger */
+tr.row-accepted td {
+    background-color: rgba(25, 135, 84, 0.15) !important;
+}
+
+tr.table-danger td,
+tr.table-danger th {
+    transition: background-color .2s ease-in-out;
+}
+
+/* Bouton toggle */
+.btn-toggle {
+    min-width: 52px;
+    font-size: .75rem;
+    padding: 2px 8px;
+    transition: all .15s ease-in-out;
+}
+.btn-toggle.is-non {
+    background: transparent;
+    border-color: #adb5bd;
+    color: #6c757d;
+}
+.btn-toggle.is-oui {
+    background: #198754;
+    border-color: #198754;
+    color: #fff;
+    font-weight: 600;
+    box-shadow: 0 0 0 2px rgba(25,135,84,.25);
+}
+.btn-toggle.is-non:hover { border-color: #6c757d; color: #495057; }
+.btn-toggle.is-oui:hover { background: #157347; }

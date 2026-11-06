@@ -19,9 +19,11 @@ $title = $form->getField('title') ? 'title' : ($form->getField('name') ? 'name' 
 $alias = $form->getField('alias') ? 'alias' : ($form->getField('tablecolumn') ? 'tablecolumn' : '');
 
 ?>
-<div class="form-inline form-inline-header">
-	<?php
-	echo $title ? $form->getControlGroup($title) : '';
-	echo $alias ? $form->getControlGroup($alias) : '';
-	?>
+<div class="row title-alias form-vertical mb-3">
+    <div class="col-12 col-md-6">
+        <?php echo $title ? $form->renderField($title) : ''; ?>
+    </div>
+    <div class="col-12 col-md-6">
+        <?php echo $alias ? $form->renderField($alias) : ''; ?>
+    </div>
 </div>

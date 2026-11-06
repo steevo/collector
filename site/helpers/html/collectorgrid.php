@@ -19,7 +19,7 @@ defined('_JEXEC') or die( 'Restricted access' );
  *
  * @package     Collector
  */
-abstract class JHtmlCollectorGrid
+abstract class HTMLHelper::CollectorGrid
 {
 	/**
 	 * Returns an action on a grid
@@ -58,11 +58,11 @@ abstract class JHtmlCollectorGrid
 
 		if ($tip)
 		{
-			JHtml::_('bootstrap.tooltip');
+			HTMLHelper::_('bootstrap.tooltip');
 
 			$title = $enabled ? $active_title : $inactive_title;
-			$title = $translate ? JText::_($title) : $title;
-			$title = JHtml::tooltipText($title, '', 0);
+			$title = $translate ? Text::_($title) : $title;
+			$title = HTMLHelper::tooltipText($title, '', 0);
 		}
 
 		if ($enabled)
@@ -150,7 +150,7 @@ abstract class JHtmlCollectorGrid
 	 *
 	 * @return  string  The HTML markup
 	 *
-	 * @see     JHtmlPifaGrid::state()
+	 * @see     HTMLHelper::PifaGrid::state()
 	 */
 	public static function edit($value, $i, $prefix = '', $enabled = true)
 	{

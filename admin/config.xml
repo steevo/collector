@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <config>
+	<inlinehelp button="show"/>
 	<fieldset name="component">
 		<field
 			name="file_path"
@@ -175,6 +176,43 @@
 			<option value="1">JYES</option>
 		</field>
 	</fieldset>
+	<fieldset name="import"
+    label="COM_COLLECTOR_IMPORT"
+    description="COM_COLLECTOR_IMPORT_DESC"
+>
+		<field
+			name="import_skip_identical"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="COM_COLLECTOR_IMPORT_SKIP_IDENTICAL"
+			description="COM_COLLECTOR_IMPORT_SKIP_IDENTICAL_DESC">
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+		</field>
+		
+		<field
+			name="import_skip_if_identical_exists"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="COM_COLLECTOR_IMPORT_SKIP_IF_IDENTICAL_EXISTS"
+			description="COM_COLLECTOR_IMPORT_SKIP_IF_IDENTICAL_EXISTS_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+		
+		<field
+			name="import_rollback_delete_mode"
+			type="list"
+			default="trash"
+			label="COM_COLLECTOR_IMPORT_ROLLBACK_DELETE_MODE"
+			description="COM_COLLECTOR_IMPORT_ROLLBACK_DELETE_MODE_DESC">
+			<option value="trash">COM_COLLECTOR_IMPORT_ROLLBACK_DELETE_TRASH</option>
+			<option value="delete">COM_COLLECTOR_IMPORT_ROLLBACK_DELETE_PERMANENT</option>
+		</field>
+
+	</fieldset>
 	
 	<fieldset name="modification"
 		label="COM_COLLECTOR_MODIFICATION"
@@ -198,6 +236,16 @@
 			default="1"
 			label="COM_COLLECTOR_SAVE_HISTORY"
 			description="COM_COLLECTOR_SAVE_HISTORY_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
+		<field
+			name="auto_validate"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="COM_COLLECTOR_HISTORY_AUTO_VALIDATE"
+			description="COM_COLLECTOR_HISTORY_AUTO_VALIDATE_DESC">
 			<option value="0">JNO</option>
 			<option value="1">JYES</option>
 		</field>

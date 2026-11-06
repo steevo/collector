@@ -11,8 +11,15 @@
  * it can be used for several purpose.
  */
 
-// No direct access
 defined('_JEXEC') or die;
+
+use Joomla\CMS\Application\ApplicationHelper;
+use Joomla\CMS\Factory;
+use Joomla\CMS\Filesystem\File;
+use Joomla\CMS\Filesystem\Folder;
+use Joomla\CMS\Installer\InstallerAdapter;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Table\Table;
 
 ignore_user_abort( true ); 
 
@@ -28,24 +35,24 @@ class com_collectorInstallerScript
 	 */
 	public function install($parent) 
 	{
-		$user	= JFactory::getUser();
+		$user	= Factory::getApplication()->getIdentity();
 		$params   = JComponentHelper::getParams('com_languages');
 		$frontend_lang = $params->get('site', 'en-GB');
 		$language = JLanguage::getInstance($frontend_lang);
 		
 		// get language file for default layouts
-		$language = JFactory::getLanguage();
+		$language = Factory::getLanguage();
 		$language->load('com_collector');
-		$db = JFactory::getDBO();
+		$db = Factory::getDBO();
 		
 		// check for root item
 		$query = "SELECT id from `#__collector_defined_content` WHERE id=1;";
 		$db->setQuery( $query );
 		if (!$result = $db->LoadResult())
 		{
-			$query = "INSERT INTO `#__collector_defined_content` SET `id` = 1,`defined` = 0,`parent_id` = 0,`level` = 0,`path` = '',`content` = 'List_Item_Root',`lft` = 0,`rgt` = 1;";
+			$query = "INSERT INTO `#__collector_defined_content` SET `id` = 1,`defined` = 0,`parent_id` = 0,`level` = 0,`path` = '',`content` = 'List_Item_Root',`image` = '', `lft` = 0,`rgt` = 1;";
 			$db->setQuery( $query );
-			$db->query();
+			$db->execute();
 		}
 		
 		// check for fields types
@@ -63,7 +70,7 @@ class com_collectorInstallerScript
 				(7, 'date', 1, 1, 1, 1, 1, 1),
 				(8, 'file', 1, 0, 0, 1, 0, 0);";
 			$db->setQuery( $query );
-			$db->query();
+			$db->execute();
 		}
 
 		// check for files types
@@ -80,7 +87,7 @@ class com_collectorInstallerScript
 				(6 , 'video', 'VIDEO_DOC'),
 				(7 , 'other', 'OTHER_DOC');";
 			$db->setQuery( $query );
-			$db->query();
+			$db->execute();
 		}
 		
 		$query = "SELECT id from `#__collector_files_ext`;";
@@ -101,7 +108,7 @@ class com_collectorInstallerScript
 				(11 , 'ods', '3', 'page_white_excel.png', '1'),
 				(12 , 'pdf', '4', 'page_white_acrobat.png', '1');";
 			$db->setQuery( $query );
-			$db->query();
+			$db->execute();
 		}
 		
 		$imagepath = JUri::root().'administrator/components/com_collector/assets/images/collector_logo.png';
@@ -116,7 +123,7 @@ class com_collectorInstallerScript
 		$msg[] = '</tr>';
 		$msg[] = '<tr>';
 		$msg[] = '<td style="border:1px solid #999;background-color:aliceblue;" colspan="2">';
-		$msg[] = '<b>' . JText::_('COM_COLLECTOR_INSTALL') . '</b>';
+		$msg[] = '<b>' . Text::_('COM_COLLECTOR_INSTALL') . '</b>';
 		$msg[] = '</td>';
 		$msg[] = '</tr>';
 		$msg[] = '</table>';
@@ -136,7 +143,7 @@ class com_collectorInstallerScript
 
         $this->install($parent);
 		
-		$db = JFactory::getDBO();
+		$db = Factory::getDBO();
 		$query = "SHOW COLUMNS FROM `#__collector_userslists` LIKE 'type'";
 		$db->setQuery( $query );
 		$db->execute();
@@ -145,9 +152,9 @@ class com_collectorInstallerScript
 		if (!$exist) {
 			$query = "ALTER TABLE `#__collector_userslists` ADD `type` INT(11) NOT NULL after `collection`";
 			$db->setQuery( $query );
-			$db->query();
+			$db->execute();
 		}
-		
+
 		// Userlists creation if not exists
 		// foreach collection
 		$query = "SELECT id FROM `#__collector`;";
@@ -156,14 +163,27 @@ class com_collectorInstallerScript
 
 		foreach ($collections AS $collection)
 		{
+			// collection InnoDB
+			$query = "ALTER TABLE `#__collector_items_history_".$collection->id."` ENGINE=InnoDB;";
+			$db->setQuery( $query );
+			$db->execute();
+			
+			$table = '#__collector_items_history_' . (int) $collection->id;
+			// Vérifier si la colonne existe déjà
+			$db->setQuery('SHOW COLUMNS FROM ' . $db->quoteName($table) . ' LIKE ' . $db->quote('refuse_note'));
+			if (!$db->loadResult()) {
+				$db->setQuery('ALTER TABLE ' . $db->quoteName($table) . ' ADD COLUMN `refuse_note` text DEFAULT NULL AFTER `modification`');
+				$db->execute();
+			}
+			
 			// collection list
 			$query = "SELECT id FROM `#__collector_userslists` WHERE collection = '".$collection->id."' AND type = '2'";
 			$db->setQuery( $query );
 			if (!$result = $db->LoadResult())
 			{
-				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 2,`name` = '".$db->escape(JText::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`alias` = '".JApplication::stringURLSafe(JText::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`state` = '0',`ordering` = '0',`created` = '".JFactory::getDate()->toSql()."',`created_by` = '".JFactory::getUser()->get('id')."',`publish_up` = '".JFactory::getDate()->toSql()."',`access` = '1';";
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 2,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getUser()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
 				$db->setQuery( $query );
-				$db->query();
+				$db->execute();
 			}
 			
 			// wish list
@@ -171,9 +191,9 @@ class com_collectorInstallerScript
 			$db->setQuery( $query );
 			if (!$result = $db->LoadResult())
 			{
-				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 0,`name` = '".$db->escape(JText::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`alias` = '".JApplication::stringURLSafe(JText::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`state` = '0',`ordering` = '0',`created` = '".JFactory::getDate()->toSql()."',`created_by` = '".JFactory::getUser()->get('id')."',`publish_up` = '".JFactory::getDate()->toSql()."',`access` = '1';";
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 0,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getUser()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
 				$db->setQuery( $query );
-				$db->query();
+				$db->execute();
 			}
 			
 			// swap list
@@ -181,13 +201,13 @@ class com_collectorInstallerScript
 			$db->setQuery( $query );
 			if (!$result = $db->LoadResult())
 			{
-				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 1,`name` = '".$db->escape(JText::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`alias` = '".JApplication::stringURLSafe(JText::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`state` = '0',`ordering` = '0',`created` = '".JFactory::getDate()->toSql()."',`created_by` = '".JFactory::getUser()->get('id')."',`publish_up` = '".JFactory::getDate()->toSql()."',`access` = '1';";
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 1,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getUser()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
 				$db->setQuery( $query );
-				$db->query();
+				$db->execute();
 			}
 		}
 
-		$db = JFactory::getDBO();
+		$db = Factory::getDBO();
 		$query = "SHOW COLUMNS FROM `#__collector_fields` LIKE 'next_sorted_field'";
 		$db->setQuery( $query );
 		$db->execute();
@@ -196,10 +216,10 @@ class com_collectorInstallerScript
 		if (!$exist) {
 			$query = "ALTER TABLE `#__collector_fields` ADD `next_sorted_field` varchar(30) NOT NULL default '0' after `required`";
 			$db->setQuery( $query );
-			$db->query();
+			$db->execute();
 		}
 
-		$db = JFactory::getDBO();
+		$db = Factory::getDBO();
 		$query = "SHOW COLUMNS FROM `#__collector_fields` LIKE 'column_width'";
 		$db->setQuery( $query );
 		$db->execute();
@@ -208,8 +228,24 @@ class com_collectorInstallerScript
 		if (!$exist) {
 			$query = "ALTER TABLE `#__collector_fields` ADD `column_width` varchar(30) NOT NULL default '' after `next_sorted_field`";
 			$db->setQuery( $query );
-			$db->query();
+			$db->execute();
 		}
+		
+		$repertoireObsolete = JPATH_SITE . '/administrator/components/com_collector/layouts/joomla/searchtools';
+
+        // 2. Vérifier si le répertoire existe avant de tenter la suppression
+        if (Folder::exists($repertoireObsolete)) {
+            try {
+                // 3. Supprimer le fichier
+                Folder::delete($repertoireObsolete);
+                
+                // Optionnel : Log ou message pour dire que c'est fait
+                // echo "<p>Fichier obsolète supprimé : " . basename($repertoireObsolete) . "</p>";
+            } catch (\Exception $e) {
+                // Gérer l'erreur silencieusement ou l'afficher
+                Factory::getApplication()->enqueueMessage('Erreur lors de la suppression : ' . $e->getMessage(), 'warning');
+            }
+        }
 	}
 	
 	/**
@@ -221,7 +257,7 @@ class com_collectorInstallerScript
 	{
 		// $parent is the class calling this method
 		
-		$db = JFactory::getDBO();
+		$db = Factory::getDBO();
 		
 		// foreach collection
 		$query = "SELECT id FROM `#__collector`;";
@@ -233,7 +269,7 @@ class com_collectorInstallerScript
 			// drop history table
 			$query = "DROP TABLE `#__collector_items_history_".$collection->id."`";
 			$db->setQuery( $query );
-			$db->query();
+			$db->execute();
 		}
 
 		/* delete comments */

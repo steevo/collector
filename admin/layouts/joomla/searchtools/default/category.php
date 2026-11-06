@@ -13,6 +13,11 @@
 
 defined('JPATH_BASE') or die;
 
+
+use Steevo\Component\Collector\Administrator\Field\CollectionField;
+use Steevo\Component\Collector\Administrator\Field\DefinedField;
+use Steevo\Component\Collector\Administrator\Field\ItemField;
+
 $data = $displayData;
 
 if ($data['view']->getName() == 'listitems') {

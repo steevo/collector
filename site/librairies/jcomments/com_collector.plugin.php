@@ -13,7 +13,7 @@ class jc_com_collector extends JCommentsPlugin
 {
 	function getObjectInfo($id, $language = null)
 	{
-        $db = JFactory::getDBO();
+        $db = Factory::getDBO();
         $query = 'SELECT i.id, i.fulltitle, i.created_by, i.collection, i.access'
             .' , CASE WHEN CHAR_LENGTH(c.alias) THEN CONCAT_WS(\':\', c.id, c.alias) ELSE c.id END as catslug'
             .' , CASE WHEN CHAR_LENGTH(i.alias) THEN CONCAT_WS(\':\', i.id, i.alias) ELSE i.id END as slug'
