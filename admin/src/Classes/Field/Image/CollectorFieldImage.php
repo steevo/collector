@@ -95,7 +95,8 @@ class CollectorFieldImage extends CollectorField
 	function display($value,$listing=true,$params=array(),$itemId=0)
 	{
 		// image de substitution
-		$imagedefault = HTMLHelper::cleanImageURL($this->_field->attribs['default']);
+		// la valeur par défaut est enregistrée au même format que les valeurs : "chemin|desc|titre|..."
+		$imagedefault = HTMLHelper::cleanImageURL(explode('|', (string) ($this->_field->attribs['default'] ?? ''))[0]);
 		$imagedefaultUrl = $imagedefault->url;
 		
 		$url = explode('|',$value);
@@ -151,9 +152,10 @@ class CollectorFieldImage extends CollectorField
 			}
 		}
 
-		$taille=getimagesize($image);
-		$largeur=$taille[0];
-		$hauteur=$taille[1];
+		$taille = is_file($image) ? getimagesize($image) : false;
+		// image illisible ou absente : on affiche le cadre aux dimensions maximales
+		$largeur = $taille ? $taille[0] : $largeurmax;
+		$hauteur = $taille ? $taille[1] : $hauteurmax;
 		
 		if ( ($hauteur/$hauteurmax) < ($largeur/$largeurmax) )
 		{
