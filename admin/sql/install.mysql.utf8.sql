@@ -7,18 +7,18 @@ CREATE TABLE IF NOT EXISTS `#__collector` (
 	`name` varchar(30) NOT NULL default '',
 	`alias` varchar(30) NOT NULL default '',
 	`description` text NOT NULL,
-	`custom` varchar(30) NOT NULL default '0',
+	`custom` text NOT NULL,
 	`state` tinyint(3) NOT NULL default '0',
 	`ordering` int(11) NOT NULL,
-	`created` datetime NOT NULL default '0000-00-00 00:00:00'
+	`created` datetime NOT NULL,
 	`created_by` int(11) unsigned NOT NULL default '0',
 	`created_by_alias` varchar(255) NOT NULL default '',
-	`modified` datetime NOT NULL default '0000-00-00 00:00:00'
+	`modified` datetime NULL DEFAULT NULL,
 	`modified_by` int(11) unsigned NOT NULL default '0',
-	`publish_up` datetime NOT NULL default '0000-00-00 00:00:00'
-	`publish_down` datetime NOT NULL default '0000-00-00 00:00:00'
+	`publish_up` datetime NULL DEFAULT NULL,
+	`publish_down` datetime NULL DEFAULT NULL,
 	`checked_out` int(11) unsigned NOT NULL default '0',
-	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00'
+	`checked_out_time` datetime NULL DEFAULT NULL,
 	`image` text NOT NULL,
 	`access` int(11) unsigned NOT NULL default '0',
 	`home` int(1) NOT NULL default '0',
@@ -61,15 +61,15 @@ CREATE TABLE IF NOT EXISTS `#__collector_fields` (
 	`type` int(11) NOT NULL,
 	`ordering` int(11) NOT NULL,
 	`state` TINYINT(3) NOT NULL default '0',
-	`created` datetime NOT NULL default '0000-00-00 00:00:00'
+	`created` datetime NOT NULL,
 	`created_by` INT(11) NOT NULL default '0',
 	`created_by_alias` VARCHAR(255) NOT NULL default '',
-	`modified` datetime NOT NULL default '0000-00-00 00:00:00'
+	`modified` datetime NULL DEFAULT NULL,
 	`modified_by` INT(11) NOT NULL default '0',
-	`publish_up` datetime NOT NULL default '0000-00-00 00:00:00'
-	`publish_down` datetime NOT NULL default '0000-00-00 00:00:00'
+	`publish_up` datetime NULL DEFAULT NULL,
+	`publish_down` datetime NULL DEFAULT NULL,
 	`checked_out` INT(11) NOT NULL default '0',
-	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00'
+	`checked_out_time` datetime NULL DEFAULT NULL,
 	`access` INT(11) NOT NULL default '0',
 	`home` int(1) NOT NULL default '0',
 	`unik` int(1) NOT NULL default '0',
@@ -98,13 +98,13 @@ CREATE TABLE IF NOT EXISTS `#__collector_defined` (
 	`id` int(11) NOT NULL auto_increment,
 	`name` varchar(30) NOT NULL default '',
 	`alias` varchar(30) NOT NULL default '',
-	`created` datetime NOT NULL default '0000-00-00 00:00:00'
+	`created` datetime NOT NULL default '0000-00-00 00:00:00',
 	`created_by` int(11) unsigned NOT NULL default '0',
 	`created_by_alias` varchar(255) NOT NULL default '',
-	`modified` datetime NOT NULL default '0000-00-00 00:00:00'
+	`modified` datetime NOT NULL default '0000-00-00 00:00:00',
 	`modified_by` int(11) unsigned NOT NULL default '0',
 	`checked_out` int(11) unsigned NOT NULL default '0',
-	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00'
+	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00',
 	`access` INT(11) NOT NULL default '0',
 	`width` INT(11) NOT NULL default '0',
 	`height` INT(11) NOT NULL default '0',
@@ -189,17 +189,17 @@ CREATE TABLE IF NOT EXISTS `#__collector_items` (
 	`state` tinyint(3) NOT NULL default '0',
 	`ordering` int(11) NOT NULL,
 	`hits` int(11) NOT NULL default '0',
-	`created` datetime NOT NULL default '0000-00-00 00:00:00'
+	`created` datetime NOT NULL,
 	`created_by` int(11) unsigned NOT NULL default '0',
 	`created_by_alias` varchar(255) NOT NULL default '',
-	`modified` datetime NOT NULL default '0000-00-00 00:00:00'
+	`modified` datetime NULL DEFAULT NULL,
 	`modified_by` int(11) unsigned NOT NULL default '0',
-	`publish_up` datetime NOT NULL default '0000-00-00 00:00:00'
-	`publish_down` datetime NOT NULL default '0000-00-00 00:00:00'
+	`publish_up` datetime NULL DEFAULT NULL,
+	`publish_down` datetime NULL DEFAULT NULL,
 	`checked_out` int(11) unsigned NOT NULL default '0',
-	`checked_out_time` datetime NOT NULL default '0000-00-00 00:00:00',
+	`checked_out_time` datetime NULL DEFAULT NULL,
 	`access` int(11) unsigned NOT NULL default '0',
-	`to_validate` int(11) NOT NULL DEFAULT '0'
+	`to_validate` int(11) NOT NULL DEFAULT '0',
 	PRIMARY KEY (`id`),
 	KEY `idx_access` (`access`),
 	KEY `idx_checkout` (`checked_out`),
@@ -260,10 +260,7 @@ CREATE TABLE IF NOT EXISTS `#__collector_userslists` (
 	`access` int(11) unsigned NOT NULL default '0',
 	PRIMARY KEY (`id`),
 	KEY `idx_access` (`access`),
-	KEY `idx_checkout` (`checked_out`),
 	KEY `idx_state` (`state`),
-	KEY `idx_createdby` (`created_by`),
-	KEY `idx_modifiedby` (`modified_by`),
 	KEY `idx_collection` (`collection`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 DEFAULT COLLATE = utf8mb4_unicode_ci;
 
@@ -289,7 +286,7 @@ CREATE TABLE IF NOT EXISTS `#__collector_usersitems` (
 	`itemid` int(11) NOT NULL,
 	`userlist` int(11) NOT NULL,
 	`note` text NOT NULL,
-	`created` datetime NOT NULL DEFAULT '0000-00-00 00:00:00'
+	`created` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
 	PRIMARY KEY (`id`),
 	KEY `idx_userlist` (`userlist`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 DEFAULT COLLATE = utf8mb4_unicode_ci;
@@ -323,9 +320,9 @@ CREATE TABLE IF NOT EXISTS `#__collector_import_history_items` (
     `id`             int(11)     NOT NULL AUTO_INCREMENT,
     `import_id`      int(11)     NOT NULL,
     `item_id`        int(11)     NOT NULL,
-    `action`         varchar(10) NOT NULL DEFAULT '',  -- 'imported' | 'merged'
-    `version_before` int(11)     DEFAULT NULL,         -- historyId avant merge
-    `version_after`  int(11)     DEFAULT NULL,         -- historyId après action
+    `action`         varchar(10) NOT NULL DEFAULT '',  -- 'imported' | 'merged',
+    `version_before` int(11)     DEFAULT NULL,         -- historyId avant merge,
+    `version_after`  int(11)     DEFAULT NULL,         -- historyId après action,
 	`rolled_back_at` datetime    DEFAULT NULL,
     PRIMARY KEY (`id`),
     KEY `idx_import_id` (`import_id`),

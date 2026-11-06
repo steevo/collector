@@ -91,6 +91,7 @@ class CollectorItemsHistoryTable extends Table
 		$query .= '`metadesc` text NOT NULL,';
 		$query .= '`metadata` text NOT NULL,';
 		$query .= '`modification` text NOT NULL,';
+		$query .= '`refuse_note` text DEFAULT NULL,';
 		$query .= 'PRIMARY KEY (`id`),';
 		$query .= 'KEY `idx_item` (`item`),';
 		$query .= 'KEY `idx_modifiedby` (`modified_by`)';

@@ -186,7 +186,7 @@ class com_collectorInstallerScript
 			$db->setQuery( $query );
 			if (!$result = $db->LoadResult())
 			{
-				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 2,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getApplication()->getIdentity()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 2,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_COLLECTION'))."',`state` = '0',`ordering` = '0',`access` = '1';";
 				$db->setQuery( $query );
 				$db->execute();
 			}
@@ -196,7 +196,7 @@ class com_collectorInstallerScript
 			$db->setQuery( $query );
 			if (!$result = $db->LoadResult())
 			{
-				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 0,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getApplication()->getIdentity()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 0,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_WISH_LIST'))."',`state` = '0',`ordering` = '0',`access` = '1';";
 				$db->setQuery( $query );
 				$db->execute();
 			}
@@ -206,7 +206,7 @@ class com_collectorInstallerScript
 			$db->setQuery( $query );
 			if (!$result = $db->LoadResult())
 			{
-				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 1,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`alias` = '".ApplicationHelper::stringURLSafe(Text::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`description` = '0',`state` = '0',`ordering` = '0',`created` = '".Factory::getDate()->toSql()."',`created_by` = '".Factory::getApplication()->getIdentity()->get('id')."',`publish_up` = '".Factory::getDate()->toSql()."',`access` = '1';";
+				$query = "INSERT INTO `#__collector_userslists` SET `collection` = '".$collection->id."',`type` = 1,`name` = '".$db->escape(Text::_('COM_COLLECTOR_USERLIST_SWAP_LIST'))."',`state` = '0',`ordering` = '0',`access` = '1';";
 				$db->setQuery( $query );
 				$db->execute();
 			}
