@@ -1,0 +1,95 @@
+/**
+ * Collector — couleurs adaptées au thème du site (clair / sombre).
+ *
+ * Les couleurs de Collector sont des variables qui reprennent celles du template :
+ * Bootstrap 5.3 (--bs-*), sinon T4 (--t4-*), sinon des valeurs claires par défaut.
+ * Elles sont recalculées partout où un thème est déclaré (data-bs-theme), ce qui suffit
+ * à suivre le mode sombre du template sans rien régler dans Collector.
+ *
+ * @package     Collector
+ * @copyright   Copyright (C) 2010 - 2026 Philippe Ousset. All rights reserved.
+ * @license     GNU General Public License version 2 or later; see LICENSE.txt
+ */
+
+:root,
+[data-bs-theme] {
+	--collector-text: var(--bs-body-color, var(--t4-body-color, #212529));
+	--collector-bg: var(--bs-body-bg, var(--t4-body-bg, #fff));
+	--collector-bg-alt: var(--bs-tertiary-bg, var(--t4-tertiary-bg, #f8f9fa));
+	--collector-bg-hover: var(--bs-secondary-bg, var(--t4-secondary-bg, #e9ecef));
+	--collector-border: var(--bs-border-color, var(--t4-border-color, #dee2e6));
+	--collector-muted: var(--bs-secondary-color, var(--t4-secondary-color, #6c757d));
+	--collector-shadow: rgba(0, 0, 0, .15);
+	--collector-success: #198754;
+	--collector-success-hover: #157347;
+	--collector-success-bg: rgba(25, 135, 84, .15);
+}
+
+[data-bs-theme="dark"] {
+	--collector-shadow: rgba(0, 0, 0, .5);
+	--collector-success-bg: rgba(25, 135, 84, .3);
+}
+
+/* Tableaux (liste d'une collection, fiche détaillée) : certains templates figent la couleur
+   du texte des tableaux sur sa valeur claire ; Collector garde celle de la page. */
+table.category > :not(caption) > * > * {
+	color: var(--collector-text);
+}
+
+table.category > :not(caption) > * > * a:not(.btn) {
+	color: inherit;
+}
+
+/* Champ de recherche de la liste */
+.search-element .inputbox {
+	padding: .375rem .75rem;
+	color: var(--collector-text);
+	background-color: var(--collector-bg);
+	border: 1px solid var(--collector-border);
+	border-radius: .375rem;
+}
+
+.search-element .inputbox::placeholder {
+	color: var(--collector-muted);
+	opacity: 1;
+}
+
+/* Onglets Joomla (fiche détaillée, formulaire) : couleurs claires figées par Joomla,
+   en onglets comme en accordéon (petits écrans) */
+html joomla-tab > joomla-tab-element,
+html joomla-tab[view=accordion] [active] {
+	color: var(--collector-text);
+	background-color: var(--collector-bg);
+	border-color: var(--collector-border);
+}
+
+html joomla-tab[view=tabs] > div[role=tablist],
+html joomla-tab[orientation=vertical] > div[role=tablist] {
+	background-color: var(--collector-bg-alt);
+	border-color: var(--collector-border);
+	box-shadow: none;
+}
+
+html joomla-tab button[role=tab],
+html joomla-tab[orientation=vertical] > div[role=tablist] button,
+html joomla-tab[view=accordion] > button {
+	color: var(--collector-text);
+	border-color: var(--collector-border);
+}
+
+html joomla-tab[view=accordion] > button {
+	background-color: var(--collector-bg-alt);
+}
+
+html joomla-tab button[role=tab][aria-selected=true],
+html joomla-tab button[role=tab][aria-expanded=true],
+html joomla-tab[orientation=vertical] > div[role=tablist] button[aria-expanded=true],
+html joomla-tab[view=accordion] > button[aria-expanded=true] {
+	background-color: var(--collector-bg);
+	background-image: none;
+}
+
+html joomla-tab button[role=tab]:hover,
+html joomla-tab[view=accordion] > button:hover {
+	background-color: var(--collector-bg-hover);
+}

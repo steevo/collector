@@ -6,9 +6,15 @@
     "license": "GPL-2.0-or-later",
     "assets": [
         {
+            "name": "com_collector.theme",
+            "type": "style",
+            "uri": "com_collector/theme.css",
+            "version": "0.9.0"
+        },
+        {
             "name": "com_collector.versionscompare",
             "type": "style",
-            "uri": "com_collector/css/versionscompare.css",
+            "uri": "com_collector/versionscompare.css",
             "version": "0.9.0"
         }
     ]

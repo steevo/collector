@@ -63,6 +63,13 @@ class DisplayController extends BaseController
             throw new \Exception(Text::sprintf('JLIB_APPLICATION_ERROR_UNHELD_ID', $id), 403);
         }
 
+        // Couleurs de Collector adaptées au thème du site (clair / sombre)
+        $document = $this->app->getDocument();
+
+        if ($document->getType() === 'html') {
+            $document->getWebAssetManager()->useStyle('com_collector.theme');
+        }
+
         parent::display($cachable, $urlparams);
 
         return $this;
