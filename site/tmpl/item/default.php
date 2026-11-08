@@ -177,7 +177,7 @@ echo HTMLHelper::_('uitab.startTabSet', 'myTab', array('active' => '#details'));
 
 echo HTMLHelper::_('uitab.addTab', 'myTab', '#details', Text::_('COM_COLLECTOR_ARTICLE'));
 
-echo $this->loadTemplate('details');
+echo $this->loadTemplate($this->itemTemplate ? 'template' : 'details');
 
 echo HTMLHelper::_('uitab.endTab');
 

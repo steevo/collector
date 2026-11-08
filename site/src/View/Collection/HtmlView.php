@@ -24,6 +24,7 @@ use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Toolbar\Toolbar;
 use Joomla\CMS\Toolbar\ToolbarHelper;
 use Joomla\CMS\Uri\Uri;
+use Steevo\Component\Collector\Administrator\Helper\CollectorTemplateHelper;
 
 /**
  * HTML Collection View class for the Collector component
@@ -77,7 +78,28 @@ class HtmlView extends BaseHtmlView
      * @since  4.0.0
      */
     protected $pageclass_sfx = '';
-	
+
+    /**
+     * Template d'affichage choisi pour la liste (null : mise en page standard)
+     *
+     * @var  object|null
+     */
+    protected $listTemplate = null;
+
+    /**
+     * Vues proposées au visiteur (templates de liste publiés) ; vide si le sélecteur est désactivé
+     *
+     * @var  object[]
+     */
+    protected $listViews = [];
+
+    /**
+     * Vue de liste affichée : id du template, 0 pour le tableau standard
+     *
+     * @var  int
+     */
+    protected $listView = 0;
+
 	/**
 	 * Display function
 	 */
@@ -143,7 +165,35 @@ class HtmlView extends BaseHtmlView
 			$model   = $this->getModel();
 			$this->userlistIndicators = $model->getUserlistIndicators($itemIds, (int) $this->collection->id);
 		}
-		
+
+		// Template d'affichage de la liste : celui affecté à la collection (0 = tableau standard),
+		// ou celui choisi par le visiteur quand le sélecteur de vue est activé
+		$listView = (int) ($collection->template_list ?? 0);
+
+		if ($params->get('show_view_switch', 0)) {
+			$this->listViews = CollectorTemplateHelper::getPublished((int) $collection->id, CollectorTemplateHelper::CLIENT_LIST);
+
+			if ($this->listViews) {
+				$choice  = (int) $app->getUserStateFromRequest('com_collector.collection.' . (int) $collection->id . '.view', 'vue', $listView, 'int');
+				$allowed = array_merge([0], array_map(static fn ($view) => (int) $view->id, $this->listViews));
+
+				if (\in_array($choice, $allowed, true)) {
+					$listView = $choice;
+				}
+			}
+		}
+
+		$this->listView     = $listView;
+		$this->listTemplate = CollectorTemplateHelper::load(
+			$listView,
+			(int) $collection->id,
+			CollectorTemplateHelper::CLIENT_LIST
+		);
+
+		if ($this->listTemplate) {
+			CollectorTemplateHelper::addCss($this->listTemplate);
+		}
+
 		$this->_prepareDocument();
 		
 		parent::display($tpl);

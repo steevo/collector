@@ -26,6 +26,7 @@ use Joomla\CMS\Toolbar\ToolbarHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
 use Steevo\Component\Collector\Site\Model\UseritemModel;
+use Steevo\Component\Collector\Administrator\Helper\CollectorTemplateHelper;
 
 // JTable::addIncludePath(JPATH_ADMINISTRATOR.'/components/com_collector/tables');
 
@@ -44,6 +45,13 @@ class HtmlView extends BaseHtmlView
 	protected $form;
 	protected $user;
 	protected $navigation;
+
+	/**
+	 * Template d'affichage choisi pour la fiche (null : mise en page standard)
+	 *
+	 * @var  object|null
+	 */
+	protected $itemTemplate = null;
 	
 	/**
 	 * Display function
@@ -113,7 +121,18 @@ class HtmlView extends BaseHtmlView
 		
 		//Escape strings for HTML output
 		$this->pageclass_sfx = htmlspecialchars($this->params->get('pageclass_sfx', ''));
-		
+
+		// Template d'affichage de la fiche choisi pour la collection
+		$this->itemTemplate = CollectorTemplateHelper::load(
+			(int) ($this->collection->template_item ?? 0),
+			(int) $this->collection->id,
+			CollectorTemplateHelper::CLIENT_ITEM
+		);
+
+		if ($this->itemTemplate) {
+			CollectorTemplateHelper::addCss($this->itemTemplate);
+		}
+
 		$this->_prepareDocument();
 		
 		parent::display($tpl);

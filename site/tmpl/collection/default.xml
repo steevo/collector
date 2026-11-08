@@ -170,6 +170,17 @@
 			</field>
 			
 			<field
+				name="show_view_switch"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_SHOW_VIEW_SWITCH"
+				description="COM_COLLECTOR_SHOW_VIEW_SWITCH_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+
+			<field
 				name="required"
 				type="requiredfilter"
 				default="0"

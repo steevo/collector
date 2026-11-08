@@ -73,6 +73,20 @@
 		
 		<field name="custom" type="customtitle" label="COM_COLLECTOR_FIELD_CUSTOM_TITLE_LABEL"
 			description="COM_COLLECTOR_FIELD_CUSTOM_TITLE_DESC" class="inputbox chzn-done" />
+
+		<field name="template_list" type="collectortemplate" client="1"
+			label="COM_COLLECTOR_FIELD_TEMPLATE_LIST_LABEL"
+			description="COM_COLLECTOR_FIELD_TEMPLATE_LIST_DESC"
+			default="0" filter="int">
+			<option value="0">COM_COLLECTOR_TEMPLATE_DEFAULT_LAYOUT</option>
+		</field>
+
+		<field name="template_item" type="collectortemplate" client="0"
+			label="COM_COLLECTOR_FIELD_TEMPLATE_ITEM_LABEL"
+			description="COM_COLLECTOR_FIELD_TEMPLATE_ITEM_DESC"
+			default="0" filter="int">
+			<option value="0">COM_COLLECTOR_TEMPLATE_DEFAULT_LAYOUT</option>
+		</field>
 		
 		<field
 			name="created"

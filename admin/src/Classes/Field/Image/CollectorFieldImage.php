@@ -186,7 +186,6 @@ class CollectorFieldImage extends CollectorField
 		// $return = '<a data-bs-toggle="modal" data-bs-target="#'.$this->_item.'-'.$this->_field->id.'"  />';
 		$return = '';
 		$return .= '<img data-bs-toggle="modal" data-bs-target="#'.$itemId.'-'.$this->_field->id.'" alt="'.$imageDesc.'" title="'.$imageTitle.'" align="middle" border="1" src="'.$URLimage.'" '.$style.' />';
-		$return .= '</a>';
 		$return .= '<div id="'.$itemId.'-'.$this->_field->id.'" class="modal fade" tabindex="-1" aria-labelledby="'.$itemId.'-'.$this->_field->id.'_image" aria-hidden="true">
 			<div class="modal-dialog">
 				<div class="modal-content">

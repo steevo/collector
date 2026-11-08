@@ -251,7 +251,41 @@ foreach ( $this->fields as $field )
 				<div class="alert alert-no-items">
 					<?php echo Text::_('COM_COLLECTOR_NO_ITEMS_FOUND'); ?>
 				</div>
-			<?php else : ?>	
+			<?php else : ?>
+
+				<?php if ($this->listViews) : ?>
+				<nav class="collector-view-switch" aria-label="<?php echo Text::_('COM_COLLECTOR_VIEW_SWITCH_LABEL'); ?>">
+					<span class="collector-view-switch-label"><?php echo Text::_('COM_COLLECTOR_VIEW_SWITCH_LABEL'); ?></span>
+					<?php // même balisage que la pagination de Joomla : le sélecteur prend les couleurs que le template donne à sa pagination ?>
+					<ul class="pagination collector-view-switch-group">
+						<?php
+						// icônes intégrées : ne dépendent pas des polices d'icônes du template du site
+						$icons = [
+							'table'    => '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M2 3.5h12M2 8h12M2 12.5h12"/></svg>',
+							'template' => '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.75" y="1.75" width="5" height="5" rx="1"/><rect x="9.25" y="1.75" width="5" height="5" rx="1"/><rect x="1.75" y="9.25" width="5" height="5" rx="1"/><rect x="9.25" y="9.25" width="5" height="5" rx="1"/></g></svg>',
+						];
+						$views = array_merge(
+							[(object) ['id' => 0, 'name' => Text::_('COM_COLLECTOR_VIEW_STANDARD')]],
+							$this->listViews
+						);
+						foreach ($views as $view) :
+							$active = (int) $view->id === $this->listView;
+							$url    = Route::_('index.php?option=com_collector&view=collection&id=' . (int) $this->collection->id . '&reset=0&vue=' . (int) $view->id);
+						?>
+						<li class="page-item<?php echo $active ? ' active' : ''; ?>">
+							<?php if ($active) : ?>
+							<span class="page-link" aria-current="true">
+							<?php else : ?>
+							<a class="page-link" href="<?php echo $url; ?>">
+							<?php endif; ?>
+								<?php echo $icons[(int) $view->id ? 'template' : 'table']; ?>
+								<?php echo $this->escape($view->name); ?>
+							<?php echo $active ? '</span>' : '</a>'; ?>
+						</li>
+						<?php endforeach; ?>
+					</ul>
+				</nav>
+				<?php endif; ?>
 
 				<?php if ($this->params->def('show_pagination', 2) == 1  || ($this->params->get('show_pagination') == 2)) : ?>
 				<div>
@@ -266,7 +300,7 @@ foreach ( $this->fields as $field )
 				</div>
 				<?php endif; ?>
 			
-				<?php echo $this->loadTemplate('items'); ?>
+				<?php echo $this->loadTemplate($this->listTemplate ? 'template' : 'items'); ?>
 				
 				<?php if (($this->params->def('show_pagination', 2) == 1  || ($this->params->get('show_pagination') == 2)) && ($this->pagination->pagesTotal > 1)) : ?>
 				<div>

@@ -236,6 +236,21 @@ class com_collectorInstallerScript
 			$db->execute();
 		}
 		
+		// 0.9.1 : ancienne gestion des templates par fichiers PHP (éditeur de code en ligne) supprimée
+		$admin = JPATH_ADMINISTRATOR . '/components/com_collector';
+
+		foreach (['/src/View/Htmledit', '/tmpl/htmledit'] as $dossier) {
+			if (is_dir($admin . $dossier)) {
+				Folder::delete($admin . $dossier);
+			}
+		}
+
+		foreach (['/src/Model/HtmleditModel.php', '/src/Table/Collector_templatesTable.php'] as $fichier) {
+			if (is_file($admin . $fichier)) {
+				unlink($admin . $fichier);
+			}
+		}
+
 		$repertoireObsolete = JPATH_SITE . '/administrator/components/com_collector/layouts/joomla/searchtools';
 
         // 2. Vérifier si le répertoire existe avant de tenter la suppression

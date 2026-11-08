@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<form>
+<form addfieldprefix="Steevo\Component\Collector\Administrator\Field">
 	<field
 		name="collection"
 		type="collections"
 		label="COM_COLLECTOR_FILTER_COLLECTION"
-		description="JOPTION_FILTER_COLLECTION_DESC"
-		onchange="this.form.submit();"
+		filtermode="selector"
+		layout="joomla.form.field.list-fancy-select"
+		class="js-select-submit-on-change"
 	/>
 	<fields name="filter">
 		<field
@@ -18,22 +19,32 @@
 			name="client"
 			type="list"
 			label="COM_COLLECTOR_TEMPLATE_CLIENT_LABEL"
-			description="COM_COLLECTOR_TEMPLATE_CLIENT_LABEL_DESC"
 			onchange="this.form.submit();"
 			>
-			<option value="">COM_COLLECTOR_SELECT_TEMPLATE_CLIENT</option>
-			<option value="0">COM_COLLECTOR_TEMPLATE_CLIENT_LISTING_LABEL</option>
-			<option value="1">COM_COLLECTOR_TEMPLATE_CLIENT_DETAILS_LABEL</option>
+			<option value="">COM_COLLECTOR_TEMPLATE_SELECT_CLIENT</option>
+			<option value="1">COM_COLLECTOR_TEMPLATE_CLIENT_LIST</option>
+			<option value="0">COM_COLLECTOR_TEMPLATE_CLIENT_ITEM</option>
 		</field>
 	</fields>
 	<fields name="list">
 		<field
+			name="fullordering"
+			type="list"
+			label="JGLOBAL_SORT_BY"
+			onchange="this.form.submit();"
+			default="t.name ASC"
+			>
+			<option value="">JGLOBAL_SORT_BY</option>
+			<option value="t.name ASC">JGLOBAL_TITLE_ASC</option>
+			<option value="t.name DESC">JGLOBAL_TITLE_DESC</option>
+			<option value="t.id ASC">JGRID_HEADING_ID_ASC</option>
+			<option value="t.id DESC">JGRID_HEADING_ID_DESC</option>
+		</field>
+		<field
 			name="limit"
 			type="limitbox"
-			class="inputbox input-mini"
 			default="25"
-			label="COM_COLLECTOR_LIST_LIMIT"
-			description="COM_COLLECTOR_LIST_LIMIT_DESC"
+			label="JGLOBAL_LIST_LIMIT"
 			onchange="this.form.submit();"
 		/>
 	</fields>

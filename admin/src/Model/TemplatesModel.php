@@ -1,216 +1,114 @@
 <?php
 /**
- * Joomla! 3.0 component Collector
+ * Joomla! component Collector
  *
- * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
+ * @package     Collector
+ * @copyright   Copyright (C) 2010 - 2026 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
- *
- * Collector is a Multi Purpose Listing Tool.
- * Originaly developped to list Collections
- * it can be used for several purpose.
  */
 
 namespace Steevo\Component\Collector\Administrator\Model;
 
-defined('_JEXEC') or die;
+\defined('_JEXEC') or die;
 
-use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
-use Joomla\CMS\Language\Associations;
-use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
 use Joomla\CMS\MVC\Model\ListModel;
 use Joomla\Database\ParameterType;
 
 /**
- * Templates model
- * @package	Collector
+ * Templates d'affichage d'une collection.
  */
 class TemplatesModel extends ListModel
 {
-	/**
-	 * Collection Id
-	 * @var int
-	 */
-	var $_collection = null;
-	
-	/**
-	 * Constructor.
-	 *
-	 * @param	array	An optional associative array of configuration settings.
-	 * @see		JController
-	 * @since	1.6
-	 */
-	public function __construct($config = array())
-	{
-		if (empty($config['filter_fields'])) {
-			$config['filter_fields'] = array(
-				'id', 't.id',
-				'collection', 't.collection',
-				'name', 't.name',
-				'client', 't.client',
-				'home', 'f.home',
-			);
-		}
+    public function __construct($config = [])
+    {
+        if (empty($config['filter_fields'])) {
+            $config['filter_fields'] = [
+                'id', 't.id',
+                'name', 't.name',
+                'client', 't.client',
+                'state', 't.state',
+            ];
+        }
 
-		parent::__construct($config);
-	}
-	
-	/**
-	 * Method to auto-populate the model state.
-	 *
-	 * Note. Calling getState in this method will result in recursion.
-	 *
-	 * @return	void
-	 * @since	1.6
-	 */
-	protected function populateState($ordering = null, $direction = null)
-	{
-		// Initialise variables.
-		$app = Factory::getApplication();
-		$session = Factory::getApplication()->getSession();
+        parent::__construct($config);
+    }
 
-		// Adjust the context to support modal layouts.
-		if ($layout = $app->input->get('layout')) {
-			$this->context .= '.'.$layout;
-		}		
-		
-		$collection = $this->getCollection();
-		
-		if ($collection != $app->getUserState($this->context.'.collection'))
-		{
-			$app->setUserState($this->context.'.collection', $collection);
-			$app->input->set('limitstart', 0);
-		}
-		
-		$this->setState('filter.collection', $collection);
+    protected function populateState($ordering = 't.name', $direction = 'asc')
+    {
+        $app = Factory::getApplication();
 
-		$search = $this->getUserStateFromRequest($this->context.'.filter.search', 'filter_search');
-		$this->setState('filter.search', $search);
+        // collection partagée avec les autres écrans de Collector
+        $collection = $app->input->getInt('collection', 0)
+            ?: (int) $app->getUserState('com_collector.current_collection', 0);
 
-		// List state information.
-		parent::populateState('t.name', 'asc');
-	}
-	
-	/**
-	 * Build an SQL query to load the list data.
-	 *
-	 * @return	JDatabaseQuery
-	 */
-	protected function getListQuery()
-	{
-		// Get collection
-		$collection = $this->getState('filter.collection');
-		// $collection = $this->getCollection();
-		
-		// Create a new query object.
-		$db = $this->getDbo();
-		$query = $db->getQuery(true);
-		$user = Factory::getApplication()->getIdentity();
-		
-		// Select the required fields from the table.
-		$query->select(
-			$this->getState(
-				'list.select',
-				't.id, t.collection, t.name, t.client, t.home, t.column'
-			)
-		);
-		$query->from('#__collector_templates AS t');
-		
-		// Filter by collection
-		$query->where('t.collection = ' . $collection);
-		
-		// Filter by search in title.
-		$search = $this->getState('filter.search');
-		if (!empty($search)) {
-			if (stripos($search, 'id:') === 0)
-			{
-				$query->where('t.id = '.(int) substr($search, 3));
-			}
-			else
-			{
-				$search = $db->quote('%'.$db->escape($search, true).'%');
-				$query->where('(f.name LIKE '.$search.')');
-			}
-		}
-		
-		// Add the list ordering clause.
-		$orderCol	= $this->state->get('list.ordering', 'f.name');
-		$orderDirn	= $this->state->get('list.direction', 'asc');
-		$query->order($db->escape($orderCol.' '.$orderDirn));
-		
-		return $query;
-	}
+        if ($collection <= 0) {
+            $collection = $this->getHomeCollection();
+        }
 
-	/**
-	 * Finds the default menu type.
-	 *
-	 * In the absence of better information, this is the first menu ordered by title.
-	 *
-	 * @return  string    The default menu type
-	 *
-	 * @since   1.6
-	 */
-	protected function getDefaultCollection()
-	{
-		// Create a new query object.
-		$db = $this->getDbo();
-		$query = $db->getQuery(true)
-			->select('id')
-			->from('#__collector')
-			->where('home = 1');
-		$db->setQuery($query);
-		$collection = $db->loadResult();
+        if ($collection !== (int) $app->getUserState($this->context . '.collection', 0)) {
+            $app->setUserState($this->context . '.collection', $collection);
+            $app->input->set('limitstart', 0);
+        }
 
-		return $collection;
-	}
-	
-	/**
-	 * Method to load default collection Id in <var>_collection</var>
-	 *
-	 * @access	private
-	 */
-	public function getCollection()
-	{
-		$app = Factory::getApplication();
-		if ($this->_collection == '')
-		{
-			$this->_collection = $app->input->getString('collection', null);
-			
-			if ($this->_collection == '')
-			{
-				$query = 'SELECT id';
-				$query .= ' FROM `#__collector`';
-				$query .= ' WHERE home = 1';
-				
-				$row = $this->_getList( $query );
-				
-				if ( !$row )
-				{
-					/**
-					 * tag à defaut d'une collection
-					 */
-					$query = 'UPDATE `#__collector` SET home = 1 LIMIT 1;';
-					$this->_db->setQuery( $query );
-					$this->_db->execute();
-					
-					$query = 'SELECT id';
-					$query .= ' FROM `#__collector`';
-					$query .= ' WHERE home = 1';
-					
-					$row = $this->_getList( $query );
-				}
-				if ( $row == null )
-				{
-					return false;
-				}
-				else
-				{
-					$this->_collection = $row[0]->id;
-				}
-			}
-		}
-		
-		return $this->_collection;
-	}
+        $app->setUserState('com_collector.current_collection', $collection);
+        $this->setState('filter.collection', $collection);
+
+        parent::populateState($ordering, $direction);
+    }
+
+    protected function getListQuery()
+    {
+        $db         = $this->getDatabase();
+        $collection = (int) $this->getState('filter.collection');
+
+        $query = $db->getQuery(true)
+            ->select('t.id, t.collection, t.name, t.client, t.state, t.checked_out, t.checked_out_time, t.modified')
+            ->from($db->quoteName('#__collector_templates', 't'))
+            ->where('t.collection = :collection')
+            ->bind(':collection', $collection, ParameterType::INTEGER);
+
+        // template choisi par la collection pour sa vue
+        $query->select('CASE WHEN (t.client = 1 AND c.template_list = t.id) OR (t.client = 0 AND c.template_item = t.id) THEN 1 ELSE 0 END AS used')
+            ->join('LEFT', $db->quoteName('#__collector', 'c'), 'c.id = t.collection');
+
+        $search = trim((string) $this->getState('filter.search'));
+
+        if ($search !== '') {
+            $search = '%' . $search . '%';
+            $query->where('t.name LIKE :search')->bind(':search', $search);
+        }
+
+        $client = $this->getState('filter.client');
+
+        if ($client !== null && $client !== '') {
+            $client = (int) $client;
+            $query->where('t.client = :client')->bind(':client', $client, ParameterType::INTEGER);
+        }
+
+        $order = $this->getState('list.ordering', 't.name');
+        $dir   = $this->getState('list.direction', 'asc');
+        $query->order($db->escape($order . ' ' . $dir));
+
+        return $query;
+    }
+
+    public function getCollection(): int
+    {
+        return (int) $this->getState('filter.collection');
+    }
+
+    protected function getHomeCollection(): int
+    {
+        $db = $this->getDatabase();
+
+        return (int) $db->setQuery(
+            $db->getQuery(true)
+                ->select('id')
+                ->from($db->quoteName('#__collector'))
+                ->order('home DESC, ordering ASC'),
+            0,
+            1
+        )->loadResult();
+    }
 }

@@ -78,7 +78,27 @@ $input = $app->input;
             </div>
         </div>
 		<?php echo HTMLHelper::_('uitab.endTab'); ?>
-		
+
+		<?php echo HTMLHelper::_('uitab.addTab', 'myTab', 'display', Text::_('COM_COLLECTOR_FIELDSET_DISPLAY', true)); ?>
+		<div class="row">
+			<div class="col-lg-9">
+				<fieldset class="options-form">
+					<legend><?php echo Text::_('COM_COLLECTOR_TEMPLATES'); ?></legend>
+					<?php echo $this->form->renderField('template_list'); ?>
+					<?php echo $this->form->renderField('template_item'); ?>
+					<?php if ((int) $this->item->id) : ?>
+						<p>
+							<a class="btn btn-secondary btn-sm" href="<?php echo Route::_('index.php?option=com_collector&view=templates&collection=' . (int) $this->item->id); ?>">
+								<span class="icon-file-alt" aria-hidden="true"></span>
+								<?php echo Text::_('COM_COLLECTOR_TEMPLATE_MANAGE'); ?>
+							</a>
+						</p>
+					<?php endif; ?>
+				</fieldset>
+			</div>
+		</div>
+		<?php echo HTMLHelper::_('uitab.endTab'); ?>
+
 		<?php echo HTMLHelper::_('uitab.addTab', 'myTab', 'publishing', Text::_('COM_COLLECTOR_FIELDSET_PUBLISHING', true)); ?>
 		<div class="row">
               <div class="col-12 col-lg-6">

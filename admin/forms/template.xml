@@ -1,68 +1,71 @@
 <?xml version="1.0" encoding="utf-8"?>
-<form>
+<form addfieldprefix="Steevo\Component\Collector\Administrator\Field">
 	<fieldset>
-		<field name="id"  type="text" class="readonly" label="JGLOBAL_FIELD_ID_LABEL"
-			description ="JGLOBAL_FIELD_ID_DESC" size="10" default="0" 
-			readonly="true"  />
+		<field name="id" type="text" label="JGLOBAL_FIELD_ID_LABEL" default="0" readonly="true" class="readonly" />
 
 		<field
 			name="name"
 			type="text"
 			label="COM_COLLECTOR_TEMPLATE_NAME_LABEL"
-			description="COM_COLLECTOR_TEMPLATE_NAME_DESC"
-			size="60"
-			class="inputbox input-xxlarge input-large-text"
 			required="true"
-		/>
-		
-		<field name="alias" type="text" label="JFIELD_ALIAS_LABEL"
-			description="JFIELD_ALIAS_DESC"
-			hint="JFIELD_ALIAS_PLACEHOLDER"
-			class="inputbox" size="40" />
-		
-		<field name="collection"  type="collection" label="COM_COLLECTOR_FIELD_COLLECTION_LABEL"
-			description ="COM_COLLECTOR_FIELD_COLLECTION_DESC" default="0" 
-			readonly="true" />
-			
-		<field 
-			name="client"
-			type="radio"
-			class="btn-group btn-group-yesno"
-			label="COM_COLLECTOR_TEMPLATE_CLIENT_LABEL"
-			description="COM_COLLECTOR_TEMPLATE_CLIENT_DESC"
-			default="0"
-		>
-			<option value="0">COM_COLLECTOR_TEMPLATE_CLIENT_LISTING_LABEL</option>
-			<option value="1">COM_COLLECTOR_TEMPLATE_CLIENT_DETAILS_LABEL</option>
-		</field>
-		
-		<field 
-			name="home"
-			type="radio"
-			class="btn-group btn-group-yesno"
-			label="COM_COLLECTOR_TEMPLATE_HOME_LABEL"
-			description="COM_COLLECTOR_TEMPLATE_HOME_DESC"
-			default="0"
-		>
-			<option value="0">JNO</option>
-			<option value="1">JYES</option>
-		</field>
-		
-		<field
-			name="column"
-			type="integer"
-			default="1"
-			label="COM_COLLECTOR_TEMPLATE_COLUMN_LABEL"
-			description="COM_COLLECTOR_TEMPLATE_COLUMN_DESC"
-			first="1" last="5" step="1"
-		/>
-			
-		<field name="rules" type="rules" label="JFIELD_RULES_LABEL"
-			translate_label="false" class="inputbox" filter="rules"
-			component="com_collector" section="template" validate="rules"
+			maxlength="255"
 		/>
 
+		<field name="alias" type="hidden" />
+
+		<field
+			name="collection"
+			type="collections"
+			label="COM_COLLECTOR_FIELD_COLLECTION_LABEL"
+			required="true"
+		/>
+
+		<field
+			name="client"
+			type="radio"
+			label="COM_COLLECTOR_TEMPLATE_CLIENT_LABEL"
+			description="COM_COLLECTOR_TEMPLATE_CLIENT_DESC"
+			layout="joomla.form.field.radio.switcher"
+			default="1"
+			>
+			<option value="0">COM_COLLECTOR_TEMPLATE_CLIENT_ITEM</option>
+			<option value="1">COM_COLLECTOR_TEMPLATE_CLIENT_LIST</option>
+		</field>
+
+		<field
+			name="state"
+			type="list"
+			label="JSTATUS"
+			class="form-select-color-state"
+			default="1"
+			filter="intval"
+			>
+			<option value="1">JPUBLISHED</option>
+			<option value="0">JUNPUBLISHED</option>
+		</field>
+
+		<field
+			name="content"
+			type="editor"
+			label="COM_COLLECTOR_TEMPLATE_CONTENT_LABEL"
+			description="COM_COLLECTOR_TEMPLATE_CONTENT_DESC"
+			editor="codemirror|none"
+			syntax="html"
+			buttons="false"
+			height="420"
+			filter="raw"
+		/>
+
+		<field
+			name="css"
+			type="editor"
+			label="COM_COLLECTOR_TEMPLATE_CSS_LABEL"
+			description="COM_COLLECTOR_TEMPLATE_CSS_DESC"
+			editor="codemirror|none"
+			syntax="css"
+			buttons="false"
+			height="250"
+			filter="raw"
+		/>
 	</fieldset>
-	
-	<fields name="attribs" />
 </form>

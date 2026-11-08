@@ -93,3 +93,48 @@ html joomla-tab button[role=tab]:hover,
 html joomla-tab[view=accordion] > button:hover {
 	background-color: var(--collector-bg-hover);
 }
+
+/* Templates de collection : passent sous le compteur de pages flottant au-dessus de la liste
+   (sinon une grille se rétrécit à côté et laisse un vide à droite) */
+.collector-template {
+	clear: both;
+}
+
+/* Sélecteur de vue de la liste (tableau standard ou templates publiés).
+   Il reprend le balisage de la pagination de Joomla (pagination / page-item / page-link) :
+   ses couleurs sont celles que le template du site donne à la pagination, en clair comme en sombre.
+   Seule la mise en page est définie ici. */
+.collector-view-switch {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: flex-end;
+	gap: .5rem;
+	margin: .75rem 0;
+	clear: both;
+}
+
+.collector-view-switch-label {
+	font-size: .875rem;
+	opacity: .75;
+}
+
+.collector-view-switch .collector-view-switch-group {
+	flex-wrap: wrap;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.collector-view-switch .page-link {
+	display: inline-flex;
+	align-items: center;
+	gap: .4em;
+	height: 100%;
+}
+
+.collector-view-switch .page-link svg {
+	width: 1em;
+	height: 1em;
+	flex: none;
+}
