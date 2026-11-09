@@ -1,108 +1,68 @@
 <?php
 /**
- * Joomla! 3.0 component Collector
+ * Joomla! component Collector
  *
- * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
+ * @package     Collector
+ * @copyright   Copyright (C) 2010 - 2026 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
- *
- * Collector is a Multi Purpose Listing Tool.
- * Originaly developped to list Collections
- * it can be used for several purpose.
  */
 
-// Check to ensure this file is included in Joomla!
-defined('_JEXEC') or die( 'Restricted access' );
+namespace Steevo\Component\Collector\Site\View\Collections;
 
-jimport( 'joomla.application.component.view' );
-jimport( 'joomla.mail.helper' );
-jimport( 'joomla.filesystem.file' );
+\defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\MVC\View\GenericDataException;
+use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 
 /**
- * HTML Collections View class for the Collector component
- * @package		Joomla
- * @subpackage	Collector
- * @license		GNU/GPL
+ * Liste des collections (lien de menu « Liste des collections »).
  */
-class CollectorViewCollections extends JViewLegacy
+class HtmlView extends BaseHtmlView
 {
-	protected $state;
-	protected $items;
-	protected $pagination;
-	
-	function display($tpl = null)
-	{
-		$app		= Factory::getApplication();
-		$params		= $app->getParams();
+    /** @var  \stdClass[] */
+    protected $items = [];
 
-		// Get some data from the models
-		$state		= $this->get('State');
-		$items		= $this->get('Items');
-		$pagination	= $this->get('Pagination');
-		
-		$this->params = $params;
-		$this->state = $state;
-		$this->items = $items;
-		$this->pagination = $pagination;
+    /** @var  \Joomla\Registry\Registry */
+    protected $params;
 
-		$this->_prepareDocument();
-		
-		parent::display($tpl);
-	}
-	
-	/**
-	 * Prepares the document
-	 */
-	protected function _prepareDocument()
-	{
-		$app		= Factory::getApplication();
-		$menus		= $app->getMenu();
-		$pathway	= $app->getPathway();
-		$title		= null;
+    /** @var  \Joomla\CMS\Object\CMSObject */
+    protected $state;
 
-		// Because the application sets a default page title,
-		// we need to get it from the menu item itself
-		$menu = $menus->getActive();
+    public function display($tpl = null)
+    {
+        $this->state  = $this->get('State');
+        $this->items  = $this->get('Items') ?: [];
+        $this->params = $this->state->get('params');
 
-		if ($menu) {
-			$this->params->def('page_heading', $this->params->get('page_title', $menu->title));
-		}
-		else {
-			$this->params->def('page_heading', Text::_('COM_COLLECTOR_COLLECTIONS'));
-		}
+        if (\count($errors = $this->get('Errors'))) {
+            throw new GenericDataException(implode("\n", $errors), 500);
+        }
 
-		$title = $this->params->get('page_title', '');
+        $this->prepareDocument();
 
-		if (empty($title)) {
-			$title = $app->getCfg('sitename');
-		}
-		elseif ($app->getCfg('sitename_pagetitles', 0) == 1) {
-			$title = Text::sprintf('JPAGETITLE', $app->getCfg('sitename'), $title);
-		}
-		elseif ($app->getCfg('sitename_pagetitles', 0) == 2) {
-			$title = Text::sprintf('JPAGETITLE', $title, $app->getCfg('sitename'));
-		}
+        parent::display($tpl);
+    }
 
-		$this->document->setTitle($title);
+    /**
+     * Titre de la page, titre affiché et métadonnées, d'après le lien de menu.
+     */
+    protected function prepareDocument(): void
+    {
+        $app  = Factory::getApplication();
+        $menu = $app->getMenu()->getActive();
 
-		if ($this->params->get('menu-meta_description'))
-		{
-			$this->document->setDescription($this->params->get('menu-meta_description'));
-		}
+        $this->params->def('page_heading', $this->params->get('page_title', $menu ? $menu->title : Text::_('COM_COLLECTOR_COLLECTIONS')));
 
-		if ($this->params->get('menu-meta_keywords'))
-		{
-			$this->document->setMetadata('keywords', $this->params->get('menu-meta_keywords'));
-		}
+        $this->setDocumentTitle($this->params->get('page_title', ''));
 
-		if ($this->params->get('robots'))
-		{
-			$this->document->setMetadata('robots', $this->params->get('robots'));
-		}
+        if ($this->params->get('menu-meta_description')) {
+            $this->getDocument()->setDescription($this->params->get('menu-meta_description'));
+        }
 
-		if ($app->getCfg('MetaAuthor') == '1') {
-			$this->document->setMetaData('author', $this->params->get('author'));
-		}
-	}
+        if ($this->params->get('robots')) {
+            $this->getDocument()->setMetaData('robots', $this->params->get('robots'));
+        }
+    }
 }

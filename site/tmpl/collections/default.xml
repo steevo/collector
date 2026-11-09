@@ -9,14 +9,14 @@
 	<!-- Add fields to the request variables for the layout. -->
 	<fields name="request">
 		<fieldset name="request"
-			addfieldpath="/administrator/components/com_collector/models/fields">
+			addfieldprefix="Steevo\Component\Collector\Administrator\Field">
 			
 		</fieldset>
 	</fields>
 
 	<!-- Add fields to the parameters object for the layout. -->
 	<fields name="params"
-		addfieldpath="/administrator/components/com_collector/models/fields">
+		addfieldprefix="Steevo\Component\Collector\Administrator\Field">
 		
 		<fieldset name="advanced" label="JGLOBAL_LIST_LAYOUT_OPTIONS" >
 		
@@ -218,8 +218,7 @@
 			</field>
 		</fieldset>
 		
-		<fieldset name="modification" label="COM_COLLECTOR_MODIFICATION"
-			addpath="/administrator/components/com_collector/elements">
+		<fieldset name="modification" label="COM_COLLECTOR_MODIFICATION">
 			<field
 				name="allow_front_mod"
 				type="radio"

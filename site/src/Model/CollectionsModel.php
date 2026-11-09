@@ -1,156 +1,59 @@
 <?php
 /**
- * Joomla! 3.0 component Collector
+ * Joomla! component Collector
  *
- * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
+ * @package     Collector
+ * @copyright   Copyright (C) 2010 - 2026 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
- *
- * Collector is a Multi Purpose Listing Tool.
- * Originaly developped to list Collections
- * it can be used for several purpose.
  */
 
-// Check to ensure this file is included in Joomla!
-defined('_JEXEC') or die( 'Restricted access' );
+namespace Steevo\Component\Collector\Site\Model;
+
+\defined('_JEXEC') or die;
+
+use Joomla\CMS\Factory;
+use Joomla\CMS\MVC\Model\ListModel;
+use Joomla\Database\ParameterType;
 
 /**
- * Collections model
- * @package	Collector
+ * Liste des collections publiées et accessibles au visiteur.
  */
-class CollectorModelCollections extends ListModel
+class CollectionsModel extends ListModel
 {
-	/**
-	 * Constructor.
-	 *
-	 * @param	array	An optional associative array of configuration settings.
-	 * @see		JController
-	 * @since	1.6
-	 */
-	public function __construct($config = array())
-	{
-		if (empty($config['filter_fields'])) {
-			$config['filter_fields'] = array(
-				'id', 'c.id',
-				'name', 'c.title',
-				'description', 'c.description',
-				'alias', 'c.alias',
-				'checked_out', 'c.checked_out',
-				'checked_out_time', 'c.checked_out_time',
-				'state', 'c.state',
-				'access', 'c.access', 'access_level',
-				'created', 'c.created',
-				'created_by', 'c.created_by',
-				'publish_up', 'c.publish_up',
-				'publish_down', 'c.publish_down',
-			);
-		}
+    protected function populateState($ordering = 'c.name', $direction = 'ASC')
+    {
+        $app = Factory::getApplication();
 
-		parent::__construct($config);
-	}
-	
-	/**
-	 * Method to auto-populate the model state.
-	 *
-	 * Note. Calling getState in this method will result in recursion.
-	 *
-	 * @return	void
-	 * @since	1.6
-	 */
-	protected function populateState($ordering = null, $direction = null)
-	{
-		// Initialise variables.
-		$app = Factory::getApplication();
-		
-		$this->setState('filter.access', true);
+        $this->setState('params', $app->getParams());
 
-		$this->setState('filter.published', 1);
+        // toutes les collections sur une seule page, dans l'ordre alphabétique
+        $this->setState('list.start', 0);
+        $this->setState('list.limit', 0);
+        $this->setState('list.ordering', $ordering);
+        $this->setState('list.direction', $direction);
+    }
 
-		$this->setState('layout', $app->input->getString('layout'));
+    protected function getListQuery()
+    {
+        $db     = $this->getDatabase();
+        $user   = Factory::getApplication()->getIdentity();
+        $groups = $user->getAuthorisedViewLevels();
+        $now    = Factory::getDate()->toSql();
+        $null   = $db->getNullDate();
 
-		// List state information.
-		parent::populateState('c.name', 'asc');
-	}
-	
-	/**
-	 * Build an SQL query to load the list data.
-	 *
-	 * @return	JDatabaseQuery
-	 */
-	protected function getListQuery()
-	{
-		// Create a new query object.
-		$db = $this->getDbo();
-		$query = $db->getQuery(true);
-		
-		$jnow		= Factory::getDate();
-		$now		= $jnow->toSql();
-		$nullDate	= $db->getNullDate();
-		
-		// Select the required fields from the table.
-		$query->select(
-			$this->getState(
-				'list.select',
-				'c.id, c.name, c.description, c.alias, c.state, c.created, c.created_by, c.created_by_alias, c.checked_out, c.checked_out_time' .
-				', c.modified, c.modified_by, c.access, c.publish_up, c.publish_down, c.home'
-			)
-		);
-		$query->from('#__collector AS c');
-		
-		// Join over the users for the checked out user.
-		$query->select('uc.name AS editor');
-		$query->join('LEFT', '#__users AS uc ON uc.id = c.checked_out');
-		
-		// Join over the users for the author.
-		$query->select('ua.name AS author_name');
-		$query->join('LEFT', '#__users AS ua ON ua.id = c.created_by');
-		
-		// Filter by access level.
-		if ($access = $this->getState('filter.access')) {
-			$user	= Factory::getApplication()->getIdentity();
-			$groups	= implode(',', $user->getAuthorisedViewLevels());
-			$query->where('c.access IN ('.$groups.')');
-		}
-		
-		// Filter by published state
-		$published = $this->getState('filter.published');
-		if (is_numeric($published)) {
-			$query->where('( c.created_by = ' . (int) $user->id . ' OR ( c.state = ' . (int) $published . ' AND ( c.publish_up = '.$db->Quote($nullDate).' OR c.publish_up <= '.$db->Quote($now).' ) AND ( c.publish_down = '.$db->Quote($nullDate).' OR c.publish_down >= '.$db->Quote($now).' ) ) )');
-		
-		}
-		else if ($published === '') {
-			$query->where('(c.state = 0 OR c.state = 1)');
-		}
-		
-		// Add the list ordering clause.
-		$orderCol	= $this->state->get('list.ordering');
-		$orderDirn	= $this->state->get('list.direction');
-		$query->order($db->escape($orderCol.' '.$orderDirn));
-		
-		return $query;
-	}
-	
-	/**
-	 * Method to get a list of collections.
-	 * Overridden to add a check for access levels.
-	 *
-	 * @return	mixed	An array of data items on success, false on failure.
-	 */
-	public function getItems()
-	{
-		$items	= parent::getItems();
-		$app	= Factory::getApplication();
-		if ($app->isSite()) {
-			$user	= Factory::getApplication()->getIdentity();
-			$groups	= $user->getAuthorisedViewLevels();
+        $query = $db->getQuery(true)
+            ->select($db->quoteName(['c.id', 'c.name', 'c.alias', 'c.description', 'c.home', 'c.created', 'c.created_by']))
+            ->select($db->quoteName('ua.name', 'author_name'))
+            ->from($db->quoteName('#__collector', 'c'))
+            ->join('LEFT', $db->quoteName('#__users', 'ua') . ' ON ua.id = c.created_by')
+            ->where($db->quoteName('c.state') . ' = 1')
+            ->whereIn($db->quoteName('c.access'), $groups)
+            ->where('(c.publish_up IS NULL OR c.publish_up = :null1 OR c.publish_up <= :now1)')
+            ->where('(c.publish_down IS NULL OR c.publish_down = :null2 OR c.publish_down >= :now2)')
+            ->bind([':null1', ':null2'], $null)
+            ->bind([':now1', ':now2'], $now)
+            ->order($db->escape($this->getState('list.ordering', 'c.name')) . ' ' . $db->escape($this->getState('list.direction', 'ASC')));
 
-			for ($x = 0, $count = count($items); $x < $count; $x++) {
-				//Check the access level. Remove collections the user shouldn't see
-				if (!in_array($items[$x]->access, $groups)) {
-					unset($items[$x]);
-				}
-			}
-		}
-		return $items;
-	}
+        return $query;
+    }
 }

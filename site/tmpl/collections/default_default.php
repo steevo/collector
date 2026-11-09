@@ -1,29 +1,26 @@
 <?php
 /**
- * Joomla! 3.0 component Collector
+ * Joomla! component Collector
  *
- * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
+ * Une collection dans la liste des collections.
+ *
+ * @package     Collector
+ * @copyright   Copyright (C) 2010 - 2026 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
- *
- * Collector is a Multi Purpose Listing Tool.
- * Originaly developped to list Collections
- * it can be used for several purpose.
  */
 
-// Check to ensure this file is included in Joomla!
-defined('_JEXEC') or die( 'Restricted access' );
+\defined('_JEXEC') or die;
 
+use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Router\Route;
 
-$link = 'index.php?option=com_collector&view=collection&id='.$this->item->id;
-$app = Factory::getApplication();
-$Itemid = $app->input->get('Itemid', 0, 'get');
-
+$link = Route::_('index.php?option=com_collector&view=collection&id=' . (int) $this->item->id);
 ?>
-<div class="items-row">
-	<h2>
-		<a href="<?php echo Route::_($link.'&Itemid='.$Itemid); ?>"><?php echo $this->escape($this->item->name); ?></a>
-	</h2>
-	<?php echo $this->item->description; ?>
+<div class="collector-collections-item mb-4">
+	<h2><a href="<?php echo $link; ?>"><?php echo $this->escape($this->item->name); ?></a></h2>
+	<?php if (trim((string) $this->item->description) !== '') : ?>
+		<div class="collector-collections-description">
+			<?php echo HTMLHelper::_('content.prepare', $this->item->description, '', 'com_collector.collections'); ?>
+		</div>
+	<?php endif; ?>
 </div>
