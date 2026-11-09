@@ -103,6 +103,5 @@ $canEdit    = $user->authorise('core.edit', 'com_collector');
 
 	<input type="hidden" name="task" value="">
 	<input type="hidden" name="boxchecked" value="0">
-	<input type="hidden" name="collection" value="<?php echo $collection; ?>">
 	<?php echo HTMLHelper::_('form.token'); ?>
 </form>

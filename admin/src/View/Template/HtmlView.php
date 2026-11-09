@@ -26,6 +26,7 @@ class HtmlView extends BaseHtmlView
     protected $item;
     protected $state;
     protected $tags;
+    protected $previewItems;
 
     public function display($tpl = null)
     {
@@ -33,6 +34,7 @@ class HtmlView extends BaseHtmlView
         $this->item  = $this->get('Item');
         $this->state = $this->get('State');
         $this->tags  = $this->get('Tags');
+        $this->previewItems = $this->get('PreviewItems');
 
         if (\count($errors = $this->get('Errors'))) {
             throw new GenericDataException(implode("\n", $errors), 500);
