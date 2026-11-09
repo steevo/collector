@@ -251,6 +251,40 @@ class com_collectorInstallerScript
 			}
 		}
 
+		// 0.9.1 : fichiers hérités de Joomla 1.5 / 3 qui ne sont plus utilisés
+		$site      = JPATH_SITE . '/components/com_collector';
+		$obsoletes = [
+			$site . '/collector.php',
+			$site . '/controller.php',
+			$site . '/assets/css/select.css',
+			$admin . '/src/Classes/CollectorUser.php',
+			$admin . '/src/Classes/collection.php',
+		];
+
+		foreach (['Date', 'Define', 'File', 'Image', 'Item', 'Line', 'Number', 'Text'] as $type) {
+			$obsoletes[] = $admin . '/src/Classes/Field/Collector' . $type . 'Field.php';
+			$obsoletes[] = $admin . '/src/Classes/Field/' . $type . '/Collector' . $type . 'Field.php';
+		}
+
+		foreach ($obsoletes as $fichier) {
+			if (is_file($fichier)) {
+				unlink($fichier);
+			}
+		}
+
+		foreach ([$site . '/helpers', $site . '/layouts', $admin . '/helpers', $admin . '/params', $admin . '/src/Plugin'] as $dossier) {
+			if (is_dir($dossier)) {
+				Folder::delete($dossier);
+			}
+		}
+
+		// gabarit de comparaison des versions : dossier renommé en minuscules (Joomla le cherche ainsi sous Linux) ;
+		// on vérifie le nom exact, car sous Windows les deux noms désignent le même dossier
+		if (is_dir($admin . '/tmpl') && \in_array('Versionscompare', scandir($admin . '/tmpl'), true)
+			&& \in_array('versionscompare', scandir($admin . '/tmpl'), true)) {
+			Folder::delete($admin . '/tmpl/Versionscompare');
+		}
+
 		$repertoireObsolete = JPATH_SITE . '/administrator/components/com_collector/layouts/joomla/searchtools';
 
         // 2. Vérifier si le répertoire existe avant de tenter la suppression

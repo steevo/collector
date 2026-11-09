@@ -31,14 +31,10 @@
 	</update>
 
 	<files folder="site">
-		<file>controller.php</file>
-		<file>collector.php</file>
 		<file>index.html</file>
 		
 		<folder>assets</folder>
 		<folder>forms</folder>
-		<folder>helpers</folder>
-		<folder>layouts</folder>
 		<folder>librairies</folder>
 		<folder>src</folder>
 		<folder>tmpl</folder>
@@ -76,10 +72,8 @@
 			
 			<folder>assets</folder>
 			<folder>forms</folder>
-			<folder>helpers</folder>
 			<folder>layouts</folder>
 			<folder>libraries</folder>
-			<folder>params</folder>
 			<folder>services</folder>
 			<folder>sql</folder>
 			<folder>src</folder>
@@ -110,7 +104,6 @@
 
 	<media destination="com_collector" folder="media">
 		<folder>css</folder>
-		<folder>js</folder>
 		<filename>joomla.asset.json</filename>
 	</media>
 
