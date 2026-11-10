@@ -65,7 +65,8 @@ class CollectorFieldImage extends CollectorField
 		$this->_item = $item;
 		$this->_field = $field;
 		
-		$this->directory = 'images/collector/collection/'.$collection;
+		// Relatif au dossier images (com_media), comme FilesModel : images/collector/collections/{id}
+		$this->directory = 'collector/collections/' . (int) $collection;
 	}
 	
 	/**

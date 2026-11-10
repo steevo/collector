@@ -3,6 +3,7 @@ namespace Steevo\Component\Collector\Administrator\Model;
 
 defined('_JEXEC') or die;
 
+use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Model\BaseDatabaseModel;
 
 class FilesModel extends BaseDatabaseModel
@@ -342,15 +343,27 @@ class FilesModel extends BaseDatabaseModel
             }
 
             if (is_dir($newDir)) {
-                $report[] = (object) [
-                    'collection' => $col->name,
-                    'status'     => 'error',
-                    'message'    => 'Le dossier cible existe déjà.',
-                ];
-                continue;
-            }
+                // Le dossier cible existe déjà (souvent créé vide par le gestionnaire de fichiers) :
+                // on fusionne, sauf si un fichier de même nom mais de contenu différent existe des deux côtés.
+                $conflicts = $this->findMergeConflicts($oldDir, $newDir);
 
-            $moved = rename($oldDir, $newDir);
+                if ($conflicts) {
+                    $report[] = (object) [
+                        'collection' => $col->name,
+                        'status'     => 'error',
+                        'message'    => Text::sprintf(
+                            'COM_COLLECTOR_TOOLS_MIGRATE_FOLDERS_CONFLICTS',
+                            count($conflicts),
+                            implode(', ', array_slice($conflicts, 0, 5))
+                        ),
+                    ];
+                    continue;
+                }
+
+                $moved = $this->mergeDirectory($oldDir, $newDir);
+            } else {
+                $moved = rename($oldDir, $newDir);
+            }
 
             if (!$moved) {
                 $report[] = (object) [
@@ -371,6 +384,66 @@ class FilesModel extends BaseDatabaseModel
         }
 
         return $report;
+    }
+
+    /**
+     * Fichiers présents dans les deux dossiers avec un contenu différent (chemins relatifs).
+     */
+    private function findMergeConflicts(string $from, string $to, string $rel = ''): array
+    {
+        $conflicts = [];
+
+        foreach (new \DirectoryIterator($from) as $item) {
+            if ($item->isDot()) continue;
+
+            $name   = $item->getFilename();
+            $target = $to . '/' . $name;
+
+            if ($item->isDir()) {
+                if (is_dir($target)) {
+                    $conflicts = array_merge($conflicts, $this->findMergeConflicts($item->getPathname(), $target, $rel . $name . '/'));
+                } elseif (file_exists($target)) {
+                    $conflicts[] = $rel . $name;
+                }
+            } elseif (file_exists($target) && $name !== 'index.html'
+                && (is_dir($target) || md5_file($target) !== md5_file($item->getPathname()))) {
+                $conflicts[] = $rel . $name;
+            }
+        }
+
+        return $conflicts;
+    }
+
+    /**
+     * Déplace le contenu de $from dans $to (sans conflit, vérifié avant), puis supprime $from.
+     */
+    private function mergeDirectory(string $from, string $to): bool
+    {
+        $entries = [];
+
+        foreach (new \DirectoryIterator($from) as $item) {
+            if (!$item->isDot()) {
+                $entries[] = [$item->getFilename(), $item->isDir()];
+            }
+        }
+
+        foreach ($entries as [$name, $isDir]) {
+            $source = $from . '/' . $name;
+            $target = $to . '/' . $name;
+
+            if ($isDir && is_dir($target)) {
+                if (!$this->mergeDirectory($source, $target)) {
+                    return false;
+                }
+            } elseif (file_exists($target)) {
+                // Même fichier des deux côtés (ou index.html) : on garde la cible
+                unlink($source);
+            } elseif (!rename($source, $target)) {
+                return false;
+            }
+        }
+
+        return rmdir($from);
     }
 
     /**

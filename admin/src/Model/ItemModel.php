@@ -322,7 +322,7 @@ class ItemModel extends AdminModel
 			
 			$this->_collection = $db->loadObject();
 			
-			$this->_collection->folder = 'images/collector/collection/'.$this->_collection->alias;
+			$this->_collection->folder = 'images/collector/collections/' . (int) $this->_collection->id;
 		}
 		
 		return $this->_collection;
