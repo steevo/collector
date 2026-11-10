@@ -31,6 +31,84 @@ class TemplateController extends FormController
     /** Nombre d'éléments montrés dans l'aperçu d'une vue liste */
     protected const PREVIEW_ITEMS = 6;
 
+    /** Nombre maximal d'objets renvoyés par la recherche d'objets */
+    protected const SEARCH_ITEMS = 200;
+
+    /**
+     * Recherche d'objets d'une collection par titre, en JSON (choix d'un objet dans le module Collector).
+     * Paramètres : collection, search (facultatif), id (objet déjà choisi, toujours renvoyé).
+     */
+    public function items(): void
+    {
+        $user = $this->app->getIdentity();
+
+        if (!Session::checkToken('get')
+            || !($user->authorise('core.manage', 'com_collector') || $user->authorise('core.manage', 'com_modules'))) {
+            $this->app->setHeader('status', 403, true);
+            $this->app->sendHeaders();
+            echo json_encode(['error' => Text::_('JERROR_ALERTNOAUTHOR')]);
+            $this->app->close();
+        }
+
+        $collection = $this->input->getInt('collection');
+        $search     = trim($this->input->getString('search', ''));
+        $selected   = $this->input->getInt('id');
+
+        $db    = Factory::getContainer()->get(DatabaseInterface::class);
+        $query = $db->getQuery(true)
+            ->select($db->quoteName(['id', 'fulltitle', 'state']))
+            ->from($db->quoteName('#__collector_items'))
+            ->where($db->quoteName('collection') . ' = :collection')
+            ->where($db->quoteName('state') . ' IN (0, 1)')
+            ->order($db->quoteName('fulltitle'))
+            ->bind(':collection', $collection, ParameterType::INTEGER);
+
+        $total = (int) $db->setQuery((clone $query)->clear('select')->clear('order')->select('COUNT(*)'))->loadResult();
+
+        if ($search !== '') {
+            if (ctype_digit($search)) {
+                $id = (int) $search;
+                $query->where('(' . $db->quoteName('fulltitle') . ' LIKE :search OR ' . $db->quoteName('id') . ' = :sid)')
+                    ->bind(':sid', $id, ParameterType::INTEGER);
+            } else {
+                $query->where($db->quoteName('fulltitle') . ' LIKE :search');
+            }
+
+            $like = '%' . $db->escape($search, true) . '%';
+            $query->bind(':search', $like);
+        }
+
+        $rows = $db->setQuery($query, 0, static::SEARCH_ITEMS + 1)->loadObjectList();
+        $more = \count($rows) > static::SEARCH_ITEMS;
+        $rows = \array_slice($rows, 0, static::SEARCH_ITEMS);
+
+        // l'objet déjà choisi reste disponible, même hors de la recherche
+        if ($selected > 0 && !\in_array($selected, array_map(static fn ($row) => (int) $row->id, $rows), true)) {
+            $query = $db->getQuery(true)
+                ->select($db->quoteName(['id', 'fulltitle', 'state']))
+                ->from($db->quoteName('#__collector_items'))
+                ->where($db->quoteName('id') . ' = :id')
+                ->where($db->quoteName('collection') . ' = :collection')
+                ->bind(':id', $selected, ParameterType::INTEGER)
+                ->bind(':collection', $collection, ParameterType::INTEGER);
+
+            if ($row = $db->setQuery($query)->loadObject()) {
+                array_unshift($rows, $row);
+            }
+        }
+
+        $items = array_map(static fn ($row) => [
+            'id'        => (int) $row->id,
+            'title'     => trim(strip_tags((string) $row->fulltitle)) ?: '#' . $row->id,
+            'published' => (int) $row->state === 1,
+        ], $rows);
+
+        $this->app->setHeader('Content-Type', 'application/json; charset=utf-8', true);
+        $this->app->sendHeaders();
+        echo json_encode(['items' => $items, 'more' => $more, 'total' => $total], JSON_UNESCAPED_UNICODE);
+        $this->app->close();
+    }
+
     /**
      * Aperçu du template en cours d'édition, rendu avec des éléments de la collection.
      * Renvoie une page HTML complète, affichée dans un cadre de l'éditeur.
