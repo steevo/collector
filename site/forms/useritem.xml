@@ -10,7 +10,7 @@
 			size="40" readonly="true" />
 		
 		<field name="userlist" type="text" class="readonly" label="COM_COLLECTOR_FIELD_USERLIST_LABEL"
-			description ="COM_COLLECTOR_FIELD_USERLIST$!_DESC" size="10" default="0" 
+			description="COM_COLLECTOR_FIELD_USERLIST_DESC" size="10" default="0" 
 			readonly="true"  />
 
 		<field

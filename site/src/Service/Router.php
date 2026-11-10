@@ -87,8 +87,9 @@ class Router extends RouterView
 
         $params      = ComponentHelper::getParams('com_collector');
         $this->noIDs = (bool) $params->get('sef_ids');
+        // Liste de toutes les collections : pas d'identifiant. Avec une clé, un lien de menu
+        // vers cette vue donnait un Itemid sous forme de tableau et une erreur 500.
         $collections  = new RouterViewConfiguration('collections');
-        $collections->setKey('id');
         $this->registerView($collections);
         $collection = new RouterViewConfiguration('collection');
         $collection->setKey('id');

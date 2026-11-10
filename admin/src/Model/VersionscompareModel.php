@@ -103,7 +103,7 @@ class VersionscompareModel extends BaseDatabaseModel
 		$rows = $db->loadObjectList('id');
 
 		if (!isset($rows[$v1]) || !isset($rows[$v2])) {
-			$this->setError('COM_COLLECTOR_ITEM_HISTORY_VERSION_NOT_FOUND');
+			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_VERSION_NOT_FOUND'));
 			return [];
 		}
 

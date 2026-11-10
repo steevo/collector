@@ -140,7 +140,7 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
             <span class="icon-out-2 ms-1"></span>
           </a>
           <?php if ($notExists): ?>
-          <span class="badge bg-secondary ms-1 small"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_DELETED'); ?></span>
+          <span class="badge bg-secondary ms-1 small"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ITEM_DELETED'); ?></span>
           <?php elseif ($isModified): ?>
           <span class="badge bg-warning text-dark ms-1 small"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_MODIFIED'); ?></span>
           <?php endif; ?>
