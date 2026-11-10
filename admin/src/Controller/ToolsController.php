@@ -362,4 +362,65 @@ class ToolsController extends BaseController
 			'index.php?option=com_collector&view=tools&active_tab=%23tab-files', false
 		));
 	}
+
+	/**
+	 * Remplace un lien de fichier cassé par le fichier choisi.
+	 */
+	public function fixfilelink(): void
+	{
+		$this->checkToken();
+
+		$app = Factory::getApplication();
+
+		if (!$app->getIdentity()->authorise('core.edit', 'com_collector')) {
+			throw new \Exception(Text::_('JERROR_ALERTNOAUTHOR'), 403);
+		}
+
+		$old = $app->input->post->getString('old_path', '');
+		$new = $app->input->post->getString('new_path', '');
+
+		// Fichier choisi avec le champ média : valeur dans fixN[new_path], au format
+		// « images/…/fichier.jpg#joomlaImage://local-images/…?width=…&height=… »
+		if ($new === '' && $app->input->post->get('row', null) !== null) {
+			$row = $app->input->post->get('fix' . $app->input->post->getInt('row'), [], 'array');
+			$new = (string) ($row['new_path'] ?? '');
+		}
+
+		$new = explode('#', $new)[0];
+
+		if ($new === '') {
+			$app->enqueueMessage(Text::_('COM_COLLECTOR_FILECHECK_NO_FILE_CHOSEN'), 'warning');
+			$this->setRedirect(Route::_('index.php?option=com_collector&view=tools&active_tab=%23tab-filecheck', false));
+
+			return;
+		}
+
+		try {
+			$count = $this->getModel('Filecheck')->fixLink($old, $new);
+			$app->enqueueMessage(Text::sprintf('COM_COLLECTOR_FILECHECK_FIXED', $old, $new, $count), 'success');
+		} catch (\RuntimeException $e) {
+			$app->enqueueMessage(Text::_($e->getMessage()), 'error');
+		}
+
+		$this->setRedirect(Route::_('index.php?option=com_collector&view=tools&active_tab=%23tab-filecheck', false));
+	}
+
+	/**
+	 * Corrige tous les liens cassés qui n'ont qu'un seul fichier de même nom.
+	 */
+	public function autofixfilelinks(): void
+	{
+		$this->checkToken();
+
+		$app = Factory::getApplication();
+
+		if (!$app->getIdentity()->authorise('core.edit', 'com_collector')) {
+			throw new \Exception(Text::_('JERROR_ALERTNOAUTHOR'), 403);
+		}
+
+		[$links, $records] = $this->getModel('Filecheck')->autoFix();
+		$app->enqueueMessage(Text::sprintf('COM_COLLECTOR_FILECHECK_AUTOFIXED', $links, $records), 'success');
+
+		$this->setRedirect(Route::_('index.php?option=com_collector&view=tools&active_tab=%23tab-filecheck', false));
+	}
 }

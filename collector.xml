@@ -54,7 +54,6 @@
 		<menu>COM_COLLECTOR</menu>
 		<submenu>
 			<menu link="option=com_collector">COM_COLLECTOR_DASHBOARD</menu>
-			<menu link="option=com_collector&amp;view=filemanager">COM_COLLECTOR_FILEMANAGER</menu>
 			<menu link="option=com_collector&amp;view=collections">COM_COLLECTOR_COLLECTIONS</menu>
 			<menu link="option=com_collector&amp;view=lists">COM_COLLECTOR_DEFINED</menu>
 			<menu link="option=com_collector&amp;view=fields">COM_COLLECTOR_FIELDS</menu>

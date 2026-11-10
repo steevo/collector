@@ -92,7 +92,7 @@ class FilesModel extends BaseDatabaseModel
             $db->getQuery(true)
                ->select(['f.collection', 'f.tablecolumn', 'f.field AS field_label'])
                ->from($db->quoteName('#__collector_fields', 'f'))
-               ->join('INNER', '#__collector_fields_type AS ft ON ft.id = f.type AND ft.name = ' . $db->quote('image'))
+               ->join('INNER', '#__collector_fields_type AS ft ON ft.id = f.type AND ft.type = ' . $db->quote('image'))
                ->where($db->quoteName('f.state') . ' = 1')
         );
         $imageFields = $db->loadObjectList() ?: [];
@@ -241,7 +241,7 @@ class FilesModel extends BaseDatabaseModel
             $db->getQuery(true)
                ->select(['f.collection', 'f.tablecolumn'])
                ->from($db->quoteName('#__collector_fields', 'f'))
-               ->join('INNER', '#__collector_fields_type AS ft ON ft.id = f.type AND ft.name = ' . $db->quote('image'))
+               ->join('INNER', '#__collector_fields_type AS ft ON ft.id = f.type AND ft.type = ' . $db->quote('image'))
                ->where($db->quoteName('f.state') . ' = 1')
         );
         $imageFields = $db->loadObjectList() ?: [];

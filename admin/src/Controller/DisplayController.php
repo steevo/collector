@@ -47,6 +47,14 @@ class DisplayController extends BaseController
 		$layout = $this->input->get('layout', 'default');
 		$id     = $this->input->getInt('id');
 
+		// L'ancien gestionnaire de fichiers (Joomla 3) est remplacé par l'onglet « Vérifier les fichiers » des outils
+		if ($view === 'filemanager')
+		{
+			$this->setRedirect(Route::_('index.php?option=com_collector&view=tools&active_tab=%23tab-filecheck', false));
+
+			return $this;
+		}
+
 		// Check for edit form.
 		if ($view == 'collection' && $layout == 'edit' && !$this->checkEditId('com_collector.edit.collection', $id))
 		{

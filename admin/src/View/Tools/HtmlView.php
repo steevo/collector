@@ -57,6 +57,15 @@ class HtmlView extends BaseHtmlView
 			$this->orphanVersions = $model->countOrphanVersions($this->collection);
         }
 		
+		// Vérification des liens de fichiers : parcourt tout le dossier images, donc seulement à la demande
+		$this->fileReport = null;
+
+		if ($app->input->getString('active_tab', '') === '#tab-filecheck') {
+			$this->fileReport = $app->bootComponent('com_collector')->getMVCFactory()
+				->createModel('Filecheck', 'Administrator', ['ignore_request' => true])
+				->getReport();
+		}
+
 		$this->invalidCollectionItems = $model->getItemsWithInvalidCollection();
 		$this->orphanDefinedContent = $model->getOrphanDefinedContent();
 		

@@ -729,6 +729,149 @@ echo HTMLHelper::_('uitab.startTabSet', 'toolsTab', ['active' => $activeTab]);
 
 <?php echo HTMLHelper::_('uitab.endTab'); ?>
 
+<?php /* ══════════════════════════════════════════════════════════════════
+   ONGLET — Vérification des liens de fichiers
+═══════════════════════════════════════════════════════════════════════════ */ ?>
+<?php echo HTMLHelper::_('uitab.addTab', 'toolsTab', '#tab-filecheck', Text::_('COM_COLLECTOR_FILECHECK_TAB')); ?>
+
+<p class="text-muted small"><?php echo Text::_('COM_COLLECTOR_FILECHECK_INTRO'); ?></p>
+
+<?php $runUrl = Route::_('index.php?option=com_collector&view=tools&collection=' . (int) $this->collection . '&active_tab=%23tab-filecheck'); ?>
+
+<?php if ($this->fileReport === null): ?>
+<a href="<?php echo $runUrl; ?>" class="btn btn-primary">
+    <span class="icon-search me-1"></span><?php echo Text::_('COM_COLLECTOR_FILECHECK_RUN'); ?>
+</a>
+<?php else: ?>
+<?php $report = $this->fileReport; ?>
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+    <span class="badge bg-secondary"><?php echo Text::sprintf('COM_COLLECTOR_FILECHECK_STAT_CHECKED', $report->stats->checked); ?></span>
+    <span class="badge <?php echo $report->stats->broken ? 'bg-danger' : 'bg-success'; ?>"><?php echo Text::sprintf('COM_COLLECTOR_FILECHECK_STAT_BROKEN', $report->stats->broken); ?></span>
+    <span class="badge bg-info text-dark"><?php echo Text::sprintf('COM_COLLECTOR_FILECHECK_STAT_UNUSED', $report->stats->unused); ?></span>
+    <a href="<?php echo $runUrl; ?>" class="btn btn-sm btn-outline-secondary ms-auto">
+        <span class="icon-refresh me-1"></span><?php echo Text::_('COM_COLLECTOR_FILECHECK_RERUN'); ?>
+    </a>
+    <?php if ($report->stats->fixable): ?>
+    <form action="<?php echo Route::_('index.php?option=com_collector&task=tools.autofixfilelinks'); ?>" method="post" class="d-inline"
+          onsubmit="return confirm(<?php echo $this->escape(json_encode(Text::sprintf('COM_COLLECTOR_FILECHECK_AUTOFIX_CONFIRM', $report->stats->fixable))); ?>)">
+        <button type="submit" class="btn btn-sm btn-success">
+            <span class="icon-wrench me-1"></span><?php echo Text::sprintf('COM_COLLECTOR_FILECHECK_AUTOFIX', $report->stats->fixable); ?>
+        </button>
+        <?php echo HTMLHelper::_('form.token'); ?>
+    </form>
+    <?php endif; ?>
+</div>
+
+<?php if (!$report->broken): ?>
+<div class="alert alert-success"><?php echo Text::_('COM_COLLECTOR_FILECHECK_NO_BROKEN'); ?></div>
+<?php else: ?>
+<table class="table table-sm align-middle">
+    <thead>
+        <tr>
+            <th><?php echo Text::_('COM_COLLECTOR_FILECHECK_COL_PATH'); ?></th>
+            <th><?php echo Text::_('COM_COLLECTOR_FILECHECK_COL_USED_BY'); ?></th>
+            <th style="width:40%"><?php echo Text::_('COM_COLLECTOR_FILECHECK_COL_FIX'); ?></th>
+        </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($report->broken as $i => $link): ?>
+        <tr>
+            <td class="small text-break"><code><?php echo $this->escape($link->path); ?></code></td>
+            <td class="small">
+                <?php foreach ($link->items as $use): ?>
+                <div>
+                    <a href="<?php echo Route::_('index.php?option=com_collector&task=item.edit&collection=' . $use->collection . '&id=' . $use->item); ?>" target="_blank">
+                        <?php echo $this->escape($use->title !== '' ? $use->title : '#' . $use->item); ?>
+                    </a>
+                    <span class="text-muted">— <?php echo $this->escape($use->field); ?></span>
+                    <?php if (!$use->current): ?>
+                    <span class="badge bg-light text-dark border"><?php echo Text::_('COM_COLLECTOR_FILECHECK_OLD_VERSIONS_ONLY'); ?></span>
+                    <?php endif; ?>
+                </div>
+                <?php endforeach; ?>
+                <?php foreach ($link->defined as $use): ?>
+                <div>
+                    <a href="<?php echo Route::_('index.php?option=com_collector&task=listitem.edit&defined=' . $use->defined . '&id=' . $use->id); ?>" target="_blank">
+                        <?php echo $this->escape($use->content); ?>
+                    </a>
+                    <span class="text-muted">— <?php echo Text::sprintf('COM_COLLECTOR_FILECHECK_IN_LIST', $this->escape($use->list)); ?></span>
+                </div>
+                <?php endforeach; ?>
+                <?php foreach ($link->collections as $use): ?>
+                <div>
+                    <a href="<?php echo Route::_('index.php?option=com_collector&task=collection.edit&id=' . $use->id); ?>" target="_blank">
+                        <?php echo $this->escape($use->name); ?>
+                    </a>
+                    <span class="text-muted">— <?php echo Text::_('COM_COLLECTOR_FILECHECK_COLLECTION_IMAGE'); ?></span>
+                </div>
+                <?php endforeach; ?>
+            </td>
+            <td>
+                <?php if (!$link->candidates): ?>
+                <?php
+                // Aucun fichier de même nom : champ média Joomla (sélection ou envoi d'un fichier dans la modale)
+                // La modale s'ouvre dans le dossier d'origine du fichier s'il existe encore
+                $mediaDir = 'collector';
+                $oldDir   = dirname($link->path);
+
+                if (str_starts_with($oldDir, 'images/') && is_dir(JPATH_ROOT . '/' . $oldDir)) {
+                    $mediaDir = substr($oldDir, strlen('images/'));
+                }
+
+                $mediaForm = \Joomla\CMS\Form\Form::getInstance(
+                    'com_collector.filecheck.' . $i,
+                    '<form><field name="new_path" type="media" types="images,documents" preview="tooltip" directory="'
+                        . htmlspecialchars($mediaDir, ENT_QUOTES) . '" /></form>',
+                    ['control' => 'fix' . $i]
+                );
+                ?>
+                <div class="small text-muted mb-1"><?php echo Text::_('COM_COLLECTOR_FILECHECK_NO_CANDIDATE'); ?></div>
+                <form action="<?php echo Route::_('index.php?option=com_collector&task=tools.fixfilelink'); ?>" method="post" class="d-flex gap-1 align-items-start">
+                    <div class="flex-grow-1"><?php echo $mediaForm->getInput('new_path'); ?></div>
+                    <input type="hidden" name="old_path" value="<?php echo $this->escape($link->path); ?>">
+                    <input type="hidden" name="row" value="<?php echo (int) $i; ?>">
+                    <button type="submit" class="btn btn-sm btn-primary text-nowrap"><?php echo Text::_('COM_COLLECTOR_FILECHECK_FIX'); ?></button>
+                    <?php echo HTMLHelper::_('form.token'); ?>
+                </form>
+                <?php else: ?>
+                <form action="<?php echo Route::_('index.php?option=com_collector&task=tools.fixfilelink'); ?>" method="post" class="d-flex gap-1">
+                    <select name="new_path" class="form-select form-select-sm" aria-label="<?php echo Text::_('COM_COLLECTOR_FILECHECK_COL_FIX'); ?>">
+                        <?php foreach ($link->candidates as $candidate): ?>
+                        <option value="<?php echo $this->escape($candidate); ?>"><?php echo $this->escape($candidate); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <input type="hidden" name="old_path" value="<?php echo $this->escape($link->path); ?>">
+                    <button type="submit" class="btn btn-sm btn-primary text-nowrap"><?php echo Text::_('COM_COLLECTOR_FILECHECK_FIX'); ?></button>
+                    <?php echo HTMLHelper::_('form.token'); ?>
+                </form>
+                <?php if (count($link->candidates) > 1): ?>
+                <div class="small text-warning mt-1"><?php echo Text::sprintf('COM_COLLECTOR_FILECHECK_SEVERAL_CANDIDATES', count($link->candidates)); ?></div>
+                <?php endif; ?>
+                <?php endif; ?>
+            </td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+<?php endif; ?>
+
+<?php if ($report->unused): ?>
+<details class="mt-3">
+    <summary class="fw-bold"><?php echo Text::sprintf('COM_COLLECTOR_FILECHECK_UNUSED_TITLE', count($report->unused)); ?> <span class="icon-chevron-down details-arrow small"></span></summary>
+    <p class="small text-muted mt-2"><?php echo Text::_('COM_COLLECTOR_FILECHECK_UNUSED_DESC'); ?></p>
+    <ul class="small" style="columns: 2;">
+        <?php foreach ($report->unused as $path): ?>
+        <li class="text-break"><a href="<?php echo $this->escape(\Joomla\CMS\Uri\Uri::root() . $path); ?>" target="_blank"><?php echo $this->escape($path); ?></a></li>
+        <?php endforeach; ?>
+    </ul>
+</details>
+<?php endif; ?>
+
+<?php endif; ?>
+
+<?php echo HTMLHelper::_('uitab.endTab'); ?>
+
 <?php echo HTMLHelper::_('uitab.endTabSet'); ?>
 
 <?php else: ?>

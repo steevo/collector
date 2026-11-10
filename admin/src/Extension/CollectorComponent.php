@@ -9,7 +9,7 @@
 
 namespace Steevo\Component\Collector\Administrator\Extension;
 
-defined('JPATH_PLATFORM') or die;
+defined('_JEXEC') or die;
 
 
 use Steevo\Component\Collector\Administrator\Service\Html\Collector;
@@ -22,7 +22,9 @@ use Joomla\CMS\Component\Router\RouterServiceInterface;
 use Joomla\CMS\Component\Router\RouterServiceTrait;
 use Joomla\CMS\Extension\BootableExtensionInterface;
 use Joomla\CMS\Extension\MVCComponent;
+use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\Fields\FieldsServiceInterface;
 use Joomla\CMS\HTML\HTMLRegistryAwareTrait;
 use Joomla\CMS\Language\Text;
@@ -80,7 +82,16 @@ class CollectorComponent extends MVCComponent implements
 	public function boot(ContainerInterface $container)
 	{
 		$this->container = $container;
-		
+
+		// Dossier racine des fichiers de Collector (défini en Joomla 3 dans admin/collector.php,
+		// toujours utilisé par le gestionnaire de fichiers, l'import et les sélecteurs de dossier)
+		if (!\defined('COM_COLLECTOR_BASE'))
+		{
+			$filePath = trim((string) ComponentHelper::getParams('com_collector')->get('file_path', 'images/collector'), '/\\');
+			\define('COM_COLLECTOR_BASE', JPATH_ROOT . '/' . $filePath);
+			\define('COM_COLLECTOR_BASEURL', Uri::root() . $filePath);
+		}
+
 		// $this->getRegistry()->register('collectoradministrator', new AdministratorService);
 		// $this->getRegistry()->register('collectoricon', new Icon($container->get(SiteApplication::class)));
 		$this->getRegistry()->register('collector', new Collector());
