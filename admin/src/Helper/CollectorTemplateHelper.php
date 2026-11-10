@@ -26,7 +26,7 @@ use Joomla\Database\ParameterType;
  *   {champ:label}            nom du champ
  *   {champ:value}            valeur brute, échappée
  *   {champ:text}             valeur en texte seul (sans lien ni image ; logo : son texte alternatif)
- *   {champ:url}              adresse d'une image ou d'un fichier
+ *   {champ:url}              adresse d'une image, d'un fichier ou du téléchargement Phoca Download
  * Les valeurs affichées par {champ} peuvent contenir des liens : à l'intérieur d'un lien <a>,
  * préférer {champ:text} et {champ:url} (un lien ne peut pas en contenir un autre).
  *   {link}                   adresse de la fiche détaillée
@@ -207,7 +207,12 @@ abstract class CollectorTemplateHelper
                 case 'text':
                     return htmlspecialchars(static::plainText($display($name)), ENT_QUOTES, 'UTF-8');
                 case 'url':
-                    return htmlspecialchars(static::fileUrl((string) ($item->$name ?? '')), ENT_QUOTES, 'UTF-8');
+                    // un type de champ peut fournir sa propre adresse (téléchargement Phoca Download…)
+                    $url = method_exists($byName[$name], 'getUrl')
+                        ? $byName[$name]->getUrl((string) ($item->$name ?? ''))
+                        : null;
+
+                    return htmlspecialchars($url ?? static::fileUrl((string) ($item->$name ?? '')), ENT_QUOTES, 'UTF-8');
                 default:
                     return $display($name);
             }

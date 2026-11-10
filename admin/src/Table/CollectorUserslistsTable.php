@@ -37,6 +37,7 @@ class CollectorUserslistsTable extends Table
         }
 
         // Définir l'ordre
+        $db = $this->getDbo();
         if ($this->state < 0) {
             $this->ordering = 0;
         } elseif (empty($this->ordering)) {
