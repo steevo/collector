@@ -305,36 +305,25 @@ $app->setUserState('com_collector.current_collection', $collection);
 			}
 		
 			if ((int) $this->_collection <= 0) {
-				$query = 'SELECT id';
-				$query .= ' FROM `#__collector`';
-				$query .= ' WHERE home = 1';
-				
-				$row = $this->_getList( $query );
-				
-				if ( !$row )
-				{
-					/**
-					 * tag � defaut d'une collection
-					 */
-					$query = 'UPDATE `#__collector` SET home = 1 LIMIT 1;';
-					$db = $this->getDbo();
-					$db->setQuery( $query );
-					$db->execute();
-					
-					$query = 'SELECT id';
-					$query .= ' FROM `#__collector`';
-					$query .= ' WHERE home = 1';
-					
-					$collection = (int) $db->loadResult();
+				$db    = $this->getDbo();
+				$query = $db->getQuery(true)
+					->select('id')
+					->from($db->quoteName('#__collector'))
+					->where('home = 1')
+					->setLimit(1);
+				$collection = (int) $db->setQuery($query)->loadResult();
+
+				if (!$collection) {
+					// Aucune collection par défaut : la première le devient.
+					$db->setQuery('UPDATE ' . $db->quoteName('#__collector') . ' SET home = 1 LIMIT 1')->execute();
+					$collection = (int) $db->setQuery($query)->loadResult();
 				}
-				if ( !$collection )
-				{
+
+				if (!$collection) {
 					return false;
 				}
-				else
-				{
-					$this->_collection = $collection;
-				}
+
+				$this->_collection = $collection;
 			}
 		}
 		

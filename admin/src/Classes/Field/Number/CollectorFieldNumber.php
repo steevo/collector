@@ -71,37 +71,112 @@ class CollectorFieldNumber extends CollectorField
 	}
 	
 	/**
+	 * Attributs du champ avec leurs valeurs par défaut (anciens champs sans attribs complets).
+	 */
+	protected function attrib(string $name, $default)
+	{
+		$value = $this->_field->attribs[$name] ?? '';
+
+		return ($value === '' || $value === null) ? $default : $value;
+	}
+
+	/**
+	 * Mode de recherche : 0 = zones de texte « de X à Y », 1 = curseur double.
+	 */
+	protected function isSliderMode(): bool
+	{
+		return (int) $this->attrib('search_method', 0) === 1;
+	}
+
+	/**
+	 * Convertit une borne saisie en nombre, ou chaîne vide si ce n'est pas un nombre.
+	 */
+	protected static function cleanBound($value): string
+	{
+		$value = str_replace(',', '.', trim((string) $value));
+
+		return is_numeric($value) ? (string) (0 + $value) : '';
+	}
+
+	/**
+	 * Découpe une valeur de filtre « min|max » en deux bornes nettoyées.
+	 */
+	protected static function splitRange($value): array
+	{
+		$parts = explode('|', (string) $value, 2);
+
+		return [self::cleanBound($parts[0] ?? ''), self::cleanBound($parts[1] ?? '')];
+	}
+
+	/**
+	 * Un filtre de menu « | » (aucune borne) n'impose rien : le champ reste proposé dans la recherche.
+	 */
+	function isFiltered($params)
+	{
+		$this->valueFilterMenu = $this->menuFilterValue($params);
+
+		return $this->valueFilterMenu !== '';
+	}
+
+	/**
+	 * Filtre « min|max » enregistré dans l'élément de menu, ou chaîne vide s'il n'impose rien.
+	 *
+	 * Le menu enregistre aussi les deux bornes séparément (filterfield_x_min / _max) : elles servent
+	 * de secours quand la valeur combinée n'a pas été mise à jour avant l'enregistrement.
+	 */
+	protected function menuFilterValue($params): string
+	{
+		$filter = $params ? $params->get('filter') : null;
+
+		if (!$filter || (!\is_array($filter) && !\is_object($filter))) {
+			return '';
+		}
+
+		$filter = (array) $filter;
+		$name   = 'filterfield_' . $this->_field->tablecolumn;
+
+		[$min, $max] = self::splitRange($filter[$name] ?? '');
+
+		if ($min === '') {
+			$min = self::cleanBound($filter[$name . '_min'] ?? '');
+		}
+		if ($max === '') {
+			$max = self::cleanBound($filter[$name . '_max'] ?? '');
+		}
+
+		return ($min === '' && $max === '') ? '' : $min . '|' . $max;
+	}
+
+	/**
+	 * Bornes imposées par le filtre de l'élément de menu, s'il y en a un.
+	 */
+	protected function menuRange($params): array
+	{
+		return $this->isFiltered($params) ? self::splitRange($this->valueFilterMenu) : ['', ''];
+	}
+
+	/**
 	 * Gets the action to do on submit
 	 *
 	 * @return string
 	 */
 	function resetSearchArea($params)
 	{
-		$filtered = $this->isFiltered($params);
-		
-		// Get min and max values
-		$minmaxValued = $this->getMinMaxValued();
-		$minmaxFiltered = explode ('|',$this->valueFilterMenu);
-		if ( $filtered && ($minmaxFiltered[0]!='') ) {
-			$minValue = $minmaxFiltered[0];
+		$col = $this->_field->tablecolumn;
+		[$menuMin, $menuMax] = $this->menuRange($params);
+
+		if ($this->isSliderMode()) {
+			[$minValued, $maxValued] = $this->getMinMaxValued();
+			$min = $menuMin !== '' ? $menuMin : ($minValued === null ? '' : (string) (0 + $minValued));
+			$max = $menuMax !== '' ? $menuMax : ($maxValued === null ? '' : (string) (0 + $maxValued));
 		} else {
-			$minValue = $minmaxValued[0];
+			$min = $menuMin;
+			$max = $menuMax;
 		}
-		if ( $filtered && ($minmaxFiltered[1]!='') ) {
-			$maxValue = $minmaxFiltered[1];
-		} else {
-			$maxValue = $minmaxValued[1];
-		}
-		$return = array();
-		$return[] = "jQuery( '#filterfield_".$this->_field->tablecolumn."_min' ).val( ".$minValue." );";
-		$return[] = "jQuery( '#filterfield_".$this->_field->tablecolumn."_max' ).val( ".$maxValue." );";
-		$return[] = "jQuery( '#slider-range-".$this->_field->tablecolumn."' ).slider( 'values', 0 , ".$minValue." );";
-		$return[] = "jQuery( '#slider-range-".$this->_field->tablecolumn."' ).slider( 'values', 1 , ".$maxValue." );";
-		$return[] = "jQuery( '#filterfield_".$this->_field->tablecolumn."' ).val( '|' );";
-		
-		return implode($return);
+
+		return 'CollectorNumberFilter.reset(' . json_encode($col) . ',' . json_encode($min) . ',' . json_encode($max) . ');';
 	}
-	
+
 	/**
 	 * Gets the action to do on submit search
 	 *
@@ -109,11 +184,13 @@ class CollectorFieldNumber extends CollectorField
 	 */
 	function submitSearchArea()
 	{
-		$return = "jQuery( '#filterfield_".$this->_field->tablecolumn."' ).val( jQuery( '#filterfield_".$this->_field->tablecolumn."_min' ).val() + '|' + jQuery( '#filterfield_".$this->_field->tablecolumn."_max' ).val() );";
-		
-		return $return;
+		if (!$this->_field->filter) {
+			return '';
+		}
+
+		return 'if (window.CollectorNumberFilter) { CollectorNumberFilter.submit(' . json_encode($this->_field->tablecolumn) . '); }';
 	}
-	
+
 	/**
 	 * Gets the javascript for menu creation
 	 *
@@ -121,29 +198,24 @@ class CollectorFieldNumber extends CollectorField
 	 */
 	function getMenuJs()
 	{
-		// Get min and max values
-		$minmaxValued = $this->getMinMaxValued();
-		$minValue = $minmaxValued[0];
-		$maxValue = $minmaxValued[1];
-		
-		$js = "
-		populateHidden = function() {
-			var min = jQuery( '#filterfield_".$this->_field->tablecolumn."_min' ).val();
-			if ((min < ".$minValue.")&&(min != '')) {
-				min = ".$minValue.";
-				jQuery( '#filterfield_".$this->_field->tablecolumn."_min' ).val(min);
-			}
-			var max = jQuery( '#filterfield_".$this->_field->tablecolumn."_max' ).val();
-			if ((max > ".$maxValue.")&&(max != '')) {
-				max = ".$maxValue.";
-				jQuery( '#filterfield_".$this->_field->tablecolumn."_max' ).val(max);
-			}
-			jQuery( '#filterfield_".$this->_field->tablecolumn."' ).val(min+'|'+max);
+		[$minValue, $maxValue] = $this->getMinMaxValued();
+		$col = $this->_field->tablecolumn;
+
+		// Une fonction par champ : avec un nom commun, le dernier champ nombre écrasait les autres.
+		return "
+		window['populateHidden_" . $col . "'] = function() {
+			var lo = " . json_encode($minValue === null ? null : (float) $minValue) . ", hi = " . json_encode($maxValue === null ? null : (float) $maxValue) . ";
+			var a = document.getElementById('filterfield_" . $col . "_min'), b = document.getElementById('filterfield_" . $col . "_max');
+			var min = a.value.trim().replace(',', '.'), max = b.value.trim().replace(',', '.');
+			if (min !== '' && isNaN(parseFloat(min))) { min = ''; }
+			if (max !== '' && isNaN(parseFloat(max))) { max = ''; }
+			if (min !== '' && lo !== null && parseFloat(min) < lo) { min = lo; }
+			if (max !== '' && hi !== null && parseFloat(max) > hi) { max = hi; }
+			a.value = min; b.value = max;
+			document.getElementById('filterfield_" . $col . "').value = min + '|' + max;
 		};";
-		
-		return $js;
 	}
-	
+
 	/**
 	 * Gets the field attributes for the form definition
 	 *
@@ -155,282 +227,309 @@ class CollectorFieldNumber extends CollectorField
 			'size'			=> "60",
 			'maxlength'		=> "254",
 			'default'		=> '',
-			// 'template'		=> $this->_field->attribs['template'],
-			// 'search_method'	=> $this->_field->attribs['search_method'],
-			// 'decimal'		=> $this->_field->attribs['decimal']
 		);
-		
+
 		return parent::getFieldAttributes($attributes);
 	}
-	
+
 	/**
 	 * Method to add where clause to query on filter value
 	 *
-	 * Can be overloaded/supplemented by the child class
-	 *
-	 * @param	JDatabaseQuery object		$query
-	 * @param	mixed						$value
-	 * @param	JRegistry object			$params
+	 * @param	\Joomla\Database\QueryInterface	$query
+	 * @param	mixed							$value	« min|max »
+	 * @param	\Joomla\Registry\Registry		$params
 	 */
 	function setFilterWhereClause(&$query,$value,$params)
 	{
-		$filtered = $this->isFiltered($params);
-		
-		if ((( $value != '' ) && ( $value != '|' )) || ( $filtered ))
-		{
-			// Get min and max values
-			$minmaxFiltered = explode ('|',$this->valueFilterMenu);
-			$minmax = explode ('|',$value);
-			$min = $minmax[0];
-			$max = $minmax[1];
-			
-			if ( ($min == '') && $filtered && ($minmaxFiltered[0]!='') ) {
-				$min = $minmaxFiltered[0];
-			}
-			if ( ($max == '') && $filtered && ($minmaxFiltered[1]!='') ) {
-				$max = $minmaxFiltered[1];
-			}
-			
-			if ( $min != '' )
-			{
-				$query->where('CAST(h.'.$this->_field->tablecolumn.' AS DECIMAL(18,5)) >= "'.$min.'"');
-			}
-			if ( $max != '' )
-			{
-				$query->where('CAST(h.'.$this->_field->tablecolumn.' AS DECIMAL(18,5)) <= "'.$max.'"');
-			}
-			$query->where('h.'.$this->_field->tablecolumn.' != ""');
-			return true;
+		[$min, $max]         = self::splitRange($value);
+		[$menuMin, $menuMax] = $this->menuRange($params);
+
+		if ($min === '') {
+			$min = $menuMin;
 		}
-		return false;
+		if ($max === '') {
+			$max = $menuMax;
+		}
+
+		if ($min === '' && $max === '') {
+			return false;
+		}
+
+		$column = 'CAST(h.' . $this->_field->tablecolumn . ' AS DECIMAL(18,5))';
+
+		if ($min !== '') {
+			$query->where($column . ' >= ' . (float) $min);
+		}
+		if ($max !== '') {
+			$query->where($column . ' <= ' . (float) $max);
+		}
+		$query->where('h.' . $this->_field->tablecolumn . ' != ' . $query->quote(''));
+
+		return true;
 	}
-	
+
 	/**
 	 * Method to add order by clause
-	 *
-	 * Can be overloaded/supplemented by the child class
 	 */
 	function getOrderBy()
 	{
-		$orderBy = 'CAST(h.'.$this->_field->tablecolumn.' AS DECIMAL(18,5))';
-		return $orderBy;
+		return 'CAST(h.'.$this->_field->tablecolumn.' AS DECIMAL(18,5))';
 	}
-	
+
 	/**
 	 * Method to get the min and max values
 	 */
 	function getMinMaxValued()
 	{
-		if ($this->_minValue == '')
+		if ($this->_minValue === '')
 		{
-			// Get min and max values
+			$decimal = max(0, min(10, (int) $this->attrib('decimal', 0)));
+			$column  = 'CAST(h.' . $this->_field->tablecolumn . ' AS DECIMAL(18,' . $decimal . '))';
+
 			$db = Factory::getContainer()->get(DatabaseInterface::class);
-			$query = $db->getQuery(true);
-			$query->select('MIN(CAST(h.'.$this->_field->tablecolumn.' AS DECIMAL(18,'.$this->_field->attribs['decimal'].')))');
-			$query->from('#__collector_items_history_'.$this->_collection.' as h');
-			$query->where('h.state = 1');
-			$query->where('h.'.$this->_field->tablecolumn.' != ""');
-			$db->setQuery( $query );
-			$this->_minValue = $db->loadResult();
-			$query = $db->getQuery(true);
-			$query->select('MAX(CAST(h.'.$this->_field->tablecolumn.' AS DECIMAL(18,'.$this->_field->attribs['decimal'].')))');
-			$query->from('#__collector_items_history_'.$this->_collection.' as h');
-			$query->where('h.state = 1');
-			$query->where('h.'.$this->_field->tablecolumn.' != ""');
-			$db->setQuery( $query );
-			$this->_maxValue = $db->loadResult();
+			$query = $db->getQuery(true)
+				->select('MIN(' . $column . ') AS mini, MAX(' . $column . ') AS maxi')
+				->from('#__collector_items_history_' . (int) $this->_collection . ' AS h')
+				->where('h.state = 1')
+				->where('h.' . $this->_field->tablecolumn . ' != ' . $db->quote(''));
+			$row = $db->setQuery($query)->loadObject();
+
+			$this->_minValue = $row ? $row->mini : null;
+			$this->_maxValue = $row ? $row->maxi : null;
 		}
-		
+
 		return array($this->_minValue,$this->_maxValue);
 	}
-	
+
+	/**
+	 * Script et styles partagés par tous les filtres numériques de la page (chargés une fois).
+	 */
+	protected static function addFilterAssets(): void
+	{
+		static $done = false;
+
+		if ($done) {
+			return;
+		}
+		$done = true;
+
+		$wa = Factory::getApplication()->getDocument()->getWebAssetManager();
+
+		$wa->addInlineStyle('
+.collector-number-filter{display:inline-flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem}
+.collector-number-filter input.cnf-num{width:6.5em}
+.collector-number-filter input.cnf-readonly{text-align:center;padding-left:.25rem;padding-right:.25rem;background-color:transparent}
+.collector-number-filter .cnf-range{position:relative;height:1.75rem;min-width:9rem;flex:1 1 9rem}
+.collector-number-filter .cnf-range::before{content:"";position:absolute;left:0;right:0;top:50%;height:.3rem;margin-top:-.15rem;border-radius:.15rem;background:var(--collector-border,#ccc)}
+.collector-number-filter .cnf-fill{position:absolute;top:50%;height:.3rem;margin-top:-.15rem;border-radius:.15rem;background:var(--collector-accent,#c62144)}
+.collector-number-filter .cnf-range input[type=range]{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
+.collector-number-filter .cnf-range input[type=range]::-webkit-slider-runnable-track{background:none}
+.collector-number-filter .cnf-range input[type=range]::-moz-range-track{background:none}
+.collector-number-filter .cnf-range input[type=range]::-webkit-slider-thumb{pointer-events:auto;-webkit-appearance:none;appearance:none;width:1.1rem;height:1.1rem;border-radius:50%;background:#fff;border:2px solid var(--collector-accent,#c62144);cursor:pointer}
+.collector-number-filter .cnf-range input[type=range]::-moz-range-thumb{pointer-events:auto;width:1rem;height:1rem;border-radius:50%;background:#fff;border:2px solid var(--collector-accent,#c62144);cursor:pointer}
+');
+
+		$wa->addInlineScript(<<<'JS'
+window.CollectorNumberFilter = (function () {
+	function els(col) {
+		return {
+			box: document.querySelector('.collector-number-filter[data-column="' + col + '"]'),
+			min: document.getElementById('filterfield_' + col + '_min'),
+			max: document.getElementById('filterfield_' + col + '_max'),
+			hidden: document.getElementById('filterfield_' + col)
+		};
+	}
+	function paint(e) {
+		if (!e.box || !e.box.dataset.cnfMode) { return; }
+		var lo = e.box.querySelector('.cnf-lo'), hi = e.box.querySelector('.cnf-hi'), fill = e.box.querySelector('.cnf-fill');
+		var a = parseFloat(lo.min), b = parseFloat(lo.max), span = (b - a) || 1;
+		fill.style.left = ((parseFloat(lo.value) - a) / span * 100) + '%';
+		fill.style.right = ((b - parseFloat(hi.value)) / span * 100) + '%';
+	}
+	function fromRange(col, which) {
+		var e = els(col), lo = e.box.querySelector('.cnf-lo'), hi = e.box.querySelector('.cnf-hi');
+		if (parseFloat(lo.value) > parseFloat(hi.value)) {
+			if (which === 'lo') { lo.value = hi.value; } else { hi.value = lo.value; }
+		}
+		e.min.value = lo.value;
+		e.max.value = hi.value;
+		paint(e);
+	}
+	function fromText(col) {
+		var e = els(col);
+		if (!e.box) { return; }
+		if (!e.box.dataset.cnfMode) {
+			// Zones de texte : valeurs ramenées entre le minimum et le maximum de la collection.
+			var a = parseFloat(e.box.dataset.lo), b = parseFloat(e.box.dataset.hi);
+			[e.min, e.max].forEach(function (input) {
+				if (input.value === '' || isNaN(parseFloat(input.value))) { input.value = ''; return; }
+				var v = parseFloat(input.value);
+				if (!isNaN(a) && v < a) { v = a; }
+				if (!isNaN(b) && v > b) { v = b; }
+				input.value = v;
+			});
+			if (e.min.value !== '' && e.max.value !== '' && parseFloat(e.min.value) > parseFloat(e.max.value)) {
+				var t = e.min.value; e.min.value = e.max.value; e.max.value = t;
+			}
+			return;
+		}
+		var lo = e.box.querySelector('.cnf-lo'), hi = e.box.querySelector('.cnf-hi');
+		if (e.min.value !== '') { lo.value = e.min.value; e.min.value = lo.value; }
+		if (e.max.value !== '') { hi.value = e.max.value; e.max.value = hi.value; }
+		if (parseFloat(lo.value) > parseFloat(hi.value)) { lo.value = hi.value; e.min.value = lo.value; }
+		paint(e);
+	}
+	function submit(col) {
+		var e = els(col);
+		if (!e.hidden || !e.min || !e.max) { return; }
+		if (e.box && !e.box.dataset.cnfMode && !e.min.readOnly) { fromText(col); }
+		var min = e.min.value.trim(), max = e.max.value.trim();
+		if (e.box && e.box.dataset.cnfMode) {
+			// Curseur laissé aux extrémités : pas de filtre (les objets sans valeur restent visibles).
+			if (min === e.box.dataset.lo) { min = ''; }
+			if (max === e.box.dataset.hi) { max = ''; }
+		}
+		e.hidden.value = min + '|' + max;
+	}
+	function reset(col, min, max) {
+		var e = els(col);
+		if (e.min) { e.min.value = min; }
+		if (e.max) { e.max.value = max; }
+		if (e.box && e.box.dataset.cnfMode) {
+			e.box.querySelector('.cnf-lo').value = min;
+			e.box.querySelector('.cnf-hi').value = max;
+			paint(e);
+		}
+		if (e.hidden) { e.hidden.value = '|'; }
+	}
+	document.addEventListener('DOMContentLoaded', function () {
+		document.querySelectorAll('.collector-number-filter[data-cnf-mode]').forEach(function (box) {
+			paint(els(box.dataset.column));
+		});
+	});
+	return { fromRange: fromRange, fromText: fromText, submit: submit, reset: reset };
+})();
+JS);
+	}
+
 	/**
 	 * Method to display filter in search area
 	 *
-	 * Can be overloaded/supplemented by the child class
-	 *
-	 * @param	JRegistry object		$params
-	 * @param	mixed					$value
-	 * @param	boolean					$menu
+	 * @param	\Joomla\Registry\Registry	$params
+	 * @param	mixed						$value	« min|max »
+	 * @param	boolean						$menu	true dans le formulaire de l'élément de menu
 	 */
 	function displayFilter($params,$value,$menu=false)
 	{
-		$wa = Factory::getApplication()->getDocument()->getWebAssetManager();
-		$wa->useScript('jquery');
-
-		HTMLHelper::script('administrator/components/com_collector/classes/field/number/bootstrap-slider/dist/bootstrap-slider.min.js');
-		HTMLHelper::stylesheet('administrator/components/com_collector/classes/field/number/bootstrap-slider/dist/css/bootstrap-slider.min.css');
-		
-		// Get min and max values
-		$minmaxValued = $this->getMinMaxValued();
-		$minValue = $minmaxValued[0];
-		$maxValue = $minmaxValued[1];
-		
-		// Initiliase variables.
-		$app	= Factory::getApplication();
-		$html = array();
-		$attr = '';
-		if (($value == '')||($value == '0'))
-		{
-			$value = '|';
+		$col  = $this->_field->tablecolumn;
+		$esc  = fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+		[$minValue, $maxValue] = $this->getMinMaxValued();
+		// 0 seul = « pas de valeur » (valeur par défaut transmise par le formulaire de menu), pas une borne.
+		if ($value === 0 || $value === '0' || $value === null) {
+			$value = '';
 		}
-		$minmax = explode ('|',$value);
-		$min = $minmax[0];
-		$max = $minmax[1];
-		
-		$user	= Factory::getApplication()->getIdentity();
-		$groups	= implode(',', $user->getAuthorisedViewLevels());
-		
+		[$min, $max]           = self::splitRange($value);
+		$value                 = $min . '|' . $max;
+
+		// Formulaire de l'élément de menu : deux zones de texte qui définissent le filtre imposé.
 		if ($menu) {
-			$prefix = 'jform[params][filter][';
-			$suffix = ']';
-		} else {
-			$prefix = '';
-			$suffix = '';
+			$name = fn ($suffix) => 'jform[params][filter][filterfield_' . $col . $suffix . ']';
+
+			// Valeur déjà enregistrée, y compris par les bornes séparées.
+			if ($min === '' && $max === '') {
+				[$min, $max] = self::splitRange($this->menuFilterValue($params));
+				$value       = $min . '|' . $max;
+			}
+
+			// Mise à jour de la valeur combinée sans dépendre du script chargé à part (getMenuJs).
+			$sync = $esc("var d=document,a=d.getElementById('filterfield_" . $col . "_min'),b=d.getElementById('filterfield_" . $col . "_max');"
+				. "if(window['populateHidden_" . $col . "']){window['populateHidden_" . $col . "']();}"
+				. "else{d.getElementById('filterfield_" . $col . "').value=a.value.trim()+'|'+b.value.trim();}");
+
+			return '<td>' . $esc($this->_field->field) . '</td><td>'
+				. Text::_('COM_COLLECTOR_NUMBER_FIELD_SEARCH_FROM')
+				. '<input type="text" class="form-control d-inline-block" style="width:6em" onchange="' . $sync . '" id="filterfield_' . $esc($col) . '_min" name="' . $esc($name('_min')) . '" value="' . $esc($min) . '" placeholder="' . $esc($minValue) . '">'
+				. Text::_('COM_COLLECTOR_NUMBER_FIELD_SEARCH_TO')
+				. '<input type="text" class="form-control d-inline-block" style="width:6em" onchange="' . $sync . '" id="filterfield_' . $esc($col) . '_max" name="' . $esc($name('_max')) . '" value="' . $esc($max) . '" placeholder="' . $esc($maxValue) . '">'
+				. '<input type="hidden" id="filterfield_' . $esc($col) . '" name="' . $esc($name('')) . '" value="' . $esc($value) . '">'
+				. '</td>';
 		}
-		
-		if ( ( $this->_field->attribs['search_method'] == 0 ) || ($menu == true) ) {
-		
-			// Initialize some field attributes.
-			if ( (!$params->get('show_entire_listing')) && ($menu == false) ) {
-				$requiredparams = $params->get('required');
-				$required = $requiredparams['filterfield_'.$this->_field->tablecolumn]?' required':'';
-			} else {
-				$required = '';
-			}
-			$attr .= ' class="inputbox'.$required.'"';
-			$attr .= ' size="1"';
 
-			$filtered = $this->isFiltered($params);
-			
-			if ( ($menu == true) || (!$filtered) || ( $filtered && (!$params->get('hide_filter'))) )
-			{
-				if ( (!$params->get('show_entire_listing')) && ($menu == false) ) {
-					$requiredparams = $params->get('required');
-					$required = $requiredparams['filterfield_'.$this->_field->tablecolumn]?'<span class="star">&nbsp;*</span>&nbsp;&nbsp;':'&nbsp;&nbsp;';
-				} else {
-					$required = '&nbsp;&nbsp;';
-				}
-				
-				$minmaxFiltered = explode ('|',$this->valueFilterMenu);
-				if ( $min == '' ) {
-					if ( $filtered && ($minmaxFiltered[0]!='') ) {
-						$min = $minmaxFiltered[0];
-					}
-				}
-				if ( $max == '' ) {
-					if ( $filtered && ($minmaxFiltered[1]!='') ) {
-						$max = $minmaxFiltered[1];
-					}
-				}
-				
-				// Create filter
-				$html[] = $this->_field->field . $required;
-				if ($menu == true) {
-					$html[] = '</td><td>';
-				}
-				$html[] = Text::_('COM_COLLECTOR_NUMBER_FIELD_SEARCH_FROM');
-				$html[] = '<input type=text style=\'width:'.$this->_field->attribs['textboxwidth'].'px;\' onchange=\'populateHidden();\' id=\'filterfield_'.$this->_field->tablecolumn.'_min\' name=\''.$prefix.'filterfield_'.$this->_field->tablecolumn.'_min'.$suffix.'\' '.trim($attr).' value=\''.$min.'\' placeholder=\''.$minValue.'\'/>';
-				$html[] = Text::_('COM_COLLECTOR_NUMBER_FIELD_SEARCH_TO');
-				$html[] = '<input type=text style=\'width:'.$this->_field->attribs['textboxwidth'].'px;\' onchange=\'populateHidden();\' id=\'filterfield_'.$this->_field->tablecolumn.'_max\' name=\''.$prefix.'filterfield_'.$this->_field->tablecolumn.'_max'.$suffix.'\' '.trim($attr).' value=\''.$max.'\' placeholder=\''.$maxValue.'\'/>';
-				$html[] = '<input type=hidden id=\'filterfield_'.$this->_field->tablecolumn.'\' name=\''.$prefix.'filterfield_'.$this->_field->tablecolumn.$suffix.'\' value=\''.$value.'\' />';
-			}
-			else
-			{
-				$html[] = '<input type=hidden id=\'filter_field_'.$this->_field->tablecolumn.'\' name=\''.$prefix.'filter_field_'.$this->_field->tablecolumn.$suffix.'\' value=\''.$value.'\' />';
-			}
+		$filtered = $this->isFiltered($params);
 
-			if ($menu == true) {
-				$return = '<td>'.implode($html).'</td>';
-			} else {
-				$return = implode($html);
-			}
-		} else {
-			$filtered = $this->isFiltered($params);
-			if ( (!$filtered) || ( $filtered && (!$params->get('hide_filter'))) )
-			{
-				if ( (!$params->get('show_entire_listing')) ) {
-					$requiredparams = $params->get('required');
-					$required = $requiredparams['filterfield_'.$this->_field->tablecolumn]?'<span class="star">&nbsp;*</span>&nbsp;&nbsp;':'&nbsp;&nbsp;';
-				} else {
-					$required = '&nbsp;&nbsp;';
-				}
-				
-				$minmaxFiltered = explode ('|',$this->valueFilterMenu);
-				if ( $min == '' ) {
-					if ( $filtered && ($minmaxFiltered[0]!='') ) {
-						$min = $minmaxFiltered[0];
-					} else {
-						$min = $minValue;
-					}
-				}
-				if ( $max == '' ) {
-					if ( $filtered && ($minmaxFiltered[1]!='') ) {
-						$max = $minmaxFiltered[1];
-					} else {
-						$max = $maxValue;
-					}
-				}
-				
-				$doc = Factory::getApplication()->getDocument();
-
-				$js1 = "
-				jQuery(document).ready(function(){
-					jQuery.ui.slider.prototype.widgetEventPrefix = 'slider';
-					jQuery( '#slider-range-".$this->_field->tablecolumn."' ).slider({
-						animated: true,
-						range: true,
-						step: ".$this->_field->attribs['sliderstep'].",
-						min: ".$minValue.",
-						max: ".$maxValue.",
-						values: [ ".$min.", ".$max." ],
-						slide: function( event, ui ) {
-							jQuery( '#filterfield_".$this->_field->tablecolumn."_min' ).val( ui.values[ 0 ] );
-							jQuery( '#filterfield_".$this->_field->tablecolumn."_max' ).val( ui.values[ 1 ] );
-						}
-					});
-					jQuery( '#filterfield_".$this->_field->tablecolumn."_min' ).val( jQuery( '#slider-range-".$this->_field->tablecolumn."' ).slider( 'values', 0 ) );
-					jQuery( '#filterfield_".$this->_field->tablecolumn."_max' ).val( jQuery( '#slider-range-".$this->_field->tablecolumn."' ).slider( 'values', 1 ) );
-				})";
-				$doc->addScriptDeclaration($js1);
-				$js2 = "
-				populateSlider = function() {
-					var min = jQuery( '#filterfield_".$this->_field->tablecolumn."_min' ).val();
-					if (min < ".$minValue.") {
-						min = ".$minValue.";
-						jQuery( '#filterfield_".$this->_field->tablecolumn."_min' ).val(min);
-					}
-					var max = jQuery( '#filterfield_".$this->_field->tablecolumn."_max' ).val();
-					if (max > ".$maxValue.") {
-						max = ".$maxValue.";
-						jQuery( '#filterfield_".$this->_field->tablecolumn."_max' ).val(max);
-					}
-					jQuery( '#slider-range-".$this->_field->tablecolumn."' ).slider( 'values', 0 , min );
-					jQuery( '#slider-range-".$this->_field->tablecolumn."' ).slider( 'values', 1 , max );
-				};";
-				$doc->addScriptDeclaration($js2);
-				
-				if ($this->_field->attribs['textboxeditable']) {
-					$readonly = 'onchange="populateSlider();"';
-				} else {
-					$readonly = 'readonly';
-				}
-				
-				$html[] = $this->_field->field . $required;
-				$html[] = '<input id="filterfield_'.$this->_field->tablecolumn.'_min" type=text '.$readonly.' class="search-element" style=\'width:'.$this->_field->attribs['textboxwidth'].'px;\' name=\'filterfield_'.$this->_field->tablecolumn.'_min\' '.trim($attr).' value=\''.$min.'\'/>';
-				$html[] = '<div id="slider-range-'.$this->_field->tablecolumn.'" class="search-element" style="vertical-align:middle;width:'.$this->_field->attribs['sliderwidth'].'px;"></div>';
-				$html[] = '<input id="filterfield_'.$this->_field->tablecolumn.'_max" type=text '.$readonly.' class="search-element" style=\'width:'.$this->_field->attribs['textboxwidth'].'px;\' name=\'filterfield_'.$this->_field->tablecolumn.'_max\' '.trim($attr).' value=\''.$max.'\'/>';
-				$html[] = '<input type=hidden id=\'filterfield_'.$this->_field->tablecolumn.'\' name=\'filterfield_'.$this->_field->tablecolumn.'\' value=\''.$value.'\' />';
-			}
-			else
-			{
-				$html[] = '<input type=hidden id=\'filter_field_'.$this->_field->tablecolumn.'\' name=\'filter_field_'.$this->_field->tablecolumn.'\' value=\''.$value.'\' />';
-			}
-			
-			$return = implode($html);
+		// Filtre imposé par le menu et masqué : rien à afficher.
+		if ($filtered && $params->get('hide_filter')) {
+			return '<input type="hidden" id="filterfield_' . $esc($col) . '" name="filterfield_' . $esc($col) . '" value="' . $esc($value) . '">';
 		}
-		
-		return $return;
+
+		// Aucune valeur dans la collection : pas de filtre utile.
+		if ($minValue === null || $maxValue === null) {
+			return '';
+		}
+
+		self::addFilterAssets();
+
+		[$menuMin, $menuMax] = $this->menuRange($params);
+		if ($min === '') {
+			$min = $menuMin;
+		}
+		if ($max === '') {
+			$max = $menuMax;
+		}
+
+		$required = '';
+		if (!$params->get('show_entire_listing')) {
+			$requiredParams = (array) $params->get('required');
+			if (!empty($requiredParams['filterfield_' . $col])) {
+				$required = ' <span class="star">*</span>';
+			}
+		}
+
+		$decimal = max(0, min(10, (int) $this->attrib('decimal', 0)));
+		$label   = '<label for="filterfield_' . $esc($col) . '_min">' . $esc($this->_field->field) . $required . '</label>';
+		$boxWidth = (int) $this->attrib('textboxwidth', 0);
+		$boxStyle = $boxWidth > 0 ? ' style="width:' . max(50, $boxWidth) . 'px"' : '';
+		// En lecture seule, une zone « number » garde la place des flèches masquées : on passe en texte.
+		$input   = fn ($suffix, $v, $placeholder, $extra = '') => (str_contains($extra, 'readonly')
+				? '<input type="text" class="form-control form-control-sm cnf-num cnf-readonly" tabindex="-1"'
+				: '<input type="number" class="form-control form-control-sm cnf-num" step="any"') . $boxStyle
+			. ' id="filterfield_' . $esc($col) . $suffix . '" name="filterfield_' . $esc($col) . $suffix . '"'
+			. ' value="' . $esc($v) . '" placeholder="' . $esc($placeholder) . '"' . $extra . '>';
+		$hidden  = '<input type="hidden" id="filterfield_' . $esc($col) . '" name="filterfield_' . $esc($col) . '" value="' . $esc($value) . '">';
+
+		if (!$this->isSliderMode()) {
+			$bounds = ' min="' . $esc(0 + $minValue) . '" max="' . $esc(0 + $maxValue) . '"'
+				. ' onchange="CollectorNumberFilter.fromText(' . $esc(json_encode($col)) . ')"';
+
+			return '<div class="collector-number-filter" data-column="' . $esc($col) . '" data-lo="' . $esc(0 + $minValue) . '" data-hi="' . $esc(0 + $maxValue) . '">'
+				. $label . ' '
+				. Text::_('COM_COLLECTOR_NUMBER_FIELD_SEARCH_FROM') . $input('_min', $min, $minValue, $bounds)
+				. Text::_('COM_COLLECTOR_NUMBER_FIELD_SEARCH_TO') . $input('_max', $max, $maxValue, $bounds)
+				. $hidden . '</div>';
+		}
+
+		// Curseur double : deux curseurs natifs superposés et les deux bornes en clair.
+		$lo   = (string) (0 + $minValue);
+		$hi   = (string) (0 + $maxValue);
+		$step = (float) $this->attrib('sliderstep', 0) > 0 ? (string) (0 + $this->attrib('sliderstep', 1)) : (string) (10 ** -$decimal);
+		$curMin = $min !== '' ? $min : $lo;
+		$curMax = $max !== '' ? $max : $hi;
+		$editable = (int) $this->attrib('textboxeditable', 1) === 1;
+		$textExtra = $editable
+			? ' onchange="CollectorNumberFilter.fromText(' . $esc(json_encode($col)) . ')"'
+			: ' readonly';
+		$range = fn ($cls, $v) => '<input type="range" class="' . $cls . '" min="' . $esc($lo) . '" max="' . $esc($hi) . '" step="' . $esc($step) . '" value="' . $esc($v) . '"'
+			. ' oninput="CollectorNumberFilter.fromRange(' . $esc(json_encode($col)) . ',' . $esc(json_encode($cls === 'cnf-lo' ? 'lo' : 'hi')) . ')"'
+			. ' aria-label="' . $esc($this->_field->field) . '">';
+		$width = (int) $this->attrib('sliderwidth', 0);
+
+		return '<div class="collector-number-filter" data-column="' . $esc($col) . '" data-cnf-mode="slider" data-lo="' . $esc($lo) . '" data-hi="' . $esc($hi) . '">'
+			. $label . ' '
+			. $input('_min', $curMin, $lo, $textExtra)
+			. '<div class="cnf-range"' . ($width > 0 ? ' style="max-width:' . $width . 'px"' : '') . '><div class="cnf-fill"></div>'
+			. $range('cnf-lo', $curMin) . $range('cnf-hi', $curMax) . '</div>'
+			. $input('_max', $curMax, $hi, $textExtra)
+			. $hidden . '</div>';
 	}
 	
 	/**

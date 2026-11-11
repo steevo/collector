@@ -260,6 +260,8 @@ class com_collectorInstallerScript
 			$site . '/assets/css/select.css',
 			$admin . '/src/Classes/CollectorUser.php',
 			$admin . '/src/Classes/collection.php',
+			// type nombre : liste « méthode de recherche » remplacée par une liste standard avec showon
+			$admin . '/src/Classes/Field/Number/searchmethod.php',
 		];
 
 		foreach (['Date', 'Define', 'File', 'Image', 'Item', 'Line', 'Number', 'Text'] as $type) {
@@ -273,7 +275,9 @@ class com_collectorInstallerScript
 			}
 		}
 
-		foreach ([$site . '/helpers', $site . '/layouts', $admin . '/helpers', $admin . '/params', $admin . '/src/Plugin'] as $dossier) {
+		foreach ([$site . '/helpers', $site . '/layouts', $admin . '/helpers', $admin . '/params', $admin . '/src/Plugin',
+			// curseur du type nombre : bibliothèque jQuery remplacée par un curseur natif
+			$admin . '/src/Classes/Field/Number/bootstrap-slider'] as $dossier) {
 			if (is_dir($dossier)) {
 				Folder::delete($dossier);
 			}

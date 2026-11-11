@@ -569,7 +569,12 @@ class CollectionModel extends ListModel
 					$this->_search = 1;
 				}
 			}
-			
+			elseif ($field->isFiltered($params))
+			{
+				// Filtre imposé par l'élément de menu sur un champ absent de la zone de recherche
+				$field->setFilterWhereClause($query, $field->valueFilterMenu, $params);
+			}
+
 			$search_all_value = $this->getState('filter.filter_search_all');
 			if ( $search_all_value != '' )
 			{

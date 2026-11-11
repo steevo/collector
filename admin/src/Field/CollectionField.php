@@ -50,9 +50,6 @@ class CollectionField extends ListField
 					url: url,
 					success: function( response ) {
 						jQuery('#listFilter').html(response);
-						jQuery('select').chosen({
-						disable_search_threshold : 10,
-						allow_single_deselect : true});
 					}
 				});
 			}";

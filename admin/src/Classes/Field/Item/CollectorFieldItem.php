@@ -112,7 +112,7 @@ class CollectorFieldItem extends CollectorField
 	{
 		if ( $value != '' )
 		{
-			$query->where('h.'.$this->_field->tablecolumn.' = "'.$value.'"');
+			$query->where('h.' . $this->_field->tablecolumn . ' = ' . (int) $value);
 			return true;
 		}
 		return false;
@@ -192,8 +192,8 @@ class CollectorFieldItem extends CollectorField
 				$nullDate	= $db->quote($db->getNullDate());
 				$nowDate	= $db->quote(Factory::getDate()->toSql());
 
-				$query->where('(i.publish_up = '.$nullDate.' OR i.publish_up <= '.$nowDate.')')
-					->where('(i.publish_down = '.$nullDate.' OR i.publish_down >= '.$nowDate.')')
+				$query->where('(i.publish_up IS NULL OR i.publish_up = '.$nullDate.' OR i.publish_up <= '.$nowDate.')')
+					->where('(i.publish_down IS NULL OR i.publish_down = '.$nullDate.' OR i.publish_down >= '.$nowDate.')')
 					->where('i.state = 1');
 			}
 			$query->group('value');
@@ -233,7 +233,7 @@ class CollectorFieldItem extends CollectorField
 		} else {
 			$required = '';
 		}
-		$attr .= ' class="inputbox'.$required.'"';
+		$attr .= ' class="' . ($menu ? 'form-select d-inline-block w-auto' : 'inputbox') . $required . '"';
 		$attr .= ' size="1"';
 
 		if ( $this->valueFilterMenu == null ) {
@@ -250,6 +250,9 @@ class CollectorFieldItem extends CollectorField
 			}
 			// Create a regular list.
 			$html[] = $this->_field->field . $required;
+			if ($menu) {
+				$html[] = '</td><td>';
+			}
 			$html[] = HTMLHelper::_('select.genericlist', $options, $prefix.'filterfield_'.$this->_field->tablecolumn.$suffix, trim($attr), 'value', 'text', $value);
 		}
 		else
@@ -257,9 +260,9 @@ class CollectorFieldItem extends CollectorField
 			$html[] = '<input type=hidden name=\''.$prefix.'filter_field_'.$this->_field->tablecolumn.$suffix.'\' value=\''.$value.'\' />';
 		}
 
-		return implode($html);
+		return $menu ? '<td>' . implode($html) . '</td>' : implode($html);
 	}
-	
+
 	/**
 	 * Method to display field
 	 *

@@ -132,7 +132,7 @@ class CollectorModelItemform extends AdminModel
 			$nullDate = $db->Quote($db->getNullDate());
 			$nowDate = $db->Quote(Factory::getDate()->toSql());
 
-			$query->where('((c.created_by = '.$user->id.') OR (c.state = 1 AND ( c.publish_up = '.$nullDate.' OR c.publish_up <= '.$nowDate.') AND ( c.publish_down = '.$nullDate.' OR c.publish_down >= '.$nowDate.' )))');
+			$query->where('((c.created_by = '.$user->id.') OR (c.state = 1 AND ( c.publish_up IS NULL OR c.publish_up = '.$nullDate.' OR c.publish_up <= '.$nowDate.') AND ( c.publish_down IS NULL OR c.publish_down = '.$nullDate.' OR c.publish_down >= '.$nowDate.' )))');
 			
 			// Add the filder on ID
 			$query->where('c.id = '.$collection);
@@ -199,7 +199,7 @@ class CollectorModelItemform extends AdminModel
 			$query->join('LEFT', '#__users AS u ON u.id = f.created_by');
 			$query->where('collection = ' . $collection);
 			
-			$query->where('( f.created_by = ' . (int) $user->id . ' OR ( f.state = 1 AND ( f.publish_up = '.$db->Quote($nullDate).' OR f.publish_up <= '.$db->Quote($now).' ) AND ( f.publish_down = '.$db->Quote($nullDate).' OR f.publish_down >= '.$db->Quote($now).' ) ) )');
+			$query->where('( f.created_by = ' . (int) $user->id . ' OR ( f.state = 1 AND ( f.publish_up IS NULL OR f.publish_up = '.$db->Quote($nullDate).' OR f.publish_up <= '.$db->Quote($now).' ) AND ( f.publish_down IS NULL OR f.publish_down = '.$db->Quote($nullDate).' OR f.publish_down >= '.$db->Quote($now).' ) ) )');
 			
 			// Filter by access level.
 			if ($access = $this->getState('filter.access')) {
@@ -717,8 +717,8 @@ class CollectorModelItemform extends AdminModel
 			$nullDate	= $db->quote($db->getNullDate());
 			$nowDate	= $db->quote(Factory::getDate()->toSql());
 
-			$query->where('(i.publish_up = '.$nullDate.' OR i.publish_up <= '.$nowDate.')')
-				->where('(i.publish_down = '.$nullDate.' OR i.publish_down >= '.$nowDate.')');
+			$query->where('(i.publish_up IS NULL OR i.publish_up = '.$nullDate.' OR i.publish_up <= '.$nowDate.')')
+				->where('(i.publish_down IS NULL OR i.publish_down = '.$nullDate.' OR i.publish_down >= '.$nowDate.')');
 		}
 		
 		$whereSearch = array();

@@ -144,7 +144,7 @@ class CollectorFieldDefine extends CollectorField
 		if ( $value != '' )
 		{
 			// $query->where('h.'.$this->_field->tablecolumn.' = "'.$value.'"');
-			$query->where('d'.$this->_field->id.'.path LIKE "%|'.$value.'|%"');
+			$query->where('d' . $this->_field->id . '.path LIKE ' . $query->quote('%|' . (int) $value . '|%'));
 			return true;
 		}
 		return false;
@@ -237,8 +237,8 @@ class CollectorFieldDefine extends CollectorField
 				$nullDate	= $db->quote($db->getNullDate());
 				$nowDate	= $db->quote(Factory::getDate()->toSql());
 
-				$query->where('(i.publish_up = '.$nullDate.' OR i.publish_up <= '.$nowDate.')')
-					->where('(i.publish_down = '.$nullDate.' OR i.publish_down >= '.$nowDate.')')
+				$query->where('(i.publish_up IS NULL OR i.publish_up = '.$nullDate.' OR i.publish_up <= '.$nowDate.')')
+					->where('(i.publish_down IS NULL OR i.publish_down = '.$nullDate.' OR i.publish_down >= '.$nowDate.')')
 					->where('i.state = 1');
 			}
 			$query->group('value');
@@ -319,7 +319,7 @@ class CollectorFieldDefine extends CollectorField
 		} else {
 			$required = '';
 		}
-		$attr .= ' class="inputbox'.$required.'"';
+		$attr .= ' class="' . ($menu ? 'form-select d-inline-block w-auto' : 'inputbox') . $required . '"';
 		$attr .= ' size="1"';
 
 		if ( $this->valueFilterMenu == null ) {

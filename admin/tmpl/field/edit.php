@@ -146,15 +146,9 @@ $input = $app->input;
 					<div class="span12" id="attribs-<?php echo $type->id; ?>" <?php echo $display; ?> >
 						<?php
 						if (sizeof($this->form->getGroup('attribs-'.$type->type)) != 0) {
+							// renderField() gère l'attribut showon des paramètres (ex. réglages du curseur du type nombre)
 							foreach($this->form->getGroup('attribs-'.$type->type) as $field): ?>
-							<div class="control-group">
-								<div class="control-label">
-									<?php echo $field->label; ?>
-								</div>
-								<div class="controls">
-									<?php echo $field->input; ?>
-								</div>
-							</div>
+							<?php echo $field->renderField(); ?>
 						<?php endforeach;
 						} else {
 							echo Text::_('COM_COLLECTOR_NO_SPECIFIC_ATTRIBS');

@@ -51,9 +51,6 @@ class FilterfieldField extends FormField
 					url: url,
 					success: function( response ) {
 						jQuery('#listFilter').html(response);
-						jQuery('select').chosen({
-						disable_search_threshold : 10,
-						allow_single_deselect : true});
 					}
 				});
 			});";
@@ -72,9 +69,6 @@ class FilterfieldField extends FormField
 					url: url,
 					success: function( response ) {
 						jQuery('#listFilter').html(response);
-						jQuery('select').chosen({
-						disable_search_threshold : 10,
-						allow_single_deselect : true});
 					}
 				});
 			});";

@@ -169,7 +169,7 @@ class NextSortedFieldField extends FormField
 		$app = Factory::getApplication();
 		
 		// Get collection Id
-		$collection = $app->input->get('collection', 0, '', 'int' );
+		$collection = (int) ($this->form ? $this->form->getValue('collection') : 0) ?: $app->input->getInt('collection', 0);
 		
 		// Create a new query object.
 		$db = Factory::getContainer()->get(DatabaseInterface::class);
@@ -187,7 +187,7 @@ class NextSortedFieldField extends FormField
 		$query->where('t.sortable = 1');
 		
 		// Filter by field id
-		$in = implode("', '",$value);
+		$in = implode("', '", array_map('intval', (array) $value));
 		$query->where('f.id IN (\''.$in.'\')');
 		
 		// Add the list ordering clause.
@@ -209,8 +209,8 @@ class NextSortedFieldField extends FormField
 		$app = Factory::getApplication();
 		
 		// Get collection Id
-		$collection = $app->input->get('collection', 0, '', 'int' );
-		$fieldID = $app->input->get('id', 0, '', 'int' );
+		$collection = (int) ($this->form ? $this->form->getValue('collection') : 0) ?: $app->input->getInt('collection', 0);
+		$fieldID = $app->input->getInt('id', 0);
 		
 		// Create a new query object.
 		$db = Factory::getContainer()->get(DatabaseInterface::class);
@@ -228,7 +228,7 @@ class NextSortedFieldField extends FormField
 		$query->where('t.sortable = 1');
 		
 		// Filter by field id
-		$in = implode("', '",$value);
+		$in = implode("', '", array_map('intval', (array) $value));
 		$query->where('f.id NOT IN (\''.$in.'\',\''.$fieldID.'\')');
 		
 		// Add the list ordering clause.
