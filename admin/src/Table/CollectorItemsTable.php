@@ -335,6 +335,8 @@ class CollectorItemsTable extends Table
 		}
 		
 		unset($this->historyId);
+
+		$isNewItem = empty($this->id);
 		
 		if (!$this->store())
 		{
@@ -351,7 +353,21 @@ class CollectorItemsTable extends Table
 		
 		error_log('storeVersion: history->id=' . var_export($this->history->id, true) . ' history->state=' . $this->history->state);
 		
-		$this->history->store();
+		if (!$this->history->store())
+		{
+			// Version refusée : l'erreur remonte, et un nouvel objet ne reste pas sans version
+			$error = $this->history->getError() ?: Text::_('JLIB_APPLICATION_ERROR_SAVE_FAILED');
+
+			if ($isNewItem)
+			{
+				// objet et asset créés juste avant
+				$this->delete((int) $this->id);
+			}
+
+			$this->setError($error);
+
+			return false;
+		}
 		
 		error_log('storeVersion: after store, history->id=' . $this->history->id);
 		

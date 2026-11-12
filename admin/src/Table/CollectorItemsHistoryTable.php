@@ -194,6 +194,16 @@ class CollectorItemsHistoryTable extends Table
 		$this->modified		= $date->toSql();
 		$this->modified_by	= $user->get('id');
 
+		// Nouvelle version : une colonne obligatoire sans valeur par défaut que le formulaire n'a pas
+		// envoyée (champ désactivé, case décochée…) est enregistrée vide, sinon MySQL refuse la ligne
+		if (empty($this->id)) {
+			foreach ($this->_db->getTableColumns($this->_tbl, false) as $name => $column) {
+				if ($name !== 'id' && $column->Null === 'NO' && $column->Default === null && !isset($this->$name)) {
+					$this->$name = '';
+				}
+			}
+		}
+
 		return parent::store($updateNulls);
 	}
 	

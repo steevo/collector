@@ -265,6 +265,8 @@ class com_collectorInstallerScript
 			$admin . '/src/Classes/Field/Number/searchmethod.php',
 			// proposition d'objet : modèle Joomla 3 remplacé par ItemformModel
 			$site . '/src/Model/ItemcformModel.php',
+			// ancienne vue « itemc » (variante de la fiche) restée sur les sites mis à jour
+			$site . '/src/Model/ItemcModel.php',
 		];
 
 		foreach (['Date', 'Define', 'File', 'Image', 'Item', 'Line', 'Number', 'Text'] as $type) {
@@ -280,7 +282,7 @@ class com_collectorInstallerScript
 
 		foreach ([$site . '/helpers', $site . '/layouts', $admin . '/helpers', $admin . '/params', $admin . '/src/Plugin',
 			// proposition d'objet : gabarits renommés de itemcform en itemform (nom de la vue)
-			$site . '/tmpl/itemcform',
+			$site . '/tmpl/itemcform', $site . '/tmpl/itemc', $site . '/src/View/Itemc',
 			// curseur du type nombre : bibliothèque jQuery remplacée par un curseur natif
 			$admin . '/src/Classes/Field/Number/bootstrap-slider'] as $dossier) {
 			if (is_dir($dossier)) {
