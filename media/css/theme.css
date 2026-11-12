@@ -138,3 +138,25 @@ html joomla-tab[view=accordion] > button:hover {
 	height: 1em;
 	flex: none;
 }
+
+/* Bouton « Lire en ligne » (champ Liseuse) : bouton à contour de la couleur principale du template,
+   gris foncé, invisible sur le fond sombre ; en mode sombre, il prend la couleur du texte. */
+[data-bs-theme="dark"] .collector-flipbook .btn-outline-primary {
+	--bs-btn-color: var(--collector-text);
+	--bs-btn-border-color: var(--collector-text);
+	--bs-btn-hover-color: var(--collector-bg);
+	--bs-btn-hover-bg: var(--collector-text);
+	--bs-btn-hover-border-color: var(--collector-text);
+	--bs-btn-active-color: var(--collector-bg);
+	--bs-btn-active-bg: var(--collector-text);
+	--bs-btn-active-border-color: var(--collector-text);
+	color: var(--collector-text);
+	border-color: var(--collector-text);
+}
+
+[data-bs-theme="dark"] .collector-flipbook .btn-outline-primary:hover,
+[data-bs-theme="dark"] .collector-flipbook .btn-outline-primary:focus-visible {
+	/* le template impose un texte blanc au survol (!important), illisible sur ce fond clair */
+	color: var(--collector-bg) !important;
+	background-color: var(--collector-text);
+}
