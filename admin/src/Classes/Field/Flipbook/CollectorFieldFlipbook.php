@@ -66,11 +66,19 @@ class CollectorFieldFlipbook extends CollectorField
 		if (!array_key_exists($id, static::$books)) {
 			$db    = Factory::getContainer()->get(DatabaseInterface::class);
 			$query = $db->getQuery(true)
-				->select('id, title, alias, page_count, page_offset, access')
-				->from($db->quoteName('#__flipbook_books'))
-				->where('id = :id')
-				->where('state = 1')
+				->select('a.id, a.title, a.alias, a.page_count, a.page_offset, a.access')
+				->from($db->quoteName('#__flipbook_books', 'a'))
+				->where('a.id = :id')
 				->bind(':id', $id, ParameterType::INTEGER);
+
+			// Liseuse 0.5.0 et plus : publié, entre ses dates, dans une catégorie publiée
+			$helper = 'Steevo\\Component\\Flipbook\\Administrator\\Helper\\AccessHelper';
+
+			if (class_exists($helper) && method_exists($helper, 'wherePublished')) {
+				$helper::wherePublished($query, $db);
+			} else {
+				$query->where('a.state = 1');
+			}
 
 			try {
 				$book = $db->setQuery($query)->loadObject() ?: null;
