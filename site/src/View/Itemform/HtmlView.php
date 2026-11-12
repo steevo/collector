@@ -1,181 +1,113 @@
 <?php
 /**
- * Joomla! 3.0 component Collector
- *
- * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
- * @license     GNU General Public License version 2 or later; see LICENSE.txt
- *
- * Collector is a Multi Purpose Listing Tool.
- * Originaly developped to list Collections
- * it can be used for several purpose.
+ * @package    Collector
+ * @copyright  Copyright (C) 2010 - 2026 Philippe Ousset. All rights reserved.
+ * @license    GNU General Public License version 2 or later; see LICENSE.txt
  */
 
-// Check to ensure this file is included in Joomla!
-defined('_JEXEC') or die( 'Restricted access' );
+namespace Steevo\Component\Collector\Site\View\Itemform;
 
-jimport('joomla.application.component.view');
-jimport('joomla.mail.helper');
-jimport('joomla.filesystem.file');
+defined('_JEXEC') or die;
 
-JTable::addIncludePath(JPATH_ADMINISTRATOR.'/components/com_collector/tables');
+use Joomla\CMS\Factory;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\Uri\Uri;
 
 /**
- * HTML Item View class for the Collector component
- *
- * @package	Collector
+ * Vue « Proposition d'objet » : formulaire de création d'un objet dans une collection.
  */
-class CollectorViewItemform extends JViewLegacy
+class HtmlView extends BaseHtmlView
 {
 	protected $collection;
 	protected $fields;
-	protected $item;
-	protected $params;
 	protected $form;
-	protected $state;
+	protected $params;
 	protected $user;
-	protected $navigation;
-	
+
 	/**
-	 * Display function
+	 * L'utilisateur peut choisir l'état de publication (droit core.edit.state)
+	 *
+	 * @var  bool
 	 */
+	protected $canChangeState = false;
+
+	protected $pageclass_sfx = '';
+
 	public function display($tpl = null)
 	{
-		// Initialise variables.
-		$app		= Factory::getApplication();
-		$user		= Factory::getApplication()->getIdentity();
-		$userId		= $user->get('id');
-		
-		$this->params		= $app->getParams();
-		
-		// get the Data
-		$this->collection	= $this->get('Collection');
-		$this->fields		= $this->get('Fields');
-		$this->item			= $this->get('Item');
-		$this->form			= $this->get('Form');
-		$this->state		= $this->get('State');
-		if ( $this->item->id != 0 ) {
-			if ( $this->params->get('navigation',1) ) {
-				$this->navigation	= $this->get('Navigation');
+		$app        = Factory::getApplication();
+		$this->user = $app->getIdentity();
+
+		/** @var \Steevo\Component\Collector\Site\Model\ItemformModel $model */
+		$model            = $this->getModel();
+		$this->params     = $model->getState('params');
+		$this->collection = $model->getCollection();
+
+		if (!$this->collection || empty($this->collection->id)) {
+			throw new \Exception(Text::sprintf('COM_COLLECTOR_COLLECTION_NOT_FOUND', $app->getInput()->getInt('collection')), 404);
+		}
+
+		// Droit de créer un objet dans la collection (à défaut, celui du composant)
+		$canCreate = $this->user->authorise('core.create', 'com_collector.collection.' . (int) $this->collection->id);
+
+		if ($canCreate === null) {
+			$canCreate = $this->user->authorise('core.create', 'com_collector');
+		}
+
+		if (!$canCreate) {
+			if ($this->user->guest) {
+				// Visiteur : connexion, puis retour sur ce formulaire
+				$return = base64_encode(Uri::getInstance()->toString());
+				$app->enqueueMessage(Text::_('COM_COLLECTOR_SUBMIT_LOGIN'), 'notice');
+				$app->redirect(Route::_('index.php?option=com_users&view=login&return=' . $return, false));
+
+				return;
 			}
-		}
-		$this->user			= $user;
 
-		if (($this->collection->id == 0))
-		{
-			$id = $app->input->get( 'id', '', 'default', 'int' );
-			return Factory::getApplication()->enqueueMessage(Text::sprintf( 'COM_COLLECTOR_COLLECTION_NOT_FOUND', $id ),'error');
+			throw new \Exception(Text::_('JERROR_ALERTNOAUTHOR'), 403);
 		}
 
-		if (empty($this->item->id))
-		{
-			$authorised = $this->item->params->get('access-create');
+		$this->fields = $model->getFields() ?: [];
+		$this->form   = $model->getForm();
+
+		if (!$this->form) {
+			throw new \Exception(Text::_('JERROR_AN_ERROR_HAS_OCCURRED'), 500);
 		}
-		else
-		{
-			$authorised = $this->item->params->get('access-edit');
-		}
-		
-		if ($authorised !== true)
-		{
-			Factory::getApplication()->enqueueMessage(Text::_('JERROR_ALERTNOAUTHOR'),'error');
-			return false;
-		}
-		
-		// Check for errors.
-		if (count($errors = $this->get('Errors')))
-		{
-			Factory::getApplication()->enqueueMessage(implode("\n", $errors),'warning');
-			return false;
-		}
-		
-		// Compute the collection slug.
-		$this->collection->slug = $this->collection->alias ? ($this->collection->id . ':' . $this->collection->alias) : $this->collection->id;
-		
-		//Escape strings for HTML output
-		$this->pageclass_sfx = htmlspecialchars($this->params->get('pageclass_sfx'));
-		
-		$this->_prepareDocument();
-		
+
+		$this->canChangeState = (bool) ($this->user->authorise('core.edit.state', 'com_collector.collection.' . (int) $this->collection->id)
+			?? $this->user->authorise('core.edit.state', 'com_collector'));
+
+		$this->pageclass_sfx = htmlspecialchars($this->params->get('pageclass_sfx', ''));
+
+		$this->prepareDocument();
+
 		parent::display($tpl);
 	}
 
-	/**
-	 * Prepares the document
-	 */
-	protected function _prepareDocument()
+	protected function prepareDocument()
 	{
-		$app	= Factory::getApplication();
-		$menus	= $app->getMenu();
-		$pathway = $app->getPathway();
-		$title = null;
+		$app  = Factory::getApplication();
+		$menu = $app->getMenu()->getActive();
 
-		// Because the application sets a default page title,
-		// we need to get it from the menu item itself
-		$menu = $menus->getActive();
-		if ($menu)
-		{
+		$default = Text::_('COM_COLLECTOR_SUBMIT_AN_ITEM');
+
+		if ($menu && ($menu->query['option'] ?? '') === 'com_collector' && ($menu->query['view'] ?? '') === 'itemform') {
+			// Lien de menu « Proposition d'objet » : ses titres
 			$this->params->def('page_heading', $this->params->get('page_title', $menu->title));
+			$title = $this->params->get('page_title', '') ?: $menu->title;
+		} else {
+			// Autre lien de menu actif (accueil…) : ses titres ne concernent pas ce formulaire
+			$this->params->set('page_heading', $default);
+			$this->params->set('show_page_heading', 1);
+			$title = $default;
+			$app->getPathway()->addItem($default, '');
 		}
-		else
-		{
-			$this->params->def('page_heading', Text::_('COM_COLLECTOR_SUBMIT_AN_ITEM'));
-		}
 
-		$title = $this->params->get('page_title', '');
+		$this->setDocumentTitle($title);
 
-		// Check for empty title and add site name if param is set
-		if (empty($title)) {
-			$title = $app->getCfg('sitename');
-		}
-		elseif ($app->getCfg('sitename_pagetitles', 0) == 1) {
-			$title = Text::sprintf('JPAGETITLE', $app->getCfg('sitename'), $title);
-		}
-		elseif ($app->getCfg('sitename_pagetitles', 0) == 2) {
-			$title = Text::sprintf('JPAGETITLE', $title, $app->getCfg('sitename'));
-		}
-		if (empty($title)) {
-			$title = $this->item->titleItem;
-		}
-		$this->document->setTitle($title);
-
-		// if ($this->item->metadesc)
-		// {
-			// $this->document->setDescription($this->item->metadesc);
-		// }
-		// elseif (!$this->item->metadesc && $this->params->get('menu-meta_description'))
-		// {
-			// $this->document->setDescription($this->params->get('menu-meta_description'));
-		// }
-
-		// if ($this->item->metakey)
-		// {
-			// $this->document->setMetadata('keywords', $this->item->metakey);
-		// }
-		// elseif (!$this->item->metakey && $this->params->get('menu-meta_keywords'))
-		// {
-			// $this->document->setMetadata('keywords', $this->params->get('menu-meta_keywords'));
-		// }
-
-		// if ($this->params->get('robots'))
-		// {
-			// $this->document->setMetadata('robots', $this->params->get('robots'));
-		// }
-
-		// if ($app->getCfg('MetaAuthor') == '1')
-		// {
-			// $this->document->setMetaData('author', $this->item->author);
-		// }
-
-		// $mdata = $this->item->metadata->toArray();
-		// foreach ($mdata as $k => $v)
-		// {
-			// if ($v)
-			// {
-				// $this->document->setMetadata($k, $v);
-			// }
-		// }
+		// Pas d'indexation d'un formulaire
+		$this->getDocument()->setMetaData('robots', 'noindex, nofollow');
 	}
 }
-
-?>

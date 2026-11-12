@@ -100,6 +100,10 @@ class Router extends RouterView
         $form = new RouterViewConfiguration('form');
         $form->setKey('id');
         $this->registerView($form);
+        // Proposition d'objet : un lien de menu par collection
+        $itemform = new RouterViewConfiguration('itemform');
+        $itemform->setKey('collection');
+        $this->registerView($itemform);
 
         parent::__construct($app, $menu);
 
@@ -278,6 +282,22 @@ class Router extends RouterView
     public function getFormSegment($id, $query)
     {
         return $this->getItemSegment($id, $query);
+    }
+
+    /**
+     * Segment de la vue « Proposition d'objet » : celui de la collection
+     */
+    public function getItemformSegment($id, $query)
+    {
+        return $this->getCollectionSegment($id, $query);
+    }
+
+    /**
+     * Collection de la vue « Proposition d'objet » d'après son segment
+     */
+    public function getItemformId($segment, $query)
+    {
+        return $this->getCollectionId($segment, $query);
     }
 
     /**

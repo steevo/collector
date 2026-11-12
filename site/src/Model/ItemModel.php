@@ -65,6 +65,11 @@ class ItemModel extends AdminModel
 		// Load state from the request.
 		$pkc = $app->input->getInt('collection');
 		$pki = $app->input->getInt('id');
+
+		// À l'enregistrement, la collection vient du formulaire
+		if (!$pkc) {
+			$pkc = (int) ($app->input->get('jform', [], 'array')['collection'] ?? 0);
+		}
 		$this->setState('collection.id', $pkc);
 		$this->setState('item.id', $pki);
 
@@ -150,7 +155,14 @@ class ItemModel extends AdminModel
 			$db->setQuery( $query );
 			
 			$this->_collection = $db->loadObject();
-			
+
+			// Collection inconnue ou non publiée
+			if (!$this->_collection) {
+				$this->_collection = null;
+
+				return false;
+			}
+
 			if ($this->_collection->custom == 0)
 			{
 				$query = $db->getQuery(true);
@@ -497,7 +509,7 @@ class ItemModel extends AdminModel
 		$itemId = !empty($data['id']) ? (int) $data['id'] : (int) $this->getState('item.id');
 		$item   = $itemId ? $this->getItem($itemId) : null;
 	
-		if ($item->modification != '')if ($item && $item->modification != '') {
+		if ($item && $item->modification != '') {
 			$form->setFieldAttribute('modification', 'readonly', 'true');
 		}
 		
@@ -569,6 +581,12 @@ class ItemModel extends AdminModel
 				return false;
 			}
 	
+			// Objet proposé depuis le site par un utilisateur qui ne gère pas la publication :
+			// état fixé par l'option « Publication automatique » (lien de menu, sinon composant)
+			if ($isNew && !$this->canEditState((object) $data)) {
+				$table->state = (int) $app->getParams()->get('auto_publish', 1);
+			}
+
 			// Prepare the row for saving
 			$this->prepareTable($table);
 	
@@ -645,7 +663,11 @@ class ItemModel extends AdminModel
 		// $form = $post->get('jform',null,'ARRAY');
 		// $collection = $input->get( 'collection', $form['collection'], 'int');
 		$collection = $input->get( 'collection', 0, 'int');
-		
+
+		if (!$collection) {
+			$collection = (int) ($input->get('jform', [], 'array')['collection'] ?? 0);
+		}
+
 		if ($pk > 0) {
 			// Attempt to load the row.
 			$return = $table->loadVersion($collection,$pk);

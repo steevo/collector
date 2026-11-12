@@ -62,14 +62,15 @@ class ItemController extends FormController
 		$app    = Factory::getApplication();
 		$params = ComponentHelper::getParams('com_collector');
 
+		$isNew  = empty($app->input->get('jform', [], 'array')['id']);
 		$result = parent::save($key, $urlVar);
 
 		// Si auto_validate=0, remplacer le message de succès
-		if (!$params->get('auto_validate', 1)) {
-			// Supprimer le message "Élément enregistré" ajouté par FormController
+		if ($result && !$params->get('auto_validate', 1)) {
+			// Supprimer le message "Élément enregistré" (ou "Objet proposé") ajouté par FormController
 			$messages = $app->getMessageQueue();
 			$filtered = array_filter($messages, function($msg) {
-				return $msg['message'] !== Text::_('JLIB_APPLICATION_SAVE_SUCCESS');
+				return !\in_array($msg['message'], [Text::_('JLIB_APPLICATION_SAVE_SUCCESS'), Text::_('COM_COLLECTOR_SUBMIT_SAVE_SUCCESS')], true);
 			});
 			// Vider et remettre les messages filtrés
 			while ($app->getMessageQueue()) {
@@ -80,7 +81,7 @@ class ItemController extends FormController
 			}
 			// Ajouter le message personnalisé
 			$app->enqueueMessage(
-				Text::_('COM_COLLECTOR_ITEM_SUBMITTED_FOR_VALIDATION'),
+				Text::_($isNew ? 'COM_COLLECTOR_ITEM_PROPOSED_FOR_VALIDATION' : 'COM_COLLECTOR_ITEM_SUBMITTED_FOR_VALIDATION'),
 				'info'
 			);
 		}
@@ -150,14 +151,26 @@ class ItemController extends FormController
 	 */
 	protected function getRedirectToItemAppend($recordId = null, $urlVar = 'id')
 	{
-		$append = parent::getRedirectToItemAppend($recordId, $urlVar);
-
 		$collection = $this->app->input->getInt('collection');
 
 		if (empty($collection)) {
 			$form       = $this->app->input->get('jform', [], 'ARRAY');
 			$collection = (int) ($form['collection'] ?? 0);
 		}
+
+		// Proposition d'un nouvel objet refusée (champ invalide…) : retour au formulaire de proposition,
+		// qui reprend les valeurs saisies
+		if (empty($recordId) && $this->app->input->get('view') === 'itemform') {
+			$append = '&view=itemform&collection=' . $collection;
+
+			if ($itemId = $this->app->input->getInt('Itemid')) {
+				$append .= '&Itemid=' . $itemId;
+			}
+
+			return $append;
+		}
+
+		$append = parent::getRedirectToItemAppend($recordId, $urlVar);
 
 		$id = $this->app->input->getInt('id');
 
