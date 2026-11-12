@@ -74,7 +74,8 @@ class com_collectorInstallerScript
 				(6, 'number', 1, 1, 1, 1, 1, 1),
 				(7, 'date', 1, 1, 1, 1, 1, 1),
 				(8, 'file', 1, 0, 0, 1, 0, 0),
-				(9, 'phocadownload', 1, 0, 0, 1, 0, 0);";
+				(9, 'phocadownload', 1, 0, 0, 1, 0, 0),
+				(10, 'flipbook', 1, 0, 0, 0, 0, 0);";
 			$db->setQuery( $query );
 			$db->execute();
 		}
