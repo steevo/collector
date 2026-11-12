@@ -95,20 +95,18 @@ class CollectorFieldImage extends CollectorField
 	 */
 	function display($value,$listing=true,$params=array(),$itemId=0)
 	{
+		// Valeurs : chemin du champ Média de Joomla (éventuellement suivi de #joomlaImage://…).
+		// Une valeur de Joomla 3 pas encore convertie (« chemin|titre|alt|… ») se lit par son chemin.
+		$path = static fn ($v) => explode('|', (string) $v)[0];
+
 		// image de substitution
-		// la valeur par défaut est enregistrée au même format que les valeurs : "chemin|desc|titre|..."
-		$imagedefault = HTMLHelper::cleanImageURL(explode('|', (string) ($this->_field->attribs['default'] ?? ''))[0]);
+		$imagedefault = HTMLHelper::cleanImageURL($path($this->_field->attribs['default'] ?? ''));
 		$imagedefaultUrl = $imagedefault->url;
-		
-		$url = explode('|',$value);
-		if (( $url[0] == '' )&&(!$params->get('show_emptyfield'))) {
+
+		if ($path($value) === '' && !$params->get('show_emptyfield')) {
 			return false;
 		}
-		if ( $value == '' ) {
-			$value = '||||||';
-		}
-		$imageInfos = explode('|',$value);
-		$imageInfos = HTMLHelper::cleanImageURL($imageInfos[0]);
+		$imageInfos = HTMLHelper::cleanImageURL($path($value));
 		$imageUrl = $imageInfos->url;
 		$imagePath = $imageUrl;
 		$imageName = basename(JPATH_SITE.'/'.$imagePath);

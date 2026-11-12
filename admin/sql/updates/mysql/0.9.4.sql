@@ -1,0 +1,1 @@
+-- 0.9.4 : valeurs des champs Image au format Joomla 3 converties par script.php (pas de changement de structure)

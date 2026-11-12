@@ -312,6 +312,62 @@ class com_collectorInstallerScript
                 Factory::getApplication()->enqueueMessage('Erreur lors de la suppression : ' . $e->getMessage(), 'warning');
             }
         }
+
+		$this->convertLegacyImageValues();
+	}
+
+	/**
+	 * Champs Image : valeurs au format de Collector pour Joomla 3, « chemin|titre|alt|largeur|hauteur|… »,
+	 * ramenées au simple chemin enregistré par le champ Média de Joomla 4 et plus.
+	 * Une valeur dont les parties après le chemin ne sont pas vides est laissée telle quelle
+	 * (rien n'est perdu ; l'affichage lit toujours le chemin avant la première barre).
+	 * Sans effet une fois les valeurs converties.
+	 */
+	private function convertLegacyImageValues(): void
+	{
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
+
+		try {
+			$fields = $db->setQuery(
+				'SELECT f.id, f.collection, f.tablecolumn, f.attribs FROM #__collector_fields AS f'
+				. ' INNER JOIN #__collector_fields_type AS t ON t.id = f.type'
+				. " WHERE t.type = 'image'"
+			)->loadObjectList();
+		} catch (\Exception $e) {
+			return;
+		}
+
+		$tables = $db->getTableList();
+
+		foreach ($fields as $field) {
+			$table  = $db->getPrefix() . 'collector_items_history_' . (int) $field->collection;
+			$column = $db->quoteName($field->tablecolumn);
+
+			if (!\in_array($table, $tables, true)) {
+				continue;
+			}
+
+			// « chemin|||||| » → « chemin » ; « |||||| » → « »
+			$db->setQuery(
+				'UPDATE ' . $db->quoteName($table) . ' SET ' . $column . ' = SUBSTRING_INDEX(' . $column . ", '|', 1)"
+				. ' WHERE ' . $column . " LIKE '%|%'"
+				. ' AND REPLACE(SUBSTRING(' . $column . ', LOCATE(' . "'|', " . $column . ")), '|', '') = ''"
+			)->execute();
+
+			// Image par défaut du champ, enregistrée au même format
+			$attribs = json_decode((string) $field->attribs, true);
+
+			if (\is_array($attribs) && isset($attribs['default']) && str_contains((string) $attribs['default'], '|')) {
+				$parts = explode('|', (string) $attribs['default']);
+
+				if (trim(implode('', \array_slice($parts, 1))) === '') {
+					$attribs['default'] = $parts[0];
+					$db->setQuery(
+						'UPDATE #__collector_fields SET attribs = ' . $db->quote(json_encode($attribs)) . ' WHERE id = ' . (int) $field->id
+					)->execute();
+				}
+			}
+		}
 	}
 	
 	/**

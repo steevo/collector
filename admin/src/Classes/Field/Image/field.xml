@@ -26,7 +26,7 @@
 			<field
 				name="default"
 				type="CollectorImage"
-				default="components/com_collector/assets/images/camera.png||||||"
+				default="components/com_collector/assets/images/camera.png"
 				label="COM_COLLECTOR_DEFAULT_LABEL"
 				description="COM_COLLECTOR_DEFAULT_DESC"
 				size="60"
