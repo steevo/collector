@@ -173,6 +173,16 @@ async function saveUserlistNote() {
 </script>
 <?php endif; ?>
 <?php
+$showCommentsTab = ($this->params->get('comments') != 0) && ($this->params->get('comments_display_mode') == 1);
+$showEditTab     = $this->params->get('allow_front_mod') && $this->item->params->get('access-edit');
+$showWantTab     = $this->user->id && !empty($this->userlistWant);
+$showExchangeTab = $this->user->id && !empty($this->userlistExchange);
+
+// Fiche seule : pas d'onglet unique inutile, la fiche est affichée directement.
+if (!$showCommentsTab && !$showEditTab && !$showWantTab && !$showExchangeTab) :
+	echo $this->loadTemplate($this->itemTemplate ? 'template' : 'details');
+else :
+
 echo HTMLHelper::_('uitab.startTabSet', 'myTab', array('active' => '#details'));
 
 echo HTMLHelper::_('uitab.addTab', 'myTab', '#details', Text::_('COM_COLLECTOR_ARTICLE'));
@@ -181,14 +191,14 @@ echo $this->loadTemplate($this->itemTemplate ? 'template' : 'details');
 
 echo HTMLHelper::_('uitab.endTab');
 
-if ( ($this->params->get('comments') != 0) && ($this->params->get('comments_display_mode') == 1) )
+if ($showCommentsTab)
 {
 	echo HTMLHelper::_('uitab.addTab', 'myTab', '#comments', Text::sprintf('COM_COLLECTOR_COMMENTS',$count_comments));
 	echo $this->loadTemplate('comments');
 	echo HTMLHelper::_('uitab.endTab');
 }
 
-if (($this->params->get('allow_front_mod')) && ($this->item->params->get('access-edit')))
+if ($showEditTab)
 {
 	echo HTMLHelper::_('uitab.addTab', 'myTab', 'index.php?option=com_collector&view=itemform&collection='.$this->item->collection.'&id='.$this->item->id.'&Itemid='.$Itemid, Text::_('COM_COLLECTOR_EDIT'));
 
@@ -197,7 +207,7 @@ if (($this->params->get('allow_front_mod')) && ($this->item->params->get('access
 	echo HTMLHelper::_('uitab.endTab');
 }
 
-if ($this->user->id && !empty($this->userlistWant)) {
+if ($showWantTab) {
     echo HTMLHelper::_('uitab.addTab', 'myTab', '#tab-want',
         Text::sprintf('COM_COLLECTOR_USERLIST_TAB_WANT', count($this->userlistWant)));
     // contenu inline
@@ -229,7 +239,7 @@ if ($this->user->id && !empty($this->userlistWant)) {
     echo HTMLHelper::_('uitab.endTab');
 }
 
-if ($this->user->id && !empty($this->userlistExchange)) {
+if ($showExchangeTab) {
     echo HTMLHelper::_('uitab.addTab', 'myTab', '#tab-exchange',
         Text::sprintf('COM_COLLECTOR_USERLIST_TAB_EXCHANGE', count($this->userlistExchange)));
     ob_start();
@@ -261,6 +271,8 @@ if ($this->user->id && !empty($this->userlistExchange)) {
 }
 
 echo HTMLHelper::_('uitab.endTabSet');
+
+endif;
 ?>
 
 <br />
