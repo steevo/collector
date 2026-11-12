@@ -12,26 +12,8 @@
 			
 	</fieldset>
 	<fieldset
-		name="list_default_parameters"
-		label="JGLOBAL_LIST_LAYOUT_OPTIONS"
-		description="COM_COLLECTOR_CONFIG_LIST_SETTINGS_DESC"
-		>
-
-		<field
-			name="show_pagination_limit"
-			type="radio"
-			class="btn-group btn-group-yesno"
-			default="1"
-			label="JGLOBAL_DISPLAY_SELECT_LABEL"
-			description="JGLOBAL_DISPLAY_SELECT_DESC">
-			<option value="0">JHIDE</option>
-			<option value="1">JSHOW</option>
-		</field>
-
-	</fieldset>
-	<fieldset
 		name="collection"
-		label="COM_COLLECTOR_COLLECTION"
+		label="COM_COLLECTOR_COLLECTION_LIST"
 		description="COM_COLLECTOR_COLLECTION_DISPLAY_DESC"
 	>
 		<field
@@ -151,6 +133,16 @@
 			<option value="50">J50</option>
 			<option value="100">J100</option>
 			<option value="0">JALL</option>
+		</field>
+		<field
+			name="show_pagination_limit"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="COM_COLLECTOR_SHOW_LIMIT_BOX_LABEL"
+			description="COM_COLLECTOR_SHOW_LIMIT_BOX_DESC">
+			<option value="0">JHIDE</option>
+			<option value="1">JSHOW</option>
 		</field>
 		<field
 			name="comments"

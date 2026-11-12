@@ -24,8 +24,8 @@
 				name="show_pagination_limit"
 				type="radio"
 				class="btn-group"
-				label="JGLOBAL_DISPLAY_SELECT_LABEL"
-				description="JGLOBAL_DISPLAY_SELECT_DESC">
+				label="COM_COLLECTOR_SHOW_LIMIT_BOX_LABEL"
+				description="COM_COLLECTOR_SHOW_LIMIT_BOX_DESC">
 				<option value="">JGLOBAL_USE_GLOBAL</option>
 				<option value="0">JHIDE</option>
 				<option value="1">JSHOW</option>

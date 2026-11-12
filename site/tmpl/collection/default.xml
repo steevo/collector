@@ -50,19 +50,7 @@
 	<fields name="params"
 		addfieldpath="Steevo\Component\Collector\Administrator\Field">
 		
-		<fieldset name="advanced" label="JGLOBAL_LIST_LAYOUT_OPTIONS" >
-		
-			<field
-				name="show_pagination_limit"
-				type="radio"
-				class="btn-group"
-				label="JGLOBAL_DISPLAY_SELECT_LABEL"
-				description="JGLOBAL_DISPLAY_SELECT_DESC">
-				<option value="">JGLOBAL_USE_GLOBAL</option>
-				<option value="0">JHIDE</option>
-				<option value="1">JSHOW</option>
-			</field>
-			
+		<fieldset name="collection" label="COM_COLLECTOR_COLLECTION_LIST">
 			<field
 				name="order"
 				type="list"
@@ -99,9 +87,6 @@
 				<option value="0">JNO</option>
 				<option value="1">JYES</option>
 			</field>
-		</fieldset>
-		
-		<fieldset name="collection" label="COM_COLLECTOR_COLLECTION">
 		
 			<field
 				name="show_desc"
@@ -225,6 +210,16 @@
 				<option value="50">J50</option>
 				<option value="100">J100</option>
 				<option value="0">JALL</option>
+			</field>
+			<field
+				name="show_pagination_limit"
+				type="radio"
+				class="btn-group"
+				label="COM_COLLECTOR_SHOW_LIMIT_BOX_LABEL"
+				description="COM_COLLECTOR_SHOW_LIMIT_BOX_DESC">
+				<option value="">JGLOBAL_USE_GLOBAL</option>
+				<option value="0">JHIDE</option>
+				<option value="1">JSHOW</option>
 			</field>
 
 			<field
