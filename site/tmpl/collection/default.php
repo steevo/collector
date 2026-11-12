@@ -160,7 +160,8 @@ foreach ( $this->fields as $field )
 			<?php echo $this->escape($this->params->get('page_heading')); ?>
 		</h1>
 	<?php endif; ?>
-	<?php if ($this->params->get('show_title')) : ?>
+	<?php // Nom de la collection : option du lien de menu, sinon des options de Collector (affiché par défaut) ?>
+	<?php if ($this->params->get('show_title', 1)) : ?>
 		<h2>
 			<?php echo $this->escape($this->collection->name); ?>
 		</h2>
