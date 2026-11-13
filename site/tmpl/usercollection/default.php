@@ -17,6 +17,8 @@ $targetUser = $this->targetUser;
 $token      = Session::getFormToken();
 
 HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/collection.css');
+// Fenêtre de saisie de la note (mes listes)
+HTMLHelper::_('bootstrap.modal', '.modal');
 
 // Champs à afficher en liste
 $fieldsDisplayed = array_filter($this->fields, fn($f) => $f->_field->listing);
@@ -90,6 +92,58 @@ async function removeFromUserlist(itemId, userslistId, btn) {
     } catch(e) {
         btn.disabled = false;
         console.error(e);
+    }
+}
+
+// Note d'un objet de ma liste : « Ajouter » sans note, « Modifier » avec
+let noteButton = null;
+
+function editUserlistNote(btn) {
+    noteButton = btn;
+    document.getElementById('userlist-note-input').value = btn.dataset.note || '';
+    document.getElementById('userlist-note-error').classList.add('d-none');
+    const modal = document.getElementById('modal-userlist-note');
+    modal.addEventListener('shown.bs.modal', () => document.getElementById('userlist-note-input').focus(), { once: true });
+    bootstrap.Modal.getOrCreateInstance(modal).show();
+}
+
+async function saveUserlistNote() {
+    if (!noteButton) return;
+
+    const note  = document.getElementById('userlist-note-input').value.trim();
+    const error = document.getElementById('userlist-note-error');
+    const fd    = new FormData();
+    fd.append('item',      noteButton.dataset.item);
+    fd.append('userslist', '<?php echo (int) ($this->userslistId ?? 0); ?>');
+    fd.append('note',      note);
+    fd.append('<?php echo Session::getFormToken(); ?>', '1');
+
+    try {
+        const resp   = await fetch('<?php echo \Joomla\CMS\Uri\Uri::base(true); ?>/index.php?option=com_collector&task=useritem.updatenote', {
+            method  : 'POST',
+            body    : fd,
+            headers : {'X-Requested-With': 'XMLHttpRequest'}
+        });
+        const result = await resp.json();
+
+        if (!result.success) {
+            throw new Error(result.message || '<?php echo Text::_('JERROR'); ?>');
+        }
+
+        // Texte de la note et libellé du bouton mis à jour sans recharger la page
+        const text = noteButton.parentElement.querySelector('[data-role="note-text"]');
+        text.textContent = note;
+        text.innerHTML = text.innerHTML.replace(/\n/g, '<br>');
+        noteButton.dataset.note = note;
+        noteButton.textContent = note === ''
+            ? '<?php echo Text::_('COM_COLLECTOR_USERLIST_NOTE_ADD', true); ?>'
+            : '<?php echo Text::_('COM_COLLECTOR_USERLIST_NOTE_EDIT', true); ?>';
+
+        bootstrap.Modal.getInstance(document.getElementById('modal-userlist-note'))?.hide();
+        noteButton.focus();
+    } catch (e) {
+        error.textContent = e.message;
+        error.classList.remove('d-none');
     }
 }
 
@@ -337,7 +391,7 @@ async function setUserlistAccess(userlistId, access, clickedBtn) {
                 <?php echo htmlspecialchars($field->_field->field, ENT_QUOTES); ?>
               </th>
               <?php endforeach; ?>
-              <th class="small"><?php echo Text::_('COM_COLLECTOR_USERLIST_NOTE_TITLE'); ?></th>
+              <th class="small"><?php echo Text::_('COM_COLLECTOR_USERLIST_NOTE'); ?></th>
 			  <?php if ($this->isOwnProfile): ?>
 			  <th style="width:40px"></th>
 			  <?php endif; ?>
@@ -354,8 +408,18 @@ async function setUserlistAccess(userlistId, access, clickedBtn) {
                 </a>
               </td>
               <?php endforeach; ?>
-              <td class="small text-muted fst-italic">
-                <?php echo htmlspecialchars($item->userlist_note ?? '', ENT_QUOTES); ?>
+              <?php $note = (string) ($item->userlist_note ?? ''); ?>
+              <td class="small">
+                <?php // Note du propriétaire de la liste (état, prix…) : lisible par ceux qui voient la liste ?>
+                <span class="text-muted fst-italic" data-role="note-text"><?php echo nl2br(htmlspecialchars($note, ENT_QUOTES)); ?></span>
+                <?php if ($this->isOwnProfile): ?>
+                  <button type="button" class="btn btn-sm btn-link p-0 ms-1 align-baseline"
+                          data-role="note-edit" data-item="<?php echo (int) $item->id; ?>"
+                          data-note="<?php echo htmlspecialchars($note, ENT_QUOTES); ?>"
+                          onclick="editUserlistNote(this)">
+                    <?php echo Text::_($note === '' ? 'COM_COLLECTOR_USERLIST_NOTE_ADD' : 'COM_COLLECTOR_USERLIST_NOTE_EDIT'); ?>
+                  </button>
+                <?php endif; ?>
               </td>
 				<?php if ($this->isOwnProfile): ?>
 				<td class="text-end">
@@ -381,5 +445,29 @@ async function setUserlistAccess(userlistId, access, clickedBtn) {
 
 
   </div><!-- tab-content -->
+
+  <?php if ($this->isOwnProfile): ?>
+  <?php /* Saisie de la note d'un objet de ma liste */ ?>
+  <div class="modal fade" id="modal-userlist-note" tabindex="-1" aria-labelledby="modal-userlist-note-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title fs-6" id="modal-userlist-note-title"><?php echo Text::_('COM_COLLECTOR_USERLIST_NOTE'); ?></h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo Text::_('JCLOSE'); ?>"></button>
+        </div>
+        <div class="modal-body">
+          <textarea id="userlist-note-input" class="form-control form-control-sm" rows="3"
+                    aria-labelledby="modal-userlist-note-title"
+                    placeholder="<?php echo Text::_('COM_COLLECTOR_USERLIST_NOTE_PLACEHOLDER'); ?>"></textarea>
+          <p class="small text-danger mt-2 mb-0 d-none" id="userlist-note-error"></p>
+        </div>
+        <div class="modal-footer p-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal"><?php echo Text::_('JCANCEL'); ?></button>
+          <button type="button" class="btn btn-sm btn-primary" onclick="saveUserlistNote()"><?php echo Text::_('JSAVE'); ?></button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <?php endif; ?>
 
 </div><!-- collector-usercollection -->
