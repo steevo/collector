@@ -8,6 +8,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\Router\Route;
+use Joomla\CMS\Uri\Uri;
 use Joomla\Database\DatabaseInterface;
 
 class HtmlView extends BaseHtmlView
@@ -33,10 +34,22 @@ class HtmlView extends BaseHtmlView
         /** @var \Steevo\Component\Collector\Site\Model\UsercollectionModel $model */
         $model = $this->getModel();
 
+        // Les collections d'utilisateurs ne sont visibles que connecté : connexion, puis retour ici
+        if ($user->guest) {
+            $app->enqueueMessage(Text::_('COM_COLLECTOR_YOU_MUST_LOGIN_FIRST'), 'notice');
+            $app->redirect(Route::_('index.php?option=com_users&view=login&return=' . base64_encode(Uri::getInstance()->toString()), false));
+
+            return;
+        }
+
         $this->collection = $this->get('Collection');
         if (!$this->collection) {
-            $app->enqueueMessage(Text::_('COM_COLLECTOR_ERROR_COLLECTION_NOT_FOUND'), 'error');
-            return;
+            throw new \Exception(Text::_('COM_COLLECTOR_ERROR_COLLECTION_NOT_FOUND'), 404);
+        }
+
+        // Et seulement avec le niveau d'accès de la collection
+        if (!\in_array((int) $this->collection->access, $user->getAuthorisedViewLevels(), true)) {
+            throw new \Exception(Text::_('JERROR_ALERTNOAUTHOR'), 403);
         }
 
         $this->currentType  = $app->input->getInt('type', 2);

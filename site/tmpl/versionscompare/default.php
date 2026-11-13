@@ -411,7 +411,7 @@ function openRefuseModal(versionId) {
 
 function doRefuse() {
     const note = document.getElementById('refuse-note-input').value;
-    const url  = 'index.php?option=com_collector&task=itemversions.refuse'
+    const url  = '<?php echo \Joomla\CMS\Uri\Uri::base(true); ?>/index.php?option=com_collector&task=itemversions.refuse'
                + '&collection=' + <?php echo (int) $this->collection; ?>
                + '&item='       + <?php echo (int) $this->item; ?>
                + '&version_id=' + <?php echo (int) $this->v2; ?>

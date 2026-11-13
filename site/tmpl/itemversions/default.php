@@ -243,7 +243,7 @@ function doRefuse() {
     const item       = <?php echo (int) ($this->item->id       ?? 0); ?>;
     const token      = '<?php echo Session::getFormToken(); ?>';
 
-    const url = 'index.php?option=com_collector&task=itemversions.refuse'
+    const url = '<?php echo \Joomla\CMS\Uri\Uri::base(true); ?>/index.php?option=com_collector&task=itemversions.refuse'
               + '&collection=' + collection
               + '&item='       + item
               + '&version_id=' + refuseVersionId
@@ -256,7 +256,7 @@ function doRefuse() {
 function openCompareVersions(v1, v2) {
     const collection = <?php echo (int) ($this->collection->id ?? 0); ?>;
     const item       = <?php echo (int) ($this->item->id       ?? 0); ?>;
-    const url = 'index.php?option=com_collector&view=versionscompare&tmpl=component'
+    const url = '<?php echo \Joomla\CMS\Uri\Uri::base(true); ?>/index.php?option=com_collector&view=versionscompare&tmpl=component'
               + '&collection=' + collection
               + '&item='       + item
               + '&v1='         + v1

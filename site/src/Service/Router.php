@@ -104,6 +104,15 @@ class Router extends RouterView
         $itemform = new RouterViewConfiguration('itemform');
         $itemform->setKey('collection');
         $this->registerView($itemform);
+        // Collection d'un utilisateur (« Ma collection ») : un lien de menu par collection,
+        // le type de liste (collection, souhaits, échanges) reste en paramètre
+        $usercollection = new RouterViewConfiguration('usercollection');
+        $usercollection->setKey('collection');
+        $this->registerView($usercollection);
+        // Pages sans lien de menu propre, déclarées pour que le routeur standard les connaisse
+        foreach (['itemstovalidate', 'itemversions', 'versionscompare'] as $name) {
+            $this->registerView(new RouterViewConfiguration($name));
+        }
 
         parent::__construct($app, $menu);
 
@@ -296,6 +305,22 @@ class Router extends RouterView
      * Collection de la vue « Proposition d'objet » d'après son segment
      */
     public function getItemformId($segment, $query)
+    {
+        return $this->getCollectionId($segment, $query);
+    }
+
+    /**
+     * Segment de « Ma collection » : celui de la collection
+     */
+    public function getUsercollectionSegment($id, $query)
+    {
+        return $this->getCollectionSegment($id, $query);
+    }
+
+    /**
+     * Collection de « Ma collection » d'après son segment
+     */
+    public function getUsercollectionId($segment, $query)
     {
         return $this->getCollectionId($segment, $query);
     }

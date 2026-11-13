@@ -98,7 +98,7 @@ if ( $this->params->get('navigation',1) ) {
 
 <script>
 var USERLIST_TOKEN    = '<?php echo \Joomla\CMS\Session\Session::getFormToken(); ?>';
-var USERLIST_BASE_URL = 'index.php?option=com_collector&';
+var USERLIST_BASE_URL = '<?php echo \Joomla\CMS\Uri\Uri::base(true); ?>/index.php?option=com_collector&';
 var _currentNoteBtn  = null;
 
 async function toggleUserlist(btn) {

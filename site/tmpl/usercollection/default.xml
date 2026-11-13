@@ -45,8 +45,8 @@
                 type="list"
                 default="DESC"
                 label="COM_COLLECTOR_USERCOLLECTION_DEFAULT_ORDER_DIR">
-                <option value="DESC">JDESCENDING</option>
-                <option value="ASC">JASCENDING</option>
+                <option value="DESC">JGLOBAL_ORDER_DESCENDING</option>
+                <option value="ASC">JGLOBAL_ORDER_ASCENDING</option>
             </field>
         </fieldset>
     </fields>

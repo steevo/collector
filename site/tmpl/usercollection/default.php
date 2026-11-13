@@ -21,9 +21,10 @@ HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/collec
 // Champs à afficher en liste
 $fieldsDisplayed = array_filter($this->fields, fn($f) => $f->_field->listing);
 
-// URL de base pour les onglets
-$baseTabUrl = Route::_('index.php?option=com_collector&view=usercollection&collection=' . $collection->id
-    . ($this->isOwnProfile ? '' : '&user=' . $targetUser));
+// Adresse d'un onglet : le type fait partie de l'adresse avant le routage
+// (ajouté après, il donnait « /mon-compte/mes-bulletins&type=0 » avec un lien de menu)
+$tabUrl = fn ($type) => Route::_('index.php?option=com_collector&view=usercollection&collection=' . $collection->id
+    . ($this->isOwnProfile ? '' : '&user=' . $targetUser) . '&type=' . $type);
 ?>
 
 <script>
@@ -73,7 +74,7 @@ async function removeFromUserlist(itemId, userslistId, btn) {
     fd.append('<?php echo Session::getFormToken(); ?>', '1');
 
     try {
-        const resp   = await fetch('index.php?option=com_collector&task=useritem.remove', {
+        const resp   = await fetch('<?php echo \Joomla\CMS\Uri\Uri::base(true); ?>/index.php?option=com_collector&task=useritem.remove', {
             method  : 'POST',
             body    : fd,
             headers : {'X-Requested-With': 'XMLHttpRequest'}
@@ -104,7 +105,7 @@ async function setUserlistAccess(userlistId, access, clickedBtn) {
     fd.append('<?php echo Session::getFormToken(); ?>', '1');
 
     try {
-        const resp   = await fetch('index.php?option=com_collector&task=useritem.setaccess', {
+        const resp   = await fetch('<?php echo \Joomla\CMS\Uri\Uri::base(true); ?>/index.php?option=com_collector&task=useritem.setaccess', {
             method  : 'POST',
             body    : fd,
             headers : {'X-Requested-With': 'XMLHttpRequest'}
@@ -158,7 +159,7 @@ async function setUserlistAccess(userlistId, access, clickedBtn) {
     <?php foreach ($this->userslists as $userslist): ?>
     <li class="nav-item">
       <a class="nav-link <?php echo (!$showMatching && $userslist->type === $type) ? 'active' : ''; ?>"
-         href="<?php echo $baseTabUrl . '&type=' . (int) $userslist->type; ?>">
+         href="<?php echo $tabUrl((int) $userslist->type); ?>">
         <?php
         $icon = match((int) $userslist->type) {
             0 => 'icon-heart me-1',
@@ -177,7 +178,7 @@ async function setUserlistAccess(userlistId, access, clickedBtn) {
 	<?php $totalMatches = array_sum(array_map(fn($m) => $m['want'] + $m['have'], $this->matchingUsers)); ?>
     <?php if (!empty($this->matchingUsers) && $this->isOwnProfile): ?>
 	<li class="nav-item">
-		<a class="nav-link <?php echo $showMatching ? 'active' : ''; ?>" href="<?php echo $baseTabUrl . '&type=matching'; ?>">
+		<a class="nav-link <?php echo $showMatching ? 'active' : ''; ?>" href="<?php echo $tabUrl('matching'); ?>">
 			<span class="icon-users me-1"></span>
 			<?php echo Text::_('COM_COLLECTOR_USERCOLLECTION_MATCHING_TAB'); ?>
 			<span class="badge bg-primary ms-1"><?php echo $totalMatches; ?></span>

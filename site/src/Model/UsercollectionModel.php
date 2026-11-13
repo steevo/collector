@@ -335,7 +335,8 @@ class UsercollectionModel extends ListModel
 		$type       = (int) $this->getState('filter.type');
 		$collection = $this->getCollection();
 
-		if (!$collection) return null;
+		// Pas de liste pour un visiteur non connecté (utilisateur 0)
+		if (!$collection || $userId <= 0) return null;
 
 		// Récupérer l'ID de la userslist pour ce type
 		$db->setQuery(
