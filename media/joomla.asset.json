@@ -16,6 +16,16 @@
             "type": "style",
             "uri": "com_collector/versionscompare.css",
             "version": "0.9.5"
+        },
+        {
+            "name": "com_collector.ordered-fields",
+            "type": "script",
+            "uri": "com_collector/ordered-fields.js",
+            "version": "0.9.5",
+            "dependencies": ["core"],
+            "attributes": {
+                "defer": true
+            }
         }
     ]
 }

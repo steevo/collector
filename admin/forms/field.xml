@@ -62,8 +62,7 @@
 			name="next_sorted_field"
 			type="nextsortedfield"
 			label="COM_COLLECTOR_FIELD_NEXT_SORTED_FIELD_LABEL"
-			description="COM_COLLECTOR_FIELD_NEXT_SORTED_FIELD_DESC"
-			class="inputbox chzn-done"
+			description="COM_COLLECTOR_FIELD_NEXT_SORTED_FIELD_DESC"
 			default="0"
 		/>
 		

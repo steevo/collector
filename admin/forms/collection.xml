@@ -72,7 +72,7 @@
 		/>
 		
 		<field name="custom" type="customtitle" label="COM_COLLECTOR_FIELD_CUSTOM_TITLE_LABEL"
-			description="COM_COLLECTOR_FIELD_CUSTOM_TITLE_DESC" class="inputbox chzn-done" />
+			description="COM_COLLECTOR_FIELD_CUSTOM_TITLE_DESC" />
 
 		<field name="template_list" type="collectortemplate" client="1"
 			label="COM_COLLECTOR_FIELD_TEMPLATE_LIST_LABEL"

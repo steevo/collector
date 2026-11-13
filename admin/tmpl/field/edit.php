@@ -126,9 +126,7 @@ $input = $app->input;
 				<?php echo $this->form->renderField('filter'); ?>
 				<?php echo $this->form->renderField('sort'); ?>
 				</div>
-				<div class="control-group form-inline">
-					<?php echo $this->form->getLabel('next_sorted_field'); ?> <div id="next_sorted_field" ><?php echo $this->form->getInput('next_sorted_field'); ?></div>
-				</div>
+				<?php echo $this->form->renderField('next_sorted_field'); ?>
 				<?php echo $this->form->renderField('column_width'); ?>
 			</div>
 		</div>

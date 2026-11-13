@@ -63,9 +63,7 @@ $input = $app->input;
 		<?php echo HTMLHelper::_('uitab.addTab', 'myTab', 'details', Text::_('COM_COLLECTOR_FIELDSET_DETAILS', true)); ?>
 		<div class="row">
             <div class="col-lg-9">
-				<div class="control-group form-inline">
-					<?php echo $this->form->getLabel('custom'); ?> <div id="custom" ><?php echo $this->form->getInput('custom'); ?></div>
-				</div>
+				<?php echo $this->form->renderField('custom'); ?>
                 <div>
                     <fieldset class="adminform">
                         <?php echo $this->form->getLabel('description'); ?>

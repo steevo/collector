@@ -1,0 +1,1 @@
+-- 0.9.5 : saisie des listes ordonnées de champs (titre personnalisé, tri suivant), sans changement de structure
