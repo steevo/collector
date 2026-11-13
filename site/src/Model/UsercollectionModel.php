@@ -147,6 +147,10 @@ class UsercollectionModel extends ListModel
 			if ($targetAccess === 0) {
 				// Privée ? aucun résultat
 				$query->where('1 = 0');
+			} elseif ($targetAccess === 1 && $type === 2) {
+				// Une collection n'est que privée ou publique : l'ancienne valeur « matchs uniquement »
+				// (sites mis à jour) vaut privée. Les matchs ne croisent que souhaits et échanges.
+				$query->where('1 = 0');
 			} elseif ($targetAccess === 1) {
 				// Matchs uniquement ? filtrer sur les items en commun
 				// Type opposé : si je consulte sa liste type 1 (échange), je cherche mes items type 0 (souhait)

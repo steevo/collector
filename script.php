@@ -314,6 +314,19 @@ class com_collectorInstallerScript
         }
 
 		$this->convertLegacyImageValues();
+
+		// Une collection d'utilisateur (type 2) n'est que privée (0) ou publique (2) :
+		// l'ancienne valeur « matchs uniquement » (1) devient privée, comme elle s'affichait déjà
+		try {
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
+			$db->setQuery(
+				'UPDATE #__collector_userlist AS ul'
+				. ' INNER JOIN #__collector_userslists AS uls ON uls.id = ul.userslist'
+				. ' SET ul.access = 0 WHERE ul.access = 1 AND uls.type = 2'
+			)->execute();
+		} catch (\Exception $e) {
+			// tables absentes (installation partielle) : rien à convertir
+		}
 	}
 
 	/**

@@ -1,0 +1,1 @@
+-- 0.9.6 : collections d utilisateurs en « matchs uniquement » converties en privées par script.php

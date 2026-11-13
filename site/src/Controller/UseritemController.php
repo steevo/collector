@@ -162,19 +162,25 @@ class UseritemController extends BaseController
 		$db = Factory::getContainer()->get(DatabaseInterface::class);
 		$db->setQuery(
 			$db->getQuery(true)
-			   ->select('id')
-			   ->from($db->quoteName('#__collector_userlist'))
-			   ->where($db->quoteName('id')   . ' = ' . $userlistId)
-			   ->where($db->quoteName('user') . ' = ' . (int) $user->id)
+			   ->select('uls.type')
+			   ->from($db->quoteName('#__collector_userlist', 'ul'))
+			   ->join('INNER', $db->quoteName('#__collector_userslists', 'uls') . ' ON uls.id = ul.userslist')
+			   ->where($db->quoteName('ul.id')   . ' = ' . $userlistId)
+			   ->where($db->quoteName('ul.user') . ' = ' . (int) $user->id)
 		);
+		$listType = $db->loadResult();
 
-		if (!$db->loadResult()) {
+		if ($listType === null) {
 			$this->sendJson(false, Text::_('JERROR_ALERTNOAUTHOR'));
 			return;
 		}
 
-		// Valider la valeur access (0, 1 ou 2 uniquement)
-		if (!in_array($access, [0, 1, 2])) {
+		// Valeurs : 0 privée, 1 matchs uniquement, 2 publique.
+		// Une collection (type 2) n'est que privée ou publique : les matchs ne concernent
+		// que les listes de souhaits et d'échanges.
+		$allowed = (int) $listType === 2 ? [0, 2] : [0, 1, 2];
+
+		if (!in_array($access, $allowed, true)) {
 			$this->sendJson(false, Text::_('COM_COLLECTOR_USERLIST_INVALID_ACCESS'));
 			return;
 		}
