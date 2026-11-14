@@ -264,31 +264,13 @@ foreach ( $this->fields as $field )
 				<?php endif; ?>
 
 				<?php if ($this->params->def('show_pagination', 2) == 1  || ($this->params->get('show_pagination') == 2)) : ?>
-				<div>
-					<?php if ($this->params->def('show_pagination_results', 1)) : ?>
-						<p class="counter float-end pt-3 pe-2">
-							<?php echo $this->pagination->getResultsCounter(); ?>
-						</p>
-					<?php endif; ?>
-					<div>
-						<?php echo $this->pagination->getPagesLinks(); ?>
-					</div>
-				</div>
+				<?php echo LayoutHelper::render('collector.list.pagination', ['pagination' => $this->pagination, 'showCounter' => (bool) $this->params->def('show_pagination_results', 1)], JPATH_SITE . '/components/com_collector/layouts'); ?>
 				<?php endif; ?>
 			
 				<?php echo $this->loadTemplate($this->listTemplate ? 'template' : 'items'); ?>
 				
 				<?php if (($this->params->def('show_pagination', 2) == 1  || ($this->params->get('show_pagination') == 2)) && ($this->pagination->pagesTotal > 1)) : ?>
-				<div>
-					<?php if ($this->params->def('show_pagination_results', 1)) : ?>
-						<p class="counter float-end pt-3 pe-2">
-							<?php echo $this->pagination->getResultsCounter(); ?>
-						</p>
-					<?php endif; ?>
-					<div>
-						<?php echo $this->pagination->getPagesLinks(); ?>
-					</div>
-				</div>
+				<?php echo LayoutHelper::render('collector.list.pagination', ['pagination' => $this->pagination, 'showCounter' => (bool) $this->params->def('show_pagination_results', 1)], JPATH_SITE . '/components/com_collector/layouts'); ?>
 				<?php endif; ?>
 			
 			<?php endif; ?>

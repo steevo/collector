@@ -40,6 +40,10 @@ $displayed    = array_values(array_filter(
 ));
 
 HTMLHelper::_('bootstrap.tooltip', '[data-bs-toggle="tooltip"]');
+
+// Sur mobile, le nom du champ précède sa valeur (attribut data-label) ; les cellules vides sont masquées
+$label   = static fn ($text) => htmlspecialchars(trim(strip_tags((string) $text)), ENT_QUOTES, 'UTF-8');
+$isEmpty = static fn (string $html) => trim(strip_tags($html, '<img><svg><video><iframe><audio><button><input><a>')) === '';
 ?>
 <?php if ($sortable) : ?>
 <script>
@@ -52,7 +56,8 @@ Joomla.tableOrdering = function (order, dir, task) {
 };
 </script>
 <?php endif; ?>
-<table class="category table table-striped table-bordered table-hover">
+<?php // collector-table-stack : sur mobile, chaque ligne devient une fiche (collection.css) ?>
+<table class="category table table-striped table-bordered table-hover collector-table-stack">
 	<thead>
 		<tr>
 		<?php foreach ($displayed as $row) : ?>
@@ -91,13 +96,17 @@ Joomla.tableOrdering = function (order, dir, task) {
 		<?php $url = (string) $link($item); ?>
 		<tr class="cat-list-row<?php echo 1 + ($i % 2); ?>" style="cursor:pointer">
 		<?php foreach ($displayed as $field) : ?>
-			<?php $name = $field->_field->tablecolumn; ?>
-			<td<?php echo $field->makeLink ? ' onclick="location.href=\'' . htmlspecialchars($url, ENT_QUOTES) . '\';"' : ''; ?> style="vertical-align:middle">
-				<?php echo $field->display($item->$name ?? '', true, $params, $item->id); ?>
+			<?php
+			$name  = $field->_field->tablecolumn;
+			$value = (string) $field->display($item->$name ?? '', true, $params, $item->id);
+			?>
+			<td data-label="<?php echo $label($field->_field->field); ?>"<?php echo $isEmpty($value) ? ' class="collector-cell-empty"' : ''; ?><?php echo $field->makeLink ? ' onclick="location.href=\'' . htmlspecialchars($url, ENT_QUOTES) . '\';"' : ''; ?> style="vertical-align:middle">
+				<?php echo $value; ?>
 			</td>
 		<?php endforeach; ?>
 		<?php foreach ($columns as $column) : ?>
-			<td class="<?php echo $column['class'] ?? ''; ?>" style="vertical-align:middle"><?php echo $column['cell']($item); ?></td>
+			<?php $value = (string) $column['cell']($item); ?>
+			<td data-label="<?php echo $label($column['label'] ?? ''); ?>" class="<?php echo trim(($column['class'] ?? '') . ($isEmpty($value) ? ' collector-cell-empty' : '')); ?>" style="vertical-align:middle"><?php echo $value; ?></td>
 		<?php endforeach; ?>
 		</tr>
 	<?php endforeach; ?>

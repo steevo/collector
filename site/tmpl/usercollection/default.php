@@ -490,23 +490,13 @@ async function setUserlistAccess(userlistId, access, clickedBtn) {
     <?php echo $viewSwitch($type); ?>
 
     <?php if ($showPagination): ?>
-    <div>
-      <?php if ($this->params->def('show_pagination_results', 1)): ?>
-      <p class="counter float-end pt-3 pe-2"><?php echo $this->pagination->getResultsCounter(); ?></p>
-      <?php endif; ?>
-      <div><?php echo $this->pagination->getPagesLinks(); ?></div>
-    </div>
+    <?php echo LayoutHelper::render('collector.list.pagination', ['pagination' => $this->pagination, 'showCounter' => (bool) $this->params->def('show_pagination_results', 1)], JPATH_SITE . '/components/com_collector/layouts'); ?>
     <?php endif; ?>
 
     <?php echo $renderList($this->items, $this->isOwnProfile, true); ?>
 
     <?php if ($showPagination && $this->pagination->pagesTotal > 1): ?>
-    <div>
-      <?php if ($this->params->def('show_pagination_results', 1)): ?>
-      <p class="counter float-end pt-3 pe-2"><?php echo $this->pagination->getResultsCounter(); ?></p>
-      <?php endif; ?>
-      <div><?php echo $this->pagination->getPagesLinks(); ?></div>
-    </div>
+    <?php echo LayoutHelper::render('collector.list.pagination', ['pagination' => $this->pagination, 'showCounter' => (bool) $this->params->def('show_pagination_results', 1)], JPATH_SITE . '/components/com_collector/layouts'); ?>
     <?php endif; ?>
 
     <?php endif; ?>

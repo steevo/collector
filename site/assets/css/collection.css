@@ -834,3 +834,103 @@ td.collector-userlist-extra {
 	display: table-cell;
 	vertical-align: middle;
 }
+
+/* Tableau des objets sur mobile : chaque ligne devient une fiche, chaque cellule une ligne
+   « nom du champ : valeur » (le nom vient de l'attribut data-label). Plus de défilement horizontal. */
+@media (max-width: 767.98px) {
+	.collector-table-stack,
+	.collector-table-stack tbody,
+	.collector-table-stack tr,
+	.collector-table-stack td {
+		display: block;
+		width: 100%;
+	}
+
+	/* en-têtes masqués à l'écran, gardés pour les lecteurs d'écran */
+	.collector-table-stack thead {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+
+	.collector-table-stack {
+		border: 0;
+	}
+
+	.collector-table-stack tr {
+		margin-bottom: .75rem;
+		border: 1px solid var(--bs-border-color, #dee2e6);
+		border-radius: var(--bs-border-radius, .375rem);
+		overflow: hidden;
+	}
+
+	.collector-table-stack > :not(caption) > * > td {
+		display: flex;
+		align-items: center;
+		gap: .75rem;
+		min-width: 0;
+		padding: .4rem .75rem;
+		border-width: 0 0 1px;
+		text-align: start !important;
+		overflow-wrap: anywhere;
+	}
+
+	.collector-table-stack > :not(caption) > * > td:last-child {
+		border-bottom-width: 0;
+	}
+
+	.collector-table-stack td::before {
+		content: attr(data-label);
+		flex: 0 0 35%;
+		max-width: 35%;
+		font-weight: 600;
+		overflow-wrap: anywhere;
+	}
+
+	/* cellule sans nom (boutons, indicateurs) : la valeur à droite, sur toute la largeur */
+	.collector-table-stack td[data-label=""] {
+		justify-content: flex-end;
+	}
+
+	.collector-table-stack td[data-label=""]::before {
+		display: none;
+	}
+
+	.collector-table-stack td.collector-cell-empty {
+		display: none;
+	}
+
+	.collector-table-stack td img {
+		max-width: 100%;
+		height: auto;
+	}
+}
+
+/* Pagination : liens des pages et nombre de résultats côte à côte ; le compteur passe
+   à la ligne quand la place manque (écran étroit) au lieu d'être recouvert */
+.collector-pagination {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: .25rem 1rem;
+	margin: .75rem 0;
+}
+
+.collector-pagination .pagination {
+	flex-wrap: wrap;
+	margin-bottom: 0;
+}
+
+.collector-pagination-counter {
+	margin: 0;
+}
+
+@media (max-width: 575.98px) {
+	.collector-pagination .page-link {
+		padding: .3rem .55rem;
+	}
+}
