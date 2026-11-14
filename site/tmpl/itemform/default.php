@@ -17,7 +17,9 @@ HTMLHelper::_('behavior.formvalidator');
 HTMLHelper::_('behavior.keepalive');
 
 $collId          = (int) $this->collection->id;
-$showPublishing  = $this->params->get('show_publishfields', 0) || $this->canChangeState;
+// Onglet Publication selon l'option « Afficher les options de publication » (lien de menu, sinon options
+// de Collector), même pour qui gère la publication : son objet prend alors l'état de « Publication automatique »
+$showPublishing  = (bool) $this->params->get('show_publishfields', 0);
 $showMetadata    = (bool) $this->params->get('show_metafields', 0);
 
 // L'adresse du formulaire garde le lien de menu : ses paramètres (publication automatique…)

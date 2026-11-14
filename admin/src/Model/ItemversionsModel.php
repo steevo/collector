@@ -310,6 +310,17 @@ class ItemversionsModel extends ListModel
 			return false;
 		}
 
+		// Objet sans version validée (proposition en attente) : la validation le publie
+		if ($previousActiveId === 0) {
+			$db->setQuery(
+				$db->getQuery(true)
+				   ->update($db->quoteName('#__collector_items'))
+				   ->set($db->quoteName('state') . ' = 1')
+				   ->where($db->quoteName('id') . ' = ' . $itemId)
+				   ->where($db->quoteName('state') . ' = 0')
+			)->execute();
+		}
+
 		// Si save_history=0, supprimer l'ancienne version active
 		$params = ComponentHelper::getParams('com_collector');
 		if (!$params->get('save_history', 1)) {

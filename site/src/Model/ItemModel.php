@@ -581,10 +581,16 @@ class ItemModel extends AdminModel
 				return false;
 			}
 	
-			// Objet proposé depuis le site par un utilisateur qui ne gère pas la publication :
-			// état fixé par l'option « Publication automatique » (lien de menu, sinon composant)
-			if ($isNew && !$this->canEditState((object) $data)) {
-				$table->state = (int) $app->getParams()->get('auto_publish', 1);
+			// Validation automatique des versions : option de Collector
+			$autoValidate = (int) $params->get('auto_validate', 1);
+
+			// Objet proposé depuis le site par un utilisateur qui ne gère pas la publication, ou sans état choisi
+			// (onglet Publication masqué) :
+			// - validation automatique : version validée et objet publié immédiatement ;
+			// - sinon : version en attente, l'objet apparaît dans les objets à valider ; son état suit l'option
+			//   « Publication automatique » (lien de menu, sinon composant) et la validation le publie
+			if ($isNew && (!$this->canEditState((object) $data) || !isset($data['state']) || $data['state'] === '')) {
+				$table->state = $autoValidate ? 1 : (int) $app->getParams()->get('auto_publish', 1);
 			}
 
 			// Prepare the row for saving
@@ -614,10 +620,16 @@ class ItemModel extends AdminModel
 			{
 				$version = $table->historyId;
 			}
-			if (!$table->storeVersion($version, $params->get('auto_validate',1)))
+			if (!$table->storeVersion($version, $autoValidate))
 			{
 				$this->setError($table->getError());
 				return false;
+			}
+
+			// Version en attente : le contrôleur l'annonce au membre (au lieu de « enregistré »)
+			if (!$autoValidate)
+			{
+				$app->set('com_collector.version_pending', 1);
 			}
 	
 			// Clean the cache.

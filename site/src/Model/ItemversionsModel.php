@@ -158,6 +158,9 @@ class ItemversionsModel extends ListModel
             return false;
         }
 
+        // Objet sans version validée (proposition en attente) : la validation le publie
+        $firstVersion = $this->getActiveVersionId() === 0;
+
         // Activer
         $table             = new CollectorItemsTable($db);
         $table->initVersion($collection->id);
@@ -168,6 +171,16 @@ class ItemversionsModel extends ListModel
         if (!$table->activateVersion($versionId)) {
             $this->setError($table->getError());
             return false;
+        }
+
+        if ($firstVersion) {
+        	$db->setQuery(
+        		$db->getQuery(true)
+        		   ->update($db->quoteName('#__collector_items'))
+        		   ->set($db->quoteName('state') . ' = 1')
+        		   ->where($db->quoteName('id') . ' = ' . $itemId)
+        		   ->where($db->quoteName('state') . ' = 0')
+        	)->execute();
         }
 
         // Si save_history=0, supprimer toutes les versions archivées

@@ -65,22 +65,12 @@ class ItemController extends FormController
 		$isNew  = empty($app->input->get('jform', [], 'array')['id']);
 		$result = parent::save($key, $urlVar);
 
-		// Si auto_validate=0, remplacer le message de succès
-		if ($result && !$params->get('auto_validate', 1)) {
-			// Supprimer le message "Élément enregistré" (ou "Objet proposé") ajouté par FormController
-			$messages = $app->getMessageQueue();
-			$filtered = array_filter($messages, function($msg) {
-				return !\in_array($msg['message'], [Text::_('JLIB_APPLICATION_SAVE_SUCCESS'), Text::_('COM_COLLECTOR_SUBMIT_SAVE_SUCCESS')], true);
-			});
-			// Vider et remettre les messages filtrés
-			while ($app->getMessageQueue()) {
-				$app->getMessageQueue(true); // vider
-			}
-			foreach ($filtered as $msg) {
-				$app->enqueueMessage($msg['message'], $msg['type']);
-			}
-			// Ajouter le message personnalisé
-			$app->enqueueMessage(
+		// Version en attente de validation (validation automatique désactivée, ou proposition sans
+		// publication automatique) : remplacer le message de succès
+		if ($result && (!$params->get('auto_validate', 1) || $app->get('com_collector.version_pending'))) {
+			// Le message de succès de FormController (« Élément enregistré », « objet ajouté à la collection »)
+			// n'est affiché qu'à la redirection : on le remplace par celui de l'attente de validation
+			$this->setMessage(
 				Text::_($isNew ? 'COM_COLLECTOR_ITEM_PROPOSED_FOR_VALIDATION' : 'COM_COLLECTOR_ITEM_SUBMITTED_FOR_VALIDATION'),
 				'info'
 			);
