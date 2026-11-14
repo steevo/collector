@@ -319,7 +319,7 @@ class CollectorFieldNumber extends CollectorField
 .collector-number-filter{display:inline-flex;flex-wrap:wrap;align-items:center;gap:.25rem .5rem}
 .collector-number-filter input.cnf-num{width:6.5em}
 .collector-number-filter input.cnf-readonly{text-align:center;padding-left:.25rem;padding-right:.25rem;background-color:transparent}
-.collector-number-filter .cnf-range{position:relative;height:1.75rem;min-width:9rem;flex:1 1 9rem}
+.collector-number-filter .cnf-range{position:relative;height:1.75rem;width:9rem;min-width:9rem;flex:1 1 9rem}
 .collector-number-filter .cnf-range::before{content:"";position:absolute;left:0;right:0;top:50%;height:.3rem;margin-top:-.15rem;border-radius:.15rem;background:var(--collector-border,#ccc)}
 .collector-number-filter .cnf-fill{position:absolute;top:50%;height:.3rem;margin-top:-.15rem;border-radius:.15rem;background:var(--collector-accent,#c62144)}
 .collector-number-filter .cnf-range input[type=range]{position:absolute;left:0;top:0;width:100%;height:100%;margin:0;background:none;pointer-events:none;-webkit-appearance:none;appearance:none}
@@ -521,12 +521,15 @@ JS);
 		$range = fn ($cls, $v) => '<input type="range" class="' . $cls . '" min="' . $esc($lo) . '" max="' . $esc($hi) . '" step="' . $esc($step) . '" value="' . $esc($v) . '"'
 			. ' oninput="CollectorNumberFilter.fromRange(' . $esc(json_encode($col)) . ',' . $esc(json_encode($cls === 'cnf-lo' ? 'lo' : 'hi')) . ')"'
 			. ' aria-label="' . $esc($this->_field->field) . '">';
+		// Largeur réglée : largeur du curseur (il peut rétrécir sur un écran étroit) ; sinon il occupe la place disponible.
+		// « width » en plus de « flex » : les curseurs étant superposés en position absolue, c'est elle qui donne
+		// sa largeur au bloc du filtre (sinon la borne haute passe à la ligne)
 		$width = (int) $this->attrib('sliderwidth', 0);
 
 		return '<div class="collector-number-filter" data-column="' . $esc($col) . '" data-cnf-mode="slider" data-lo="' . $esc($lo) . '" data-hi="' . $esc($hi) . '">'
 			. $label . ' '
 			. $input('_min', $curMin, $lo, $textExtra)
-			. '<div class="cnf-range"' . ($width > 0 ? ' style="max-width:' . $width . 'px"' : '') . '><div class="cnf-fill"></div>'
+			. '<div class="cnf-range"' . ($width > 0 ? ' style="width:' . max(48, $width) . 'px;flex:0 1 ' . max(48, $width) . 'px;min-width:3rem"' : '') . '><div class="cnf-fill"></div>'
 			. $range('cnf-lo', $curMin) . $range('cnf-hi', $curMax) . '</div>'
 			. $input('_max', $curMax, $hi, $textExtra)
 			. $hidden . '</div>';
