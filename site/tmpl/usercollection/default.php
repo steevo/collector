@@ -358,28 +358,32 @@ async function setUserlistAccess(userlistId, access, clickedBtn) {
 
   <?php if ($type === 'matching'): ?>
   <?php /* ── Mes échanges possibles : un membre par ligne ── */ ?>
-  <table class="table table-sm table-hover">
-    <thead class="table-light">
+  <?php // Même présentation que le tableau des objets (template, mode sombre, fiches sur mobile) ?>
+  <?php
+  $wantLabel = Text::_('COM_COLLECTOR_USERCOLLECTION_MATCHES_WANT_SHORT');
+  $haveLabel = Text::_('COM_COLLECTOR_USERCOLLECTION_MATCHES_HAVE_SHORT');
+  $count     = static fn (int $n) => $n > 0
+      ? '<span class="badge collector-count">' . $n . '</span>'
+      : '<span class="text-muted" aria-label="0">—</span>';
+  ?>
+  <table class="category table table-striped table-bordered table-hover collector-table-stack collector-matching">
+    <thead>
       <tr>
         <th><?php echo Text::_('COM_COLLECTOR_USERCOLLECTION_MATCHING_USER'); ?></th>
-        <th class="text-center"><span class="icon-heart me-1" aria-hidden="true"></span><?php echo Text::_('COM_COLLECTOR_USERCOLLECTION_MATCHES_WANT_SHORT'); ?></th>
-        <th class="text-center"><span class="icon-loop me-1" aria-hidden="true"></span><?php echo Text::_('COM_COLLECTOR_USERCOLLECTION_MATCHES_HAVE_SHORT'); ?></th>
-        <th></th>
+        <th class="text-center"><span class="icon-heart me-1" aria-hidden="true"></span><?php echo $wantLabel; ?></th>
+        <th class="text-center"><span class="icon-loop me-1" aria-hidden="true"></span><?php echo $haveLabel; ?></th>
+        <th><span class="visually-hidden"><?php echo Text::_('COM_COLLECTOR_USERCOLLECTION_SEE_MATCHES'); ?></span></th>
       </tr>
     </thead>
     <tbody>
       <?php foreach ($this->matchingUsers as $match): ?>
       <tr>
-        <td><?php echo $esc($match['user_name']); ?></td>
-        <td class="text-center">
-          <?php echo $match['want'] > 0 ? '<span class="badge bg-success">' . $match['want'] . '</span>' : '<span class="text-muted">—</span>'; ?>
-        </td>
-        <td class="text-center">
-          <?php echo $match['have'] > 0 ? '<span class="badge bg-warning text-dark">' . $match['have'] . '</span>' : '<span class="text-muted">—</span>'; ?>
-        </td>
-        <td class="text-end">
+        <td data-label="<?php echo $esc(Text::_('COM_COLLECTOR_USERCOLLECTION_MATCHING_USER')); ?>" class="fw-semibold" style="vertical-align:middle"><?php echo $esc($match['user_name']); ?></td>
+        <td data-label="<?php echo $esc($wantLabel); ?>" class="text-center" style="vertical-align:middle"><?php echo $count((int) $match['want']); ?></td>
+        <td data-label="<?php echo $esc($haveLabel); ?>" class="text-center" style="vertical-align:middle"><?php echo $count((int) $match['have']); ?></td>
+        <td data-label="" class="text-end" style="vertical-align:middle">
           <a href="<?php echo Route::_('index.php?option=com_collector&view=usercollection&collection=' . $collection->id
-              . '&user=' . (int) $match['user_id'] . '&type=matches'); ?>" class="btn btn-sm btn-outline-primary">
+              . '&user=' . (int) $match['user_id'] . '&type=matches'); ?>" class="btn btn-sm btn-primary">
             <?php echo Text::_('COM_COLLECTOR_USERCOLLECTION_SEE_MATCHES'); ?>
           </a>
         </td>

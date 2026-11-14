@@ -1033,3 +1033,21 @@ td.collector-userlist-extra {
 [data-bs-theme="dark"] .collector-usercollection .nav-tabs .badge {
 	color: var(--t4-body-bg, #1b1c27);
 }
+
+/* Compteurs des listes des membres (échanges possibles) : couleur d'accent du template */
+.collector-count {
+	min-width: 1.75em;
+	background-color: var(--mainnav-link-active-color, var(--bs-primary));
+	color: #fff;
+}
+
+[data-bs-theme="dark"] .collector-count {
+	color: var(--t4-body-bg, #1b1c27);
+}
+
+/* sur mobile, les compteurs restent à droite de leur libellé, comme les autres valeurs */
+@media (max-width: 767.98px) {
+	.collector-matching > :not(caption) > * > td.text-center {
+		justify-content: flex-start;
+	}
+}
