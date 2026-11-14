@@ -998,3 +998,38 @@ td.collector-userlist-extra {
 .collector-userlist-remove [class^="icon-"] {
 	margin: 0;
 }
+
+/* Onglets des listes des membres : couleurs du template (variables T4, mode clair et sombre),
+   comme le menu principal ; valeurs Bootstrap si le template ne les définit pas.
+   Le Bootstrap de T4 préfixe ses variables par --t4- : on règle les deux noms. */
+.collector-usercollection .nav-tabs {
+	--bs-nav-link-color: var(--body-link-color, var(--bs-link-color));
+	--t4-nav-link-color: var(--body-link-color, var(--bs-link-color));
+	--bs-nav-link-hover-color: var(--body-link-hover-color, var(--bs-link-hover-color));
+	--t4-nav-link-hover-color: var(--body-link-hover-color, var(--bs-link-hover-color));
+	--bs-nav-tabs-border-color: var(--t4-border-color, var(--bs-border-color));
+	--t4-nav-tabs-border-color: var(--t4-border-color, var(--bs-border-color));
+	--bs-nav-tabs-link-hover-border-color: var(--t4-border-color, var(--bs-border-color)) var(--t4-border-color, var(--bs-border-color)) var(--t4-border-color, var(--bs-border-color));
+	--t4-nav-tabs-link-hover-border-color: var(--t4-border-color, var(--bs-border-color)) var(--t4-border-color, var(--bs-border-color)) var(--t4-border-color, var(--bs-border-color));
+	--bs-nav-tabs-link-active-color: var(--mainnav-link-active-color, var(--bs-emphasis-color));
+	--t4-nav-tabs-link-active-color: var(--mainnav-link-active-color, var(--bs-emphasis-color));
+	--bs-nav-tabs-link-active-bg: var(--t4-body-bg, var(--bs-body-bg));
+	--t4-nav-tabs-link-active-bg: var(--t4-body-bg, var(--bs-body-bg));
+	--bs-nav-tabs-link-active-border-color: var(--t4-border-color, var(--bs-border-color)) var(--t4-border-color, var(--bs-border-color)) var(--t4-body-bg, var(--bs-body-bg));
+	--t4-nav-tabs-link-active-border-color: var(--t4-border-color, var(--bs-border-color)) var(--t4-border-color, var(--bs-border-color)) var(--t4-body-bg, var(--bs-body-bg));
+}
+
+.collector-usercollection .nav-tabs .nav-link.active {
+	box-shadow: inset 0 2px 0 var(--mainnav-link-active-color, var(--bs-primary));
+}
+
+/* nombre d'échanges possibles : couleur d'accent du template plutôt que le bleu de Bootstrap */
+.collector-usercollection .nav-tabs .badge {
+	background-color: var(--mainnav-link-active-color, var(--bs-primary)) !important;
+	color: #fff;
+}
+
+/* mode sombre : l'accent est clair, texte foncé pour rester lisible */
+[data-bs-theme="dark"] .collector-usercollection .nav-tabs .badge {
+	color: var(--t4-body-bg, #1b1c27);
+}

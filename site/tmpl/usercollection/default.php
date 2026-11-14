@@ -28,7 +28,7 @@ $token        = Session::getFormToken();
 $layouts      = JPATH_SITE . '/components/com_collector/layouts';
 $esc          = static fn ($text) => htmlspecialchars((string) $text, ENT_QUOTES, 'UTF-8');
 
-HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/collection.css');
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/collection.css', ['version' => 'auto']);
 // Fenêtre de saisie de la note (mes listes)
 HTMLHelper::_('bootstrap.modal', '.modal');
 

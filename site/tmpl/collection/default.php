@@ -20,7 +20,7 @@ use Joomla\CMS\Layout\LayoutHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
 
-HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/collection.css');
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/collection.css', ['version' => 'auto']);
 HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/dropdown.css');
 HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/icomoon.css');
 
