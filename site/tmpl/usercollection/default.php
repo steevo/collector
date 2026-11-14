@@ -39,7 +39,8 @@ $tabUrl = fn ($tab, $extra = '') => Route::_('index.php?option=com_collector&vie
 
 $itemLink = static fn ($item) => Route::_('index.php?option=com_collector&view=item&collection=' . $collection->slug . '&id=' . $item->slug);
 
-// Note du membre sur un objet ; sur mes listes, avec « Ajouter » ou « Modifier »
+// Note du membre sur un objet ; sur mes listes, avec un bouton crayon (comme le bouton de retrait)
+// dont le libellé « Ajouter une note » ou « Modifier la note » s'affiche au survol
 $noteHtml = function ($item, bool $editable) use ($esc): string {
     $note = (string) ($item->userlist_note ?? '');
 
@@ -50,9 +51,11 @@ $noteHtml = function ($item, bool $editable) use ($esc): string {
     $html = '<span class="collector-userlist-note"><span class="text-muted fst-italic" data-role="note-text">' . nl2br($esc($note)) . '</span>';
 
     if ($editable) {
-        $html .= ' <button type="button" class="btn btn-sm btn-link p-0 ms-1 align-baseline" data-role="note-edit"'
-            . ' data-item="' . (int) $item->id . '" data-note="' . $esc($note) . '" onclick="editUserlistNote(this)">'
-            . Text::_($note === '' ? 'COM_COLLECTOR_USERLIST_NOTE_ADD' : 'COM_COLLECTOR_USERLIST_NOTE_EDIT') . '</button>';
+        $label = Text::_($note === '' ? 'COM_COLLECTOR_USERLIST_NOTE_ADD' : 'COM_COLLECTOR_USERLIST_NOTE_EDIT');
+        $html .= ' <button type="button" class="btn btn-sm btn-outline-secondary collector-userlist-note-edit" data-role="note-edit"'
+            . ' data-item="' . (int) $item->id . '" data-note="' . $esc($note) . '" onclick="editUserlistNote(this)"'
+            . ' title="' . $esc($label) . '" aria-label="' . $esc($label) . '">'
+            . '<span class="icon-edit" aria-hidden="true"></span></button>';
     }
 
     return $html . '</span>';
@@ -229,9 +232,11 @@ async function saveUserlistNote() {
         text.textContent = note;
         text.innerHTML = text.innerHTML.replace(/\n/g, '<br>');
         noteButton.dataset.note = note;
-        noteButton.textContent = note === ''
+        const label = note === ''
             ? '<?php echo Text::_('COM_COLLECTOR_USERLIST_NOTE_ADD', true); ?>'
             : '<?php echo Text::_('COM_COLLECTOR_USERLIST_NOTE_EDIT', true); ?>';
+        noteButton.title = label;
+        noteButton.setAttribute('aria-label', label);
 
         bootstrap.Modal.getInstance(document.getElementById('modal-userlist-note'))?.hide();
         noteButton.focus();

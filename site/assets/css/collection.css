@@ -934,3 +934,67 @@ td.collector-userlist-extra {
 		padding: .3rem .55rem;
 	}
 }
+
+/* Note d'un objet de mes listes : le texte à gauche, le bouton crayon toujours calé à droite */
+.collector-userlist-note {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: .5rem;
+}
+
+.collector-userlist-note [data-role="note-text"] {
+	flex: 1 1 auto;
+	min-width: 0;
+}
+
+.collector-userlist-note .collector-userlist-note-edit {
+	flex: 0 0 auto;
+	margin-left: auto;
+}
+
+.collector-userlist-note [data-role="note-text"]:empty {
+	display: none;
+}
+
+/* Template de liste (vignettes souvent étroites) : la note sur toute la largeur,
+   puis le crayon et la corbeille côte à côte, à droite */
+.collector-userlist-extra {
+	flex-wrap: nowrap;
+	align-items: flex-end;
+}
+
+.collector-userlist-extra .collector-userlist-note {
+	flex-wrap: wrap;
+}
+
+.collector-userlist-extra [data-role="note-text"] {
+	flex-basis: 100%;
+	overflow-wrap: anywhere;
+}
+
+.collector-userlist-extra .collector-userlist-note {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
+.collector-userlist-extra .collector-userlist-remove {
+	flex: 0 0 auto;
+}
+
+/* Boutons crayon et corbeille des listes : carrés de même taille, icône centrée
+   (le template donne aux icônes une marge droite prévue pour un texte qui suit) */
+.collector-userlist-note-edit,
+.collector-userlist-remove {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	padding: 0;
+}
+
+.collector-userlist-note-edit [class^="icon-"],
+.collector-userlist-remove [class^="icon-"] {
+	margin: 0;
+}
