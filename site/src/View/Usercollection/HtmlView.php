@@ -130,7 +130,10 @@ class HtmlView extends BaseHtmlView
             $this->matchesCount = \count($this->matchesWant) + \count($this->matchesHave);
 
             if ($this->showMatches) {
-                $this->contacts = ContactHelper::getAllContactInfo((int) $this->targetUser, $this->collection->name);
+                $this->contacts = ContactHelper::getAllContactInfo(
+                    (int) $this->targetUser,
+                    Text::sprintf('COM_COLLECTOR_USERCOLLECTION_MATCHES_SUBJECT', $this->collection->name)
+                );
             }
         }
 
