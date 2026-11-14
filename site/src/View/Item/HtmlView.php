@@ -176,7 +176,12 @@ class HtmlView extends BaseHtmlView
 			$path = array(array('title' => $this->item->titleItem, 'link' => ''));
 			$collection = $this->item->collection;
 			
-			if ($menu && ($menu->query['option'] != 'com_collector' || $menu->query['view'] != 'collection' || $id != $this->collection->id))
+			// Fiche ouverte depuis une liste de membre de cette collection (« Mes bulletins »…) : le fil d'Ariane
+			// reste celui de la liste, sans repasser par la collection générale
+			$fromUserlist = $menu && $menu->query['option'] == 'com_collector' && $menu->query['view'] == 'usercollection'
+				&& (int) ($menu->query['collection'] ?? 0) === (int) $this->collection->id;
+
+			if (!$fromUserlist && $menu && ($menu->query['option'] != 'com_collector' || $menu->query['view'] != 'collection' || $id != $this->collection->id))
 			{
 				$path[] = array('title' => $this->collection->name, 'link' => Route::_('index.php?option=com_collector&view=collection&id='.$this->collection->id));
 			}

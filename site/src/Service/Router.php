@@ -116,7 +116,8 @@ class Router extends RouterView
 
         parent::__construct($app, $menu);
 
-        $this->attachRule(new MenuRules($this));
+        // Règle de menu de Joomla, sauf pour la fiche d'un objet ouverte depuis une liste de membre
+        $this->attachRule(new CollectorMenuRules($this));
         $this->attachRule(new StandardRules($this));
         $this->attachRule(new NomenuRules($this));
     }

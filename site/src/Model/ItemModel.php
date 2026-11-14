@@ -919,6 +919,106 @@ class ItemModel extends AdminModel
 	}
 	
 	/**
+	 * Navigation d'une fiche ouverte depuis une liste de membre (paramètre « liste » du lien) :
+	 * 0, 1 ou 2 pour la liste des souhaits, des échanges ou la collection d'un membre (« liste_user »,
+	 * vide pour la mienne), « matches1 » / « matches0 » pour les sections des échanges possibles avec
+	 * un membre. Précédent et suivant parcourent la liste dans l'ordre et avec les filtres de sa page ;
+	 * le retour ramène à la page de la liste où se trouve l'objet.
+	 *
+	 * @return  string|null  HTML de la navigation, null hors d'une liste de membre (navigation de la collection)
+	 */
+	protected function getUserlistNavigation(): ?string
+	{
+		$app   = Factory::getApplication();
+		$input = $app->getInput();
+		$liste = $input->getCmd('liste', '');
+
+		if ($liste === '' || $app->getIdentity()->guest) {
+			return null;
+		}
+
+		$collection = $this->getCollection();
+		$cid        = (int) $collection->id;
+		$other      = $input->getInt('liste_user', 0);
+		$isMatches  = (bool) preg_match('/^matches([01])$/', $liste, $m);
+
+		if (!$isMatches && !\in_array($liste, ['0', '1', '2'], true)) {
+			return null;
+		}
+
+		if ($isMatches && (!$other || $other === (int) $app->getIdentity()->id)) {
+			return null;
+		}
+
+		$model = $app->bootComponent('com_collector')->getMVCFactory()->createModel('Usercollection', 'Site', ['ignore_request' => false]);
+
+		if (!$model) {
+			return null;
+		}
+
+		// Le modèle des listes lit la collection, le type et le membre dans la requête : ceux de la liste
+		$saved = [];
+
+		foreach (['collection', 'type', 'user'] as $name) {
+			$saved[$name] = $input->get($name, null, 'raw');
+		}
+
+		$input->set('collection', $cid);
+		$input->set('type', $isMatches ? 'matches' : $liste);
+		$input->set('user', $other);
+
+		try {
+			if ($isMatches) {
+				$items = $model->getMatchItems($other, (int) $m[1]);
+				$limit = 0;
+			} else {
+				// Filtres, tri et pagination mémorisés de la page de la liste ; tous les objets, sans pagination
+				$model->getState();
+				$limit = (int) $model->getState('list.limit');
+				$model->setState('list.start', 0);
+				$model->setState('list.limit', 0);
+				$items = $model->getItems() ?: [];
+			}
+		} finally {
+			foreach ($saved as $name => $value) {
+				$input->set($name, $value);
+			}
+		}
+
+		$id  = (int) $this->getState('item.id');
+		$pos = null;
+
+		foreach (array_values($items) as $i => $row) {
+			if ((int) $row->id === $id) {
+				$pos = $i;
+				break;
+			}
+		}
+
+		// Objet retiré de la liste entre-temps : navigation de la collection
+		if ($pos === null) {
+			return null;
+		}
+
+		$items   = array_values($items);
+		$Itemid  = $input->getInt('Itemid', 0);
+		$listUrl = 'index.php?option=com_collector&view=usercollection&collection=' . $cid
+			. ($other ? '&user=' . $other : '') . '&type=' . ($isMatches ? 'matches' : $liste)
+			. ($limit ? '&limitstart=' . ((int) floor($pos / $limit) * $limit) : '')
+			. ($Itemid ? '&Itemid=' . $Itemid : '');
+		$itemUrl = fn ($row) => Route::_('index.php?option=com_collector&view=item&collection=' . $cid . '&id=' . (int) $row->id . ':' . $row->alias
+			. '&liste=' . $liste . ($other ? '&liste_user=' . $other : '') . ($Itemid ? '&Itemid=' . $Itemid : ''));
+		$esc     = fn ($text) => htmlspecialchars((string) $text, ENT_QUOTES, 'UTF-8');
+		$img     = './components/com_collector/assets/images/';
+		$prev    = $items[$pos - 1] ?? null;
+		$next    = $items[$pos + 1] ?? null;
+
+		return ($prev ? '<a title="' . $esc($prev->fulltitle) . '" href="' . $itemUrl($prev) . '"><img src="' . $img . 'leftarrow.png" /></a>' : '<img src="' . $img . 'empty.png" />')
+			. '<a title="' . $esc(Text::_('COM_COLLECTOR_RETURN_TO_LIST')) . '" href="' . Route::_($listUrl) . '"><img src="' . $img . 'uparrow.png" /></a>'
+			. ($next ? '<a title="' . $esc($next->fulltitle) . '" href="' . $itemUrl($next) . '"><img src="' . $img . 'rightarrow.png" /></a>' : '<img src="' . $img . 'empty.png" />');
+	}
+
+	/**
 	 * Method to get html navigation
 	 * Put data in <var>_navigation</var>
 	 *
@@ -929,11 +1029,17 @@ class ItemModel extends AdminModel
 	{
 		$app = Factory::getApplication();
 		
+		// Fiche ouverte depuis une liste de membre : précédent, suivant et retour dans cette liste
+		if (empty($this->_navigation) && ($userlist = $this->getUserlistNavigation()) !== null)
+		{
+			$this->_navigation = $userlist;
+		}
+
 		// Load the content if it doesn't already exist
 		if (empty($this->_navigation))
 		{
 			$this->_navigation = '';
-			
+
 			$this->getPrevNext();
 			
 			$prev = $this->_prev_id;

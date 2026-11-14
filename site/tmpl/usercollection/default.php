@@ -37,7 +37,18 @@ HTMLHelper::_('bootstrap.modal', '.modal');
 $tabUrl = fn ($tab, $extra = '') => Route::_('index.php?option=com_collector&view=usercollection&collection=' . $collection->id
     . ($this->isOwnProfile ? '' : '&user=' . $targetUser) . '&type=' . $tab . $extra);
 
-$itemLink = static fn ($item) => Route::_('index.php?option=com_collector&view=item&collection=' . $collection->slug . '&id=' . $item->slug);
+// Fiche d'un objet : on reste sous le lien de menu de la liste (« Mes bulletins »…), pour que la fiche
+// garde la navigation de la liste (menu actif, fil d'Ariane) au lieu de celle de la collection générale
+$activeMenu = \Joomla\CMS\Factory::getApplication()->getMenu()->getActive();
+$listItemid = $activeMenu && ($activeMenu->query['option'] ?? '') === 'com_collector' && ($activeMenu->query['view'] ?? '') === 'usercollection'
+    ? (int) $activeMenu->id : 0;
+// La fiche sait aussi de quelle liste on vient (« liste » : 0, 1, 2, ou « matches1 » / « matches0 » pour les
+// sections des échanges possibles ; « liste_user » : le membre consulté) : ses boutons précédent / suivant
+// parcourent cette liste et son bouton de retour y ramène
+$listeUser = $this->isOwnProfile ? '' : '&liste_user=' . $targetUser;
+$itemLink = static fn (string $liste) => static fn ($item) => Route::_('index.php?option=com_collector&view=item&collection=' . $collection->slug . '&id=' . $item->slug
+    . '&liste=' . $liste . $listeUser
+    . ($listItemid ? '&Itemid=' . $listItemid : ''));
 
 // Note du membre sur un objet ; sur mes listes, avec un bouton crayon (comme le bouton de retrait)
 // dont le libellé « Ajouter une note » ou « Modifier la note » s'affiche au survol
@@ -69,9 +80,12 @@ $removeHtml = fn ($item): string => '<button type="button" class="btn btn-sm btn
 
 /**
  * Liste d'objets, présentée comme la collection (tableau ou template choisi).
- * $editable : mes listes (note modifiable, bouton de retrait) ; $sortable : en-têtes de tri du tableau.
+ * $editable : mes listes (note modifiable, bouton de retrait) ; $sortable : en-têtes de tri du tableau ;
+ * $liste : liste parcourue depuis la fiche d'un objet (voir $itemLink).
  */
-$renderList = function (array $items, bool $editable, bool $sortable) use ($layouts, $itemLink, $noteHtml, $removeHtml): string {
+$renderList = function (array $items, bool $editable, bool $sortable, string $liste) use ($layouts, $itemLink, $noteHtml, $removeHtml): string {
+    $itemLink = $itemLink($liste);
+
     if ($this->listTemplate) {
         $tags = ['note' => fn ($item) => $noteHtml($item, $editable)];
 
@@ -395,8 +409,8 @@ async function setUserlistAccess(userlistId, access, clickedBtn) {
     <?php endif; ?>
 
     <?php foreach ([
-        ['items' => $this->matchesWant, 'title' => 'COM_COLLECTOR_USERCOLLECTION_MATCHES_WANT', 'icon' => 'icon-heart'],
-        ['items' => $this->matchesHave, 'title' => 'COM_COLLECTOR_USERCOLLECTION_MATCHES_HAVE', 'icon' => 'icon-loop'],
+        ['items' => $this->matchesWant, 'title' => 'COM_COLLECTOR_USERCOLLECTION_MATCHES_WANT', 'icon' => 'icon-heart', 'liste' => 'matches1'],
+        ['items' => $this->matchesHave, 'title' => 'COM_COLLECTOR_USERCOLLECTION_MATCHES_HAVE', 'icon' => 'icon-loop', 'liste' => 'matches0'],
     ] as $section): ?>
       <?php if ($section['items']): ?>
     <section class="mb-4">
@@ -405,7 +419,7 @@ async function setUserlistAccess(userlistId, access, clickedBtn) {
         <?php echo Text::sprintf($section['title'], $esc($this->targetUserName)); ?>
         <span class="badge bg-secondary ms-1"><?php echo count($section['items']); ?></span>
       </h3>
-      <?php echo $renderList($section['items'], false, false); ?>
+      <?php echo $renderList($section['items'], false, false, $section['liste']); ?>
     </section>
       <?php endif; ?>
     <?php endforeach; ?>
@@ -498,7 +512,7 @@ async function setUserlistAccess(userlistId, access, clickedBtn) {
     <?php echo LayoutHelper::render('collector.list.pagination', ['pagination' => $this->pagination, 'showCounter' => (bool) $this->params->def('show_pagination_results', 1)], JPATH_SITE . '/components/com_collector/layouts'); ?>
     <?php endif; ?>
 
-    <?php echo $renderList($this->items, $this->isOwnProfile, true); ?>
+    <?php echo $renderList($this->items, $this->isOwnProfile, true, (string) $type); ?>
 
     <?php if ($showPagination && $this->pagination->pagesTotal > 1): ?>
     <?php echo LayoutHelper::render('collector.list.pagination', ['pagination' => $this->pagination, 'showCounter' => (bool) $this->params->def('show_pagination_results', 1)], JPATH_SITE . '/components/com_collector/layouts'); ?>
