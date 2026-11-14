@@ -26,7 +26,7 @@ class UsercollectionModel extends ListModel
 			$this->setState('filter.show_matching', false);
 		}
 
-        // Utilisateur à afficher — si non passé ? utilisateur courant
+        // Utilisateur Ã  afficher â€” si non passÃ© ? utilisateur courant
         $userId = $app->input->getInt('user', 0)
                ?: $app->getIdentity()->id;
         $this->setState('filter.user', $userId);
@@ -42,9 +42,9 @@ class UsercollectionModel extends ListModel
 		$this->setState('filter.filter_search_all', $searchAll);
 
 
-		// Filtres par champ — lire depuis input ET sauvegarder en user state
+		// Filtres par champ â€” lire depuis input ET sauvegarder en user state
 		$reset = $app->input->getInt('reset', 0);
-		// On récupère les champs directement depuis la DB
+		// On rÃ©cupÃ¨re les champs directement depuis la DB
 		$db = $this->getDbo();
 		$db->setQuery(
 			$db->getQuery(true)
@@ -77,11 +77,95 @@ class UsercollectionModel extends ListModel
 			$defaultOrder = 'ui.created';
 		}
 
+		$defaultDir = strtoupper((string) $defaultDir) === 'ASC' ? 'ASC' : 'DESC';
 
         parent::populateState($defaultOrder, $defaultDir);
+
+		// Tri par les en-tÃªtes du tableau (comme la collection) : mÃ©morisÃ© pour cette liste,
+		// limitÃ© aux colonnes de tri des champs et aux tris proposÃ©s par le lien de menu
+		$this->setState('list.default.ordering', $defaultOrder);
+		$this->setState('list.default.direction', $defaultDir);
+
+		$order = (string) $app->getUserStateFromRequest($context . '.filter_order', 'filter_order', $defaultOrder, 'string');
+		$dir   = strtoupper((string) $app->getUserStateFromRequest($context . '.filter_order_Dir', 'filter_order_Dir', $defaultDir, 'cmd'));
+
+		if ($reset || !$this->isValidOrdering($order, $defaultOrder)) {
+			$order = $defaultOrder;
+			$dir   = $defaultDir;
+			$app->setUserState($context . '.filter_order', $order);
+			$app->setUserState($context . '.filter_order_Dir', $dir);
+		}
+
+		$this->setState('list.ordering', $order);
+		$this->setState('list.direction', \in_array($dir, ['ASC', 'DESC'], true) ? $dir : $defaultDir);
+
+		// Nombre d'objets par page : celui des options de Collector, comme la collection
+		$limit = (int) $app->getUserStateFromRequest($context . '.limit', 'limit', (int) ($params->get('display_num') ?: $app->get('list_limit')), 'uint');
+		$this->setState('list.limit', $limit);
+
+		$start = (int) $app->getUserStateFromRequest($context . '.limitstart', 'limitstart', 0, 'uint');
+		$this->setState('list.start', $limit ? (int) (floor($start / $limit) * $limit) : 0);
     }
 
+	/**
+	 * Tri acceptÃ© : chaque partie (sÃ©parÃ©e par Â« // Â») est la colonne de tri d'un champ de la collection
+	 * ou un tri proposÃ© par le lien de menu. Rien d'autre n'entre dans la requÃªte.
+	 */
+	protected function isValidOrdering(string $order, string $default): bool
+	{
+		$allowed = ['ui.created', 'i.ordering', 'i.modified', 'i.created', 'i.hits', $default];
+
+		foreach ($this->getFields() as $field) {
+			$allowed[] = (string) $field->getOrderBy();
+		}
+
+		foreach (explode('//', $order) as $part) {
+			if (!\in_array($part, $allowed, true)) {
+				return false;
+			}
+		}
+
+		return $order !== '';
+	}
+
     protected function getListQuery()
+    {
+        $query = $this->buildItemsQuery((int) $this->getState('filter.user'), (int) $this->getState('filter.type'), true);
+
+        // Tri : Â« champ1//champ2 Â» trie sur plusieurs colonnes, dans le mÃªme sens (comme la collection)
+        $dir   = $this->getState('list.direction') === 'ASC' ? 'ASC' : 'DESC';
+        $order = str_replace('//', ' ' . $dir . ', ', (string) $this->getState('list.ordering', 'i.ordering')) . ' ' . $dir;
+        $query->order($order);
+
+        return $query;
+    }
+
+    /**
+     * Objets en correspondance avec un autre membre (Ã©changes possibles) :
+     * ceux de sa liste $hisType qui sont aussi dans ma liste du type opposÃ©.
+     * Type 1 : il a en Ã©change ce que je cherche ; type 0 : il cherche ce que j'ai en Ã©change.
+     * Sa note est celle de sa liste (Ã©tat, prixâ€¦).
+     */
+    public function getMatchItems(int $otherUser, int $hisType): array
+    {
+        $me = (int) Factory::getApplication()->getIdentity()->id;
+
+        if (!$me || $otherUser === $me || !\in_array($hisType, [0, 1], true)) {
+            return [];
+        }
+
+        $query = $this->buildItemsQuery($otherUser, $hisType, false, $me)->order('i.ordering ASC');
+
+        return $this->getDbo()->setQuery($query)->loadObjectList() ?: [];
+    }
+
+    /**
+     * RequÃªte des objets de la liste $type d'un membre, avec les colonnes des champs.
+     *
+     * @param   bool      $withFilters  recherche et filtres de la page
+     * @param   int|null  $matchUser    seulement les objets aussi dans la liste du type opposÃ© de ce membre
+     */
+    protected function buildItemsQuery(int $targetUser, int $type, bool $withFilters, ?int $matchUser = null)
     {
         $db         = $this->getDbo();
         $app        = Factory::getApplication();
@@ -89,8 +173,6 @@ class UsercollectionModel extends ListModel
         $fields     = $this->getFields();
         $params     = $app->getParams();
         $user       = $app->getIdentity();
-        $targetUser = (int) $this->getState('filter.user');
-        $type       = (int) $this->getState('filter.type');
 
         $query = $db->getQuery(true);
 
@@ -127,13 +209,13 @@ class UsercollectionModel extends ListModel
         $query->where('i.state = 1');
         $query->where('h.state = 1');
 
-        // Filtre accès
+        // Filtre accÃ¨s
         $groups = implode(',', $user->getAuthorisedViewLevels());
         $query->where('i.access IN (' . $groups . ')');
 
-        // Filtre accès liste — si liste privée, seul le propriétaire peut la voir
+        // Filtre accÃ¨s liste â€” si liste privÃ©e, seul le propriÃ©taire peut la voir
 		if ($targetUser !== $user->id) {
-			// Accès à la liste d'un autre utilisateur
+			// AccÃ¨s Ã  la liste d'un autre utilisateur
 			$db->setQuery(
 				$db->getQuery(true)
 				   ->select('access')
@@ -145,15 +227,15 @@ class UsercollectionModel extends ListModel
 			$targetAccess = (int) $db->loadResult();
 
 			if ($targetAccess === 0) {
-				// Privée ? aucun résultat
+				// PrivÃ©e ? aucun rÃ©sultat
 				$query->where('1 = 0');
 			} elseif ($targetAccess === 1 && $type === 2) {
-				// Une collection n'est que privée ou publique : l'ancienne valeur « matchs uniquement »
-				// (sites mis à jour) vaut privée. Les matchs ne croisent que souhaits et échanges.
+				// Une collection n'est que privÃ©e ou publique : l'ancienne valeur Â« matchs uniquement Â»
+				// (sites mis Ã  jour) vaut privÃ©e. Les matchs ne croisent que souhaits et Ã©changes.
 				$query->where('1 = 0');
 			} elseif ($targetAccess === 1) {
 				// Matchs uniquement ? filtrer sur les items en commun
-				// Type opposé : si je consulte sa liste type 1 (échange), je cherche mes items type 0 (souhait)
+				// Type opposÃ© : si je consulte sa liste type 1 (Ã©change), je cherche mes items type 0 (souhait)
 				$myOppositeType = ($type === 1) ? 0 : 1;
 
 				$query->where(
@@ -168,16 +250,30 @@ class UsercollectionModel extends ListModel
 					)'
 				);
 			}
-			// access=2 ? liste complète, pas de filtre supplémentaire
+			// access=2 ? liste complÃ¨te, pas de filtre supplÃ©mentaire
 		}
 
-        // Champs spécifiques de la collection
+        // Ã‰changes possibles : seulement les objets aussi dans la liste du type opposÃ© de $matchUser
+        if ($matchUser) {
+            $query->where(
+                'i.id IN (SELECT ui_m.itemid FROM #__collector_usersitems AS ui_m'
+                . ' JOIN #__collector_userlist AS ul_m ON ul_m.id = ui_m.userlist'
+                . ' JOIN #__collector_userslists AS uls_m ON uls_m.id = ul_m.userslist'
+                . ' AND uls_m.collection = ' . (int) $collection->id . ' AND uls_m.type = ' . ($type === 1 ? 0 : 1) . ' AND uls_m.state = 1'
+                . ' WHERE ul_m.user = ' . (int) $matchUser . ')'
+            );
+        }
+
+        // Champs spÃ©cifiques de la collection
         foreach ($fields as $field) {
             $field->setQuery($query);
         }
 
+        if (!$withFilters) {
+            return $query;
+        }
+
         // Filtres champs
-        $itemid = $app->input->getInt('id', 0) . ':' . $app->input->getInt('Itemid', 0);
         $whereSearch = [];
         foreach ($fields as $field) {
             if ($field->_field->filter == 1) {
@@ -197,20 +293,15 @@ class UsercollectionModel extends ListModel
             $query->where('(' . implode(' OR ', $whereSearch) . ')');
         }
 
-        // Tri
-        $orderCol  = $this->getState('list.ordering', 'i.ordering');
-        $orderDirn = $this->getState('list.direction', 'ASC');
-        $query->order($db->escape($orderCol . ' ' . $orderDirn));
-
         return $query;
     }
 
     // -- Mise en relation ------------------------------------------------------
 
     /**
-     * Retourne les utilisateurs avec qui des échanges sont possibles.
-     * Items que je cherche (type 0) vs items qu'ils ont en échange (type 1)
-     * et items que j'ai en échange (type 1) vs items qu'ils cherchent (type 0)
+     * Retourne les utilisateurs avec qui des Ã©changes sont possibles.
+     * Items que je cherche (type 0) vs items qu'ils ont en Ã©change (type 1)
+     * et items que j'ai en Ã©change (type 1) vs items qu'ils cherchent (type 0)
      */
     public function getMatchingUsers(): array
     {
@@ -339,10 +430,10 @@ class UsercollectionModel extends ListModel
 		$type       = (int) $this->getState('filter.type');
 		$collection = $this->getCollection();
 
-		// Pas de liste pour un visiteur non connecté (utilisateur 0)
+		// Pas de liste pour un visiteur non connectÃ© (utilisateur 0)
 		if (!$collection || $userId <= 0) return null;
 
-		// Récupérer l'ID de la userslist pour ce type
+		// RÃ©cupÃ©rer l'ID de la userslist pour ce type
 		$db->setQuery(
 			$db->getQuery(true)
 			   ->select('id')
@@ -367,7 +458,7 @@ class UsercollectionModel extends ListModel
 		);
 		$userlist = $db->loadObject();
 
-		// Si elle n'existe pas encore ? la créer avec access=0 (privée par défaut)
+		// Si elle n'existe pas encore ? la crÃ©er avec access=0 (privÃ©e par dÃ©faut)
 		if (!$userlist) {
 			$db->setQuery(
 				$db->getQuery(true)

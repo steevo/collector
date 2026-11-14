@@ -280,7 +280,7 @@ class com_collectorInstallerScript
 			}
 		}
 
-		foreach ([$site . '/helpers', $site . '/layouts', $admin . '/helpers', $admin . '/params', $admin . '/src/Plugin',
+		foreach ([$site . '/helpers', $site . '/layouts/libraries', $admin . '/helpers', $admin . '/params', $admin . '/src/Plugin',
 			// proposition d'objet : gabarits renommés de itemcform en itemform (nom de la vue)
 			$site . '/tmpl/itemcform', $site . '/tmpl/itemc', $site . '/src/View/Itemc',
 			// curseur du type nombre : bibliothèque jQuery remplacée par un curseur natif

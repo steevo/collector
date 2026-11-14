@@ -7,7 +7,7 @@
 	<license>http://www.gnu.org/licenses/gpl-2.0.html GNU/GPL</license>
 	<authorEmail>steevo@steevo.fr</authorEmail>
 	<authorUrl>www.steevo.fr</authorUrl>
-	<version>0.9.6</version>
+	<version>0.9.7</version>
 	<description>COM_COLLECTOR_XML_DESCRIPTION</description>
 	<scriptfile>script.php</scriptfile>
 	<namespace path="src/">Steevo\Component\Collector</namespace>
@@ -35,6 +35,7 @@
 		
 		<folder>assets</folder>
 		<folder>forms</folder>
+		<folder>layouts</folder>
 		<folder>librairies</folder>
 		<folder>src</folder>
 		<folder>tmpl</folder>

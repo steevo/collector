@@ -35,6 +35,11 @@ use Joomla\Database\ParameterType;
  *   {ifnot:champ}…{/if}      bloc affiché si le champ est vide
  * Vue liste : {items}…{/items} délimite le bloc répété pour chaque élément ;
  * sans ces balises, tout le template est répété.
+ * Listes des membres (collection personnelle, souhaits, échanges) :
+ *   {note}                   note du membre sur l'objet (avec Ajouter / Modifier sur ses propres listes)
+ *   {actions}                bouton de retrait de la liste (sur ses propres listes)
+ * Ces deux balises n'affichent rien dans la collection générale. Dans une liste de membre, si le
+ * bloc répété ne les contient pas, elles sont ajoutées à la fin de chaque élément.
  */
 abstract class CollectorTemplateHelper
 {
@@ -46,6 +51,9 @@ abstract class CollectorTemplateHelper
 
     /** Balises réservées (en plus des champs) */
     public const RESERVED = ['link', 'id', 'hits'];
+
+    /** Balises des listes des membres, remplies par la vue (vides ailleurs) */
+    public const USERLIST_TAGS = ['note', 'actions'];
 
     /**
      * Charge le template publié d'une collection pour une vue donnée.
@@ -126,8 +134,9 @@ abstract class CollectorTemplateHelper
      * @param   array     $items     Éléments à afficher
      * @param   mixed     $params    Paramètres de la vue
      * @param   callable  $link      Fonction (élément) => adresse de sa fiche
+     * @param   array     $tags      Listes des membres : balise de USERLIST_TAGS => fonction (élément) => HTML
      */
-    public static function renderList(object $template, array $fields, array $items, $params, callable $link): string
+    public static function renderList(object $template, array $fields, array $items, $params, callable $link, array $tags = []): string
     {
         $content = (string) $template->content;
         $before  = '';
@@ -138,13 +147,43 @@ abstract class CollectorTemplateHelper
             [, $before, $block, $after] = $parts;
         }
 
-        $html = '';
+        $block = static::appendUserlistTags($block, $tags);
+        $html  = '';
 
         foreach ($items as $item) {
-            $html .= static::renderBlock($block, $fields, $item, $params, true, (string) $link($item));
+            $html .= static::renderBlock($block, $fields, $item, $params, true, (string) $link($item), $tags);
         }
 
         return $before . $html . $after;
+    }
+
+    /**
+     * Liste d'un membre : la note et le bouton de retrait restent disponibles même si le template
+     * ne prévoit pas {note} ou {actions} ; on les ajoute à la fin de l'élément répété.
+     */
+    protected static function appendUserlistTags(string $block, array $tags): string
+    {
+        $missing = array_filter(
+            static::USERLIST_TAGS,
+            static fn ($tag) => isset($tags[$tag]) && !preg_match('/\{(?:(?:if|ifnot):)?' . $tag . '\}/', $block)
+        );
+
+        if (!$missing) {
+            return $block;
+        }
+
+        $extra = implode(' ', array_map(static fn ($tag) => '{' . $tag . '}', $missing));
+
+        // élément unique (<div>…</div>, <li>…</li>, <tr>…</tr>) : ajout à l'intérieur, avant sa fermeture
+        if (preg_match('#^(.*)(</([a-z][a-z0-9]*)>\s*)$#is', $block, $m)) {
+            $wrap = strtolower($m[3]) === 'tr'
+                ? '<td class="collector-userlist-extra">' . $extra . '</td>'
+                : '<div class="collector-userlist-extra">' . $extra . '</div>';
+
+            return $m[1] . $wrap . $m[2];
+        }
+
+        return $block . '<div class="collector-userlist-extra">' . $extra . '</div>';
     }
 
     /**
@@ -158,7 +197,7 @@ abstract class CollectorTemplateHelper
     /**
      * Remplace les conditions puis les balises d'un bloc pour un élément.
      */
-    protected static function renderBlock(string $html, array $fields, object $item, $params, bool $listing, string $link): string
+    protected static function renderBlock(string $html, array $fields, object $item, $params, bool $listing, string $link, array $tags = []): string
     {
         $byName = [];
 
@@ -183,7 +222,12 @@ abstract class CollectorTemplateHelper
             return $cache[$name];
         };
 
-        $resolve = function (string $name, string $modifier) use ($byName, $item, $link, $display): ?string {
+        $resolve = function (string $name, string $modifier) use ($byName, $item, $link, $display, $tags): ?string {
+            // note et retrait d'une liste de membre : rien hors de ces listes
+            if (\in_array($name, static::USERLIST_TAGS, true) && $modifier === '') {
+                return isset($tags[$name]) ? (string) $tags[$name]($item) : '';
+            }
+
             if (\in_array($name, static::RESERVED, true) && $modifier === '') {
                 switch ($name) {
                     case 'link':
@@ -218,7 +262,15 @@ abstract class CollectorTemplateHelper
             }
         };
 
-        $isEmpty = function (string $name) use ($byName, $display): bool {
+        $isEmpty = function (string $name) use ($byName, $display, $item, $tags): bool {
+            if ($name === 'note') {
+                return !isset($tags['note']) || trim((string) ($item->userlist_note ?? '')) === '';
+            }
+
+            if ($name === 'actions') {
+                return !isset($tags['actions']) || trim((string) $tags['actions']($item)) === '';
+            }
+
             if (\in_array($name, static::RESERVED, true)) {
                 return false;
             }
@@ -320,6 +372,8 @@ abstract class CollectorTemplateHelper
 
         if ($client === static::CLIENT_LIST) {
             $tags[] = ['{items}{/items}', Text::_('COM_COLLECTOR_TEMPLATE_TAG_ITEMS')];
+            $tags[] = ['{note}', Text::_('COM_COLLECTOR_TEMPLATE_TAG_NOTE')];
+            $tags[] = ['{actions}', Text::_('COM_COLLECTOR_TEMPLATE_TAG_ACTIONS')];
         }
 
         return $tags;

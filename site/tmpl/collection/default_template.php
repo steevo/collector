@@ -2,7 +2,7 @@
 /**
  * Joomla! component Collector
  *
- * Vue liste mise en page par le template choisi pour la collection.
+ * Vue liste mise en page par le template choisi pour la collection (gabarit commun collector.list.template).
  *
  * @package     Collector
  * @copyright   Copyright (C) 2010 - 2026 Philippe Ousset. All rights reserved.
@@ -11,17 +11,15 @@
 
 \defined('_JEXEC') or die;
 
+use Joomla\CMS\Layout\LayoutHelper;
 use Joomla\CMS\Router\Route;
-use Steevo\Component\Collector\Administrator\Helper\CollectorTemplateHelper;
 
 $linkBase = 'index.php?option=com_collector&view=item&collection=' . $this->collection->slug . '&id=';
-?>
-<div class="collector-template collector-template-list collector-template-<?php echo (int) $this->listTemplate->id; ?>">
-	<?php echo CollectorTemplateHelper::renderList(
-		$this->listTemplate,
-		$this->fields,
-		$this->items,
-		$this->params,
-		static fn ($item) => Route::_($linkBase . $item->slug)
-	); ?>
-</div>
+
+echo LayoutHelper::render('collector.list.template', [
+	'template' => $this->listTemplate,
+	'fields'   => $this->fields,
+	'items'    => $this->items,
+	'params'   => $this->params,
+	'link'     => static fn ($item) => Route::_($linkBase . $item->slug),
+], JPATH_SITE . '/components/com_collector/layouts');
