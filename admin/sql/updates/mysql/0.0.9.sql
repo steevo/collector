@@ -92,15 +92,14 @@ CREATE TABLE IF NOT EXISTS `#__collector_import_config` (
 /*
  * Listes utilisateurs : colonnes abandonnées dans la 0.9.0
  */
-ALTER TABLE `#__collector_userslists`
-    DROP COLUMN `alias`,
-    DROP COLUMN `description`,
-    DROP COLUMN `created`,
-    DROP COLUMN `created_by`,
-    DROP COLUMN `created_by_alias`,
-    DROP COLUMN `modified`,
-    DROP COLUMN `modified_by`,
-    DROP COLUMN `publish_up`,
-    DROP COLUMN `publish_down`,
-    DROP COLUMN `checked_out`,
-    DROP COLUMN `checked_out_time`;
+ALTER TABLE `#__collector_userslists` DROP COLUMN `alias`;
+ALTER TABLE `#__collector_userslists` DROP COLUMN `description`;
+ALTER TABLE `#__collector_userslists` DROP COLUMN `created`;
+ALTER TABLE `#__collector_userslists` DROP COLUMN `created_by`;
+ALTER TABLE `#__collector_userslists` DROP COLUMN `created_by_alias`;
+ALTER TABLE `#__collector_userslists` DROP COLUMN `modified`;
+ALTER TABLE `#__collector_userslists` DROP COLUMN `modified_by`;
+ALTER TABLE `#__collector_userslists` DROP COLUMN `publish_up`;
+ALTER TABLE `#__collector_userslists` DROP COLUMN `publish_down`;
+ALTER TABLE `#__collector_userslists` DROP COLUMN `checked_out`;
+ALTER TABLE `#__collector_userslists` DROP COLUMN `checked_out_time`;
