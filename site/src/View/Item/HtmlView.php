@@ -69,6 +69,14 @@ class HtmlView extends BaseHtmlView
 		$this->collection	= $this->get('Collection');
 		$this->fields		= $this->get('Fields');
 		$this->item			= $this->get('Item');
+
+		// Objet introuvable pour ce visiteur (inexistant, ou proposition pas encore validée) : page 404
+		// plutôt qu'une erreur 500 plus loin
+		if (!\is_object($this->item))
+		{
+			throw new \Exception(Text::_('COM_COLLECTOR_ERROR_ITEM_NOT_FOUND'), 404);
+		}
+
 		$this->state		= $this->get('State');
 		$this->form			= $this->get('Form');
 		if ( $this->params->get('navigation',1) ) {
