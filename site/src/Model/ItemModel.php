@@ -329,7 +329,11 @@ class ItemModel extends AdminModel
 				$query->join('LEFT', '#__users AS uam ON uam.id = i.modified_by');
 				
 				
-				$query->where('h.state = 1');
+				// Proposition (objet sans version validée) ouverte par un validateur : sa version en attente
+				$proposalVersion = $this->canValidateCollection((int) $collection->id)
+					? $this->getProposalVersionId((int) $collection->id, (int) $id) : 0;
+
+				$query->where($proposalVersion ? 'h.id = ' . $proposalVersion : 'h.state = 1');
 				$query->where('i.collection = '.$collection->id);
 				$query->where('i.id = '.$id);
 				
@@ -352,6 +356,8 @@ class ItemModel extends AdminModel
 				{
 					return Factory::getApplication()->enqueueMessage(Text::_('COM_COLLECTOR_ERROR_ITEM_NOT_FOUND'),'error');
 				}
+
+				$data->proposal_version = $proposalVersion;
 				
 				$stateParams = $this->getState('params');
 				if ($stateParams === null) {
@@ -552,7 +558,22 @@ class ItemModel extends AdminModel
 		$pk = (!empty($data[$key])) ? $data[$key] : (int) $this->getState($this->getName() . '.id');
 		$isNew = true;
 		$collection = $data['collection'];
-		
+
+		// Validation d'une proposition (objet sans version validée), par un validateur : les corrections
+		// éventuelles vont dans la version en attente elle-même, qui est validée, et l'objet est publié
+		$proposalVersion = 0;
+
+		if ($pk > 0 && $app->get('com_collector.validate_proposal') && $this->canValidateCollection((int) $collection))
+		{
+			$proposalVersion = $this->getProposalVersionId((int) $collection, (int) $pk);
+
+			if (!$proposalVersion)
+			{
+				$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_NOT_PENDING'));
+				return false;
+			}
+		}
+
 		// Alter the title for save as copy
 		if ($app->input->get('task') == 'save2copy')
 		{
@@ -569,7 +590,7 @@ class ItemModel extends AdminModel
 			// Load the row if saving an existing record.
 			if ($pk > 0)
 			{
-				$table->loadVersion($collection,$pk);
+				$table->loadVersion($collection, $pk, $proposalVersion ?: null);
 				$isNew = false;
 			} else {
 				$table->initVersion($collection);
@@ -581,7 +602,18 @@ class ItemModel extends AdminModel
 				$this->setError($table->getError());
 				return false;
 			}
-	
+
+			// Proposition validée : on garde son commentaire de modification (« version initiale »…), que
+			// le chargement d'une version vide, sauf si le validateur en a saisi un autre
+			if ($proposalVersion && trim((string) ($table->modification ?? '')) === '')
+			{
+				$db = $this->getDbo();
+				$table->modification = (string) $db->setQuery(
+					'SELECT ' . $db->quoteName('modification') . ' FROM ' . $db->quoteName('#__collector_items_history_' . (int) $collection)
+					. ' WHERE id = ' . (int) $proposalVersion
+				)->loadResult();
+			}
+
 			// Modification d'un objet : option « Validation automatique » de Collector (onglet Modification)
 			$autoValidate = (int) $params->get('auto_validate', 1);
 
@@ -614,7 +646,13 @@ class ItemModel extends AdminModel
 			}
 	
 			// Store the data.
-			if ( $params->get('save_history') )
+			if ($proposalVersion)
+			{
+				// Proposition validée : sa version en attente, corrigée et validée
+				$version      = $proposalVersion;
+				$autoValidate = 1;
+			}
+			elseif ( $params->get('save_history') )
 			{
 				$version = null;
 			}
@@ -626,6 +664,19 @@ class ItemModel extends AdminModel
 			{
 				$this->setError($table->getError());
 				return false;
+			}
+
+			// Proposition validée : l'objet est publié et n'a plus cette version à valider
+			if ($proposalVersion)
+			{
+				$db = $this->getDbo();
+				$db->setQuery(
+					$db->getQuery(true)
+						->update($db->quoteName('#__collector_items'))
+						->set($db->quoteName('state') . ' = 1')
+						->set($db->quoteName('to_validate') . ' = GREATEST(0, ' . $db->quoteName('to_validate') . ' - 1)')
+						->where($db->quoteName('id') . ' = ' . (int) $pk)
+				)->execute();
 			}
 
 			// Version en attente : le contrôleur l'annonce au membre (au lieu de « enregistré »)
@@ -683,8 +734,8 @@ class ItemModel extends AdminModel
 		}
 
 		if ($pk > 0) {
-			// Attempt to load the row.
-			$return = $table->loadVersion($collection,$pk);
+			// Attempt to load the row (proposition sans version validée : sa version en attente)
+			$return = $table->loadVersion($collection, $pk, $this->getProposalVersionId((int) $collection, (int) $pk) ?: null);
 
 			// Check for a table object error.
 			if ($return === false && $table->getError()) {
@@ -932,6 +983,41 @@ class ItemModel extends AdminModel
 		$this->_limitstart = $limit ? ((int)($key/$limit))*$limit : 0;
 	}
 	
+	/**
+	 * Version d'une proposition : objet qui n'a encore aucune version validée, sa plus ancienne version
+	 * en attente. 0 pour un objet déjà validé (ses versions en attente sont des modifications).
+	 */
+	public function getProposalVersionId(int $collection, int $id): int
+	{
+		if ($collection <= 0 || $id <= 0)
+		{
+			return 0;
+		}
+
+		$db    = $this->getDbo();
+		$table = $db->quoteName('#__collector_items_history_' . $collection);
+
+		$active = (int) $db->setQuery('SELECT COUNT(*) FROM ' . $table . ' WHERE item = ' . $id . ' AND state = 1')->loadResult();
+
+		if ($active)
+		{
+			return 0;
+		}
+
+		return (int) $db->setQuery('SELECT MIN(id) FROM ' . $table . ' WHERE item = ' . $id . ' AND state = 0')->loadResult();
+	}
+
+	/**
+	 * L'utilisateur peut-il valider les versions de cette collection (droit de modifier)
+	 */
+	public function canValidateCollection(int $collection): bool
+	{
+		$user = Factory::getApplication()->getIdentity();
+
+		return $user->authorise('core.edit', 'com_collector.collection.' . $collection)
+			|| $user->authorise('core.edit', 'com_collector');
+	}
+
 	/**
 	 * Navigation d'une fiche ouverte depuis une liste de membre (paramètre « liste » du lien) :
 	 * 0, 1 ou 2 pour la liste des souhaits, des échanges ou la collection d'un membre (« liste_user »,

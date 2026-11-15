@@ -1,4 +1,13 @@
 <?php
+/**
+ * @package    Collector
+ * @copyright  Copyright (C) 2010 - 2026 Philippe Ousset. All rights reserved.
+ * @license    GNU General Public License version 2 or later; see LICENSE.txt
+ *
+ * Versions d'un objet (validation, refus, comparaison, rétablissement) : même présentation que les
+ * autres tableaux de Collector (couleurs du template, mode sombre, fiches sur mobile).
+ */
+
 defined('_JEXEC') or die;
 
 use Joomla\CMS\HTML\HTMLHelper;
@@ -6,40 +15,55 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
 use Joomla\CMS\Factory;
+use Joomla\CMS\Uri\Uri;
 
 $token      = Session::getFormToken();
 $collection = $this->collection->id;
 $itemId     = $this->item->id ?? 0;
 $user       = Factory::getApplication()->getIdentity();
+// Lien de menu d'où l'on vient (« Bulletins à valider »…) : transmis aux adresses construites en JavaScript
+// (refus, fenêtre de comparaison), pour que le retour après validation garde ce menu au lieu de l'accueil
+$menuItemid = (int) (Factory::getApplication()->getMenu()->getActive()->id ?? 0);
 $canEdit    = $user->authorise('core.edit', 'com_collector.collection.' . $collection)
            || $user->authorise('core.edit', 'com_collector');
 
-$baseUrl = 'index.php?option=com_collector&collection=' . $collection
-         . '&item=' . $itemId . '&' . $token . '=1';
-		 
+HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/collection.css', ['version' => 'auto']);
 HTMLHelper::_('bootstrap.modal');
+
+$labels = [
+    'status'       => Text::_('JSTATUS'),
+    'date'         => Text::_('JDATE'),
+    'author'       => Text::_('JAUTHOR'),
+    'modification' => Text::_('COM_COLLECTOR_ITEM_HISTORY_MODIFICATION'),
+    'actions'      => Text::_('COM_COLLECTOR_ACTIONS'),
+];
+
+// Bouton carré à icône (comme le crayon et la corbeille des listes), libellé au survol
+$iconButton = static function (string $tag, string $class, string $icon, string $label, string $attr): string {
+    $label = htmlspecialchars($label, ENT_QUOTES, 'UTF-8');
+
+    return '<' . $tag . ' class="btn btn-sm ' . $class . ' collector-icon-btn" title="' . $label . '" aria-label="' . $label . '" ' . $attr . '>'
+        . '<span class="' . $icon . '" aria-hidden="true"></span></' . $tag . '>';
+};
+$taskUrl = fn (string $task, int $versionId) => Route::_('index.php?option=com_collector&task=itemversions.' . $task
+    . '&collection=' . $collection . '&item=' . $itemId . '&version_id=' . $versionId . '&' . $token . '=1', false);
 ?>
 
-<div class="collector-itemversions">
+<div class="collector-itemversions category-list">
 
-  <?php /* ── Titre ─────────────────────────────────────────────────────── */ ?>
   <h2>
-    <?php echo Text::sprintf('COM_COLLECTOR_ITEM_VERSIONS_TITLE',
-        $this->escape($this->item->fulltitle ?: '#' . $itemId)); ?>
+    <?php echo Text::sprintf('COM_COLLECTOR_ITEM_VERSIONS_TITLE', $this->escape($this->item->fulltitle ?: '#' . $itemId)); ?>
   </h2>
 
-  <?php /* ── Bouton retour ────────────────────────────────────────────── */ ?>
-  <p class="mb-3">
-    <a href="<?php echo Route::_('index.php?option=com_collector&view=item&collection='
-              . $collection . '&id=' . $itemId); ?>"
+  <p class="d-flex flex-wrap gap-2 mb-3">
+    <a href="<?php echo Route::_('index.php?option=com_collector&view=item&collection=' . $collection . '&id=' . $itemId); ?>"
        class="btn btn-sm btn-outline-secondary">
-      <span class="icon-arrow-left me-1"></span>
+      <span class="icon-arrow-left me-1" aria-hidden="true"></span>
       <?php echo Text::_('COM_COLLECTOR_RETURN_TO_ITEM'); ?>
     </a>
-    <a href="<?php echo Route::_('index.php?option=com_collector&view=itemstovalidate&id='
-              . $collection); ?>"
-       class="btn btn-sm btn-outline-secondary ms-1">
-      <span class="icon-list me-1"></span>
+    <a href="<?php echo Route::_('index.php?option=com_collector&view=itemstovalidate&id=' . $collection); ?>"
+       class="btn btn-sm btn-outline-secondary">
+      <span class="icon-list me-1" aria-hidden="true"></span>
       <?php echo Text::_('COM_COLLECTOR_RETURN_TO_VALIDATE_LIST'); ?>
     </a>
   </p>
@@ -50,15 +74,15 @@ HTMLHelper::_('bootstrap.modal');
     </div>
 
   <?php else: ?>
-  <table class="table table-sm table-hover">
-    <thead class="table-light">
+  <table class="category table table-striped table-bordered table-hover collector-table-stack collector-versions">
+    <thead>
       <tr>
-        <th><?php echo Text::_('JSTATUS'); ?></th>
-        <th><?php echo Text::_('JDATE'); ?></th>
-        <th><?php echo Text::_('JAUTHOR'); ?></th>
-        <th><?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_MODIFICATION'); ?></th>
+        <th><?php echo $labels['status']; ?></th>
+        <th><?php echo $labels['date']; ?></th>
+        <th><?php echo $labels['author']; ?></th>
+        <th><?php echo $labels['modification']; ?></th>
         <?php if ($canEdit): ?>
-        <th><?php echo Text::_('COM_COLLECTOR_ACTIONS'); ?></th>
+        <th class="text-end"><?php echo $labels['actions']; ?></th>
         <?php endif; ?>
       </tr>
     </thead>
@@ -69,114 +93,63 @@ HTMLHelper::_('bootstrap.modal');
         $isActive   = ((int) $version->state === 1);
         $isArchived = ((int) $version->state === 2);
         $isOldest   = ($version->id === $this->oldestPendingId);
-        $rowClass   = $isPending ? 'table-warning' : ($isActive ? 'table-success' : '');
-
-        $versionUrl = Route::_(
-            'index.php?option=com_collector&task=itemversions.validate'
-            . '&collection=' . $collection
-            . '&item=' . $itemId
-            . '&version_id=' . $version->id
-            . '&' . $token . '=1',
-            false
-        );
+        $compare    = $this->activeVersionId
+            ? $iconButton('button', 'btn-outline-secondary', 'icon-eye', Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE_WITH_ACTIVE'),
+                'type="button" onclick="openCompareVersions(' . (int) $this->activeVersionId . ', ' . (int) $version->id . ')"')
+            : '';
       ?>
-      <tr class="<?php echo $rowClass; ?>">
-        <td class="text-nowrap">
+      <tr class="<?php echo $isActive ? 'collector-version-active' : ''; ?>">
+        <td data-label="<?php echo $this->escape($labels['status']); ?>" style="vertical-align:middle">
+          <span>
           <?php if ($isPending): ?>
-            <span class="badge bg-warning text-dark">
-              <span class="icon-clock me-1"></span>
-              <?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_PENDING'); ?>
+            <span class="badge collector-status collector-status-pending">
+              <span class="icon-clock me-1" aria-hidden="true"></span><?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_PENDING'); ?>
             </span>
           <?php elseif ($isActive): ?>
-            <span class="badge bg-success">
-              <span class="icon-check me-1"></span>
-              <?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_ACTIVE'); ?>
+            <span class="badge collector-status collector-status-active">
+              <span class="icon-check me-1" aria-hidden="true"></span><?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_ACTIVE'); ?>
             </span>
           <?php else: ?>
-            <span class="badge bg-secondary">
-              <span class="icon-archive me-1"></span>
-              <?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_ARCHIVED'); ?>
+            <span class="badge collector-status collector-status-archived">
+              <span class="icon-archive me-1" aria-hidden="true"></span><?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_ARCHIVED'); ?>
             </span>
           <?php endif; ?>
-		  <?php if ($isArchived && !empty($version->refuse_note)): ?>
-			<div class="small text-muted fst-italic mt-1">
-				<span class="icon-info-circle me-1"></span>
-				<?php echo htmlspecialchars($version->refuse_note, ENT_QUOTES); ?>
-			</div>
-		  <?php endif; ?>
+          <?php if ($isArchived && !empty($version->refuse_note)): ?>
+            <span class="d-block small text-muted fst-italic mt-1">
+              <span class="icon-info-circle me-1" aria-hidden="true"></span><?php echo $this->escape($version->refuse_note); ?>
+            </span>
+          <?php endif; ?>
+          </span>
         </td>
-        <td class="small">
+        <td data-label="<?php echo $this->escape($labels['date']); ?>" style="vertical-align:middle">
           <?php echo HTMLHelper::_('date', $version->modified, Text::_('DATE_FORMAT_LC2')); ?>
         </td>
-        <td class="small">
+        <td data-label="<?php echo $this->escape($labels['author']); ?>" style="vertical-align:middle">
           <?php echo $this->escape($version->modified_by_name ?? ''); ?>
         </td>
-        <td class="small">
+        <td data-label="<?php echo $this->escape($labels['modification']); ?>"<?php echo trim((string) ($version->modification ?? '')) === '' ? ' class="collector-cell-empty"' : ''; ?> style="vertical-align:middle">
           <?php echo $this->escape($version->modification ?? ''); ?>
         </td>
         <?php if ($canEdit): ?>
-        <td class="text-nowrap">
+        <td data-label="" class="text-end text-nowrap" style="vertical-align:middle">
+          <span class="collector-version-actions">
           <?php if ($isPending && $isOldest): ?>
-		  
-            <?php /* Comparer avec la version active */ ?>
-			<?php if ($this->activeVersionId): ?>
-			<button type="button"
-					onclick="openCompareVersions(<?php echo $this->activeVersionId; ?>, <?php echo $version->id; ?>)"
-					class="btn btn-sm btn-outline-secondary me-1"
-					title="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE_WITH_ACTIVE'); ?>">
-				<span class="icon-eye"></span>
-			</button>
-			<?php endif; ?>
-			
-            <?php /* Valider */ ?>
-            <a href="<?php echo Route::_(
-                'index.php?option=com_collector&task=itemversions.validate'
-                . '&collection=' . $collection . '&item=' . $itemId
-                . '&version_id=' . $version->id . '&' . $token . '=1', false); ?>"
-               class="btn btn-sm btn-success me-1"
-               title="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_VALIDATE'); ?>">
-              <span class="icon-check"></span>
-            </a>
-
-            <?php /* Refuser */ ?>
-			<!-- Bouton refuser → ouvre modale note -->
-			<button type="button"
-					class="btn btn-sm btn-danger"
-					title="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSE'); ?>"
-					onclick="openRefuseModal(<?php echo $version->id; ?>)">
-				<span class="icon-cancel"></span>
-			</button>
-
-          <?php elseif ($isPending && !$isOldest): ?>
-
-            <span class="text-muted small"
-                  title="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_VALIDATE_BLOCKED'); ?>">
-              <span class="icon-lock"></span>
+            <?php echo $compare; ?>
+            <?php echo $iconButton('a', 'btn-outline-success', 'icon-check', Text::_('COM_COLLECTOR_ITEM_HISTORY_VALIDATE'),
+                'href="' . $taskUrl('validate', (int) $version->id) . '"'); ?>
+            <?php echo $iconButton('button', 'btn-outline-danger', 'icon-cancel', Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSE'),
+                'type="button" onclick="openRefuseModal(' . (int) $version->id . ')"'); ?>
+          <?php elseif ($isPending): ?>
+            <span class="text-muted" title="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_VALIDATE_BLOCKED'); ?>">
+              <span class="icon-lock" aria-hidden="true"></span>
+              <span class="visually-hidden"><?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_VALIDATE_BLOCKED'); ?></span>
             </span>
-
           <?php elseif ($isArchived): ?>
-
-			<?php /* Comparer avec la version active */ ?>
-			<?php if ($this->activeVersionId): ?>
-			<button type="button"
-					onclick="openCompareVersions(<?php echo $this->activeVersionId; ?>, <?php echo $version->id; ?>)"
-					class="btn btn-sm btn-outline-secondary me-1"
-					title="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE_WITH_ACTIVE'); ?>">
-				<span class="icon-eye"></span>
-			</button>
-			<?php endif; ?>
-			
-            <?php /* Rétablir */ ?>
-            <a href="<?php echo Route::_(
-                'index.php?option=com_collector&task=itemversions.restore'
-                . '&collection=' . $collection . '&item=' . $itemId
-                . '&version_id=' . $version->id . '&' . $token . '=1', false); ?>"
-               class="btn btn-sm btn-outline-primary"
-               title="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_RESTORE_THIS'); ?>">
-              <span class="icon-undo"></span>
-            </a>
-
+            <?php echo $compare; ?>
+            <?php echo $iconButton('a', 'btn-outline-secondary', 'icon-undo', Text::_('COM_COLLECTOR_ITEM_HISTORY_RESTORE_THIS'),
+                'href="' . $taskUrl('restore', (int) $version->id) . '"'); ?>
           <?php endif; ?>
+          </span>
         </td>
         <?php endif; ?>
       </tr>
@@ -243,12 +216,13 @@ function doRefuse() {
     const item       = <?php echo (int) ($this->item->id       ?? 0); ?>;
     const token      = '<?php echo Session::getFormToken(); ?>';
 
-    const url = '<?php echo \Joomla\CMS\Uri\Uri::base(true); ?>/index.php?option=com_collector&task=itemversions.refuse'
+    const url = '<?php echo Uri::base(true); ?>/index.php?option=com_collector&task=itemversions.refuse'
               + '&collection=' + collection
               + '&item='       + item
               + '&version_id=' + refuseVersionId
               + '&refuse_note=' + encodeURIComponent(note)
-              + '&' + token + '=1';
+              + '&' + token + '=1'
+              + '<?php echo $menuItemid ? '&Itemid=' . $menuItemid : ''; ?>';
 
     window.location.href = url;
 }
@@ -256,11 +230,12 @@ function doRefuse() {
 function openCompareVersions(v1, v2) {
     const collection = <?php echo (int) ($this->collection->id ?? 0); ?>;
     const item       = <?php echo (int) ($this->item->id       ?? 0); ?>;
-    const url = '<?php echo \Joomla\CMS\Uri\Uri::base(true); ?>/index.php?option=com_collector&view=versionscompare&tmpl=component'
+    const url = '<?php echo Uri::base(true); ?>/index.php?option=com_collector&view=versionscompare&tmpl=component'
               + '&collection=' + collection
               + '&item='       + item
               + '&v1='         + v1
-              + '&v2='         + v2;
+              + '&v2='         + v2
+              + '<?php echo $menuItemid ? '&Itemid=' . $menuItemid : ''; ?>';
     window.open(url, 'compare', 'width=900,height=700,scrollbars=yes,resizable=yes');
 }
 </script>

@@ -174,7 +174,11 @@ async function saveUserlistNote() {
 <?php endif; ?>
 <?php
 $showCommentsTab = ($this->params->get('comments') != 0) && ($this->params->get('comments_display_mode') == 1);
-$showEditTab     = $this->params->get('allow_front_mod') && $this->item->params->get('access-edit');
+// Proposition (objet sans version validée) ouverte par un validateur : onglet de modification ouvert d'emblée,
+// avec le bouton « Valider la proposition »
+$isProposal      = !empty($this->item->proposal_version);
+$showEditTab     = ($this->params->get('allow_front_mod') || $isProposal) && $this->item->params->get('access-edit');
+$editTabId       = 'index.php?option=com_collector&view=itemform&collection='.$this->item->collection.'&id='.$this->item->id.'&Itemid='.$Itemid;
 $showWantTab     = $this->user->id && !empty($this->userlistWant);
 $showExchangeTab = $this->user->id && !empty($this->userlistExchange);
 
@@ -183,7 +187,7 @@ if (!$showCommentsTab && !$showEditTab && !$showWantTab && !$showExchangeTab) :
 	echo $this->loadTemplate($this->itemTemplate ? 'template' : 'details');
 else :
 
-echo HTMLHelper::_('uitab.startTabSet', 'myTab', array('active' => '#details'));
+echo HTMLHelper::_('uitab.startTabSet', 'myTab', array('active' => ($isProposal && $showEditTab) ? $editTabId : '#details'));
 
 echo HTMLHelper::_('uitab.addTab', 'myTab', '#details', Text::_('COM_COLLECTOR_ARTICLE'));
 
@@ -200,7 +204,7 @@ if ($showCommentsTab)
 
 if ($showEditTab)
 {
-	echo HTMLHelper::_('uitab.addTab', 'myTab', 'index.php?option=com_collector&view=itemform&collection='.$this->item->collection.'&id='.$this->item->id.'&Itemid='.$Itemid, Text::_('COM_COLLECTOR_EDIT'));
+	echo HTMLHelper::_('uitab.addTab', 'myTab', $editTabId, Text::_('COM_COLLECTOR_EDIT'));
 
 	echo $this->loadTemplate('edit');
 

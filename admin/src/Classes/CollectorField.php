@@ -161,6 +161,14 @@ class CollectorField
 
 		$instance = new $fieldClass($collection,$field,$item);
 
+		// Collection du champ : certaines vues chargent les champs sans cette colonne (comparaison des
+		// versions), alors que les types de champs s'en servent (liens de filtre, requêtes).
+		// Ici plutôt que dans le constructeur : chaque type de champ a le sien.
+		if (is_object($instance->_field) && empty($instance->_field->collection))
+		{
+			$instance->_field->collection = (int) $collection;
+		}
+
 		// load language
 		$extension = 'com_collector';		
 		$basePath = JPATH_ADMINISTRATOR . '/components/com_collector/src/Classes/Field/' . ucfirst(strtolower($fieldType->type));

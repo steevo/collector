@@ -14,6 +14,8 @@ use Joomla\CMS\Router\Route;
 /** @var \Steevo\Component\Collector\Site\View\Itemform\HtmlView $this */
 
 HTMLHelper::_('behavior.formvalidator');
+// Styles de Collector (formulaire sur mobile : libellé au-dessus du champ)
+HTMLHelper::stylesheet(\Joomla\CMS\Uri\Uri::base() . 'components/com_collector/assets/css/collection.css', ['version' => 'auto']);
 HTMLHelper::_('behavior.keepalive');
 
 $collId          = (int) $this->collection->id;

@@ -556,14 +556,13 @@ JS);
 
 			$return = StringHelper::str_ireplace( '%%', $value, $template );
 			
-			if (!isset($params['compare_view'])) {
-				if ($params['compare_view'] != true) {
-					if ( ($this->_field->attribs['show_fieldlink'] ?? 0) && ( $this->_field->filter == 1 ) )
-					{
-						$link= 'index.php?option=com_collector&view=collection&id='.$this->_field->collection.'&filterfield_'.$this->_field->tablecolumn.'='.$value.'|'.$value;
-						$return = '<a href="'.Route::_($link).'">'.$return.'</a>';
-					}
-				}
+			// Lien vers la collection filtrée sur cette valeur, sauf dans la comparaison des versions
+			$compare = $params instanceof \Joomla\Registry\Registry ? (bool) $params->get('compare_view') : !empty($params['compare_view']);
+
+			if (!$compare && ($this->_field->attribs['show_fieldlink'] ?? 0) && $this->_field->filter == 1)
+			{
+				$link= 'index.php?option=com_collector&view=collection&id='.(int) $this->_field->collection.'&filterfield_'.$this->_field->tablecolumn.'='.$value.'|'.$value;
+				$return = '<a href="'.Route::_($link).'">'.$return.'</a>';
 			}
 		}
 		else
@@ -605,7 +604,7 @@ JS);
 	 */
 	function displayComparison($value, $otherValue = null, $side = 'v1')
 	{
-		$display = $this->display($value, false, new \Joomla\Registry\Registry());
+		$display = $this->display($value, false, new \Joomla\Registry\Registry(['compare_view' => true]));
 		if ($display === false || $display === null || $display === '') {
 			return false;
 		}

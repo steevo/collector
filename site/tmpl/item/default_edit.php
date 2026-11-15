@@ -17,6 +17,8 @@ use Joomla\CMS\Session\Session;
 // Sans cet appel, document.formvalidator est undefined et
 // Joomla.submitbutton() lève une TypeError à l'exécution.
 HTMLHelper::_('behavior.formvalidator');
+// Styles de Collector (formulaire sur mobile : libellé au-dessus du champ)
+HTMLHelper::stylesheet(\Joomla\CMS\Uri\Uri::base() . 'components/com_collector/assets/css/collection.css', ['version' => 'auto']);
 
 $user   = Factory::getApplication()->getIdentity();
 $itemId = (int) $this->item->id;
@@ -48,13 +50,27 @@ $formAction = Route::_('index.php?option=com_collector&view=item&collection=' . 
 		<input type="hidden" name="jform[collection]" id="jform_collection" value="<?php echo $collId; ?>">
 		<?php echo HTMLHelper::_('form.token'); ?>
 
+		<?php /* ── Proposition (objet sans version validée) : relecture puis validation ── */ ?>
+		<?php $isProposal = !empty($this->item->proposal_version); ?>
+		<?php if ($isProposal) : ?>
+		<div class="alert alert-info">
+			<?php echo Text::_('COM_COLLECTOR_PROPOSAL_REVIEW'); ?>
+		</div>
+		<?php endif; ?>
+
 		<?php /* ── Barre de boutons principale ────────────────────────────────── */ ?>
 		<div class="btn-toolbar mb-3">
 			<?php if ($canEdit) : ?>
 			<div class="btn-group me-2">
+				<?php if ($isProposal) : ?>
+				<button type="button" class="btn btn-primary" onclick="Joomla.submitbutton('item.validateproposal')">
+					<span class="icon-check" aria-hidden="true"></span>&#160;<?php echo Text::_('COM_COLLECTOR_PROPOSAL_VALIDATE'); ?>
+				</button>
+				<?php else : ?>
 				<button type="button" class="btn btn-primary" onclick="Joomla.submitbutton('item.save')">
 					<span class="icon-ok" aria-hidden="true"></span>&#160;<?php echo Text::_('JSAVE'); ?>
 				</button>
+				<?php endif; ?>
 			</div>
 			<div class="btn-group me-2">
 				<button type="button" class="btn btn-secondary" onclick="Joomla.submitbutton('item.cancel')">
@@ -73,16 +89,19 @@ $formAction = Route::_('index.php?option=com_collector&view=item&collection=' . 
 		</div>
 
 		<fieldset>
-			<?php echo HTMLHelper::_('uitab.startTabSet', 'edition', ['active' => 'editor', 'recall' => true, 'breakpoint' => 768]); ?>
+			<?php echo HTMLHelper::_('uitab.startTabSet', 'edition', ['active' => 'collector-fields', 'recall' => true, 'breakpoint' => 768]); ?>
 
+			<?php /* Identifiant « collector-fields » et non « editor » : le template annule l'alignement des champs dans
+			         « .edit.item-page #editor » (onglet de l'éditeur d'articles de Joomla) */ ?>
 			<?php /* ── Onglet principal : champs de l'item ────────────────────── */ ?>
-			<?php echo HTMLHelper::_('uitab.addTab', 'edition', 'editor', Text::sprintf('COM_COLLECTOR_EDIT_ITEM', $this->item->titleItem)); ?>
+			<?php echo HTMLHelper::_('uitab.addTab', 'edition', 'collector-fields', Text::sprintf('COM_COLLECTOR_EDIT_ITEM', $this->item->titleItem)); ?>
 
 				<?php foreach ($this->fields as $field) : ?>
 					<?php echo $this->form->renderField($field->_field->tablecolumn); ?>
 				<?php endforeach; ?>
 
-				<?php if ($this->params->get('save_history') && $this->params->get('show_modification')) : ?>
+				<?php // Proposition : son commentaire (« version initiale ») est conservé à la validation, pas de champ à présenter ?>
+				<?php if (!$isProposal && $this->params->get('save_history') && $this->params->get('show_modification')) : ?>
 					<?php echo $this->form->renderField('modification'); ?>
 				<?php endif; ?>
 
@@ -90,9 +109,15 @@ $formAction = Route::_('index.php?option=com_collector&view=item&collection=' . 
 				<?php if ($canEdit) : ?>
 				<div class="btn-toolbar mt-3">
 					<div class="btn-group me-2">
+						<?php if ($isProposal) : ?>
+						<button type="button" class="btn btn-primary" onclick="Joomla.submitbutton('item.validateproposal')">
+							<span class="icon-check" aria-hidden="true"></span>&#160;<?php echo Text::_('COM_COLLECTOR_PROPOSAL_VALIDATE'); ?>
+						</button>
+						<?php else : ?>
 						<button type="button" class="btn btn-primary" onclick="Joomla.submitbutton('item.save')">
 							<span class="icon-ok" aria-hidden="true"></span>&#160;<?php echo Text::_('JSAVE'); ?>
 						</button>
+						<?php endif; ?>
 					</div>
 					<div class="btn-group">
 						<button type="button" class="btn btn-secondary" onclick="Joomla.submitbutton('item.cancel')">

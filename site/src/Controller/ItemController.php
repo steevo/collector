@@ -78,6 +78,41 @@ class ItemController extends FormController
 	}
 
 	/**
+	 * Valide une proposition (objet sans version validée) depuis l'onglet de modification de sa fiche :
+	 * enregistre les corrections dans la version en attente, la valide et publie l'objet (voir ItemModel::save),
+	 * puis revient à la liste des objets à valider. Réservé aux validateurs de la collection.
+	 */
+	public function validateproposal()
+	{
+		$this->checkToken();
+
+		$data       = $this->input->post->get('jform', [], 'array');
+		$collection = (int) ($data['collection'] ?? 0);
+		$user       = $this->app->getIdentity();
+
+		if (!$user->authorise('core.edit', 'com_collector.collection.' . $collection) && !$user->authorise('core.edit', 'com_collector'))
+		{
+			$this->setMessage(Text::_('JERROR_ALERTNOAUTHOR'), 'error');
+			$this->setRedirect(Route::_('index.php?option=com_collector&view=collection&id=' . $collection, false));
+
+			return false;
+		}
+
+		// Le modèle enregistre alors dans la version en attente et la valide (voir ItemModel::save)
+		$this->app->set('com_collector.validate_proposal', 1);
+
+		$result = $this->save();
+
+		if ($result)
+		{
+			$this->setMessage(Text::_('COM_COLLECTOR_PROPOSAL_VALIDATED'));
+			$this->setRedirect(Route::_('index.php?option=com_collector&view=itemstovalidate&id=' . $collection, false));
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Vérifie si l'utilisateur peut créer un item dans la collection donnée.
 	 */
 	protected function allowAdd($data = [])

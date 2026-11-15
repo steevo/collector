@@ -982,10 +982,12 @@ td.collector-userlist-extra {
 	flex: 0 0 auto;
 }
 
-/* Boutons crayon et corbeille des listes : carrés de même taille, icône centrée
-   (le template donne aux icônes une marge droite prévue pour un texte qui suit) */
-.collector-userlist-note-edit,
-.collector-userlist-remove {
+/* Boutons à icône (crayon, corbeille, versions) : carrés de même taille, icône centrée.
+   « .btn » en plus : le template, chargé après, l'emporterait à priorité égale (rembourrage)
+   et donne aux icônes une marge droite prévue pour un texte qui suit */
+.btn.collector-userlist-note-edit,
+.btn.collector-userlist-remove,
+.btn.collector-icon-btn {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -994,8 +996,9 @@ td.collector-userlist-extra {
 	padding: 0;
 }
 
-.collector-userlist-note-edit [class^="icon-"],
-.collector-userlist-remove [class^="icon-"] {
+.btn.collector-userlist-note-edit [class^="icon-"],
+.btn.collector-userlist-remove [class^="icon-"],
+.btn.collector-icon-btn [class^="icon-"] {
 	margin: 0;
 }
 
@@ -1049,5 +1052,53 @@ td.collector-userlist-extra {
 @media (max-width: 767.98px) {
 	.collector-matching > :not(caption) > * > td.text-center {
 		justify-content: flex-start;
+	}
+}
+
+/* Versions d'un objet : boutons d'action côte à côte, pastilles d'état aux couleurs du template */
+.collector-version-actions {
+	display: inline-flex;
+	align-items: center;
+	gap: .25rem;
+}
+
+.collector-status {
+	font-weight: 600;
+}
+
+.badge.collector-status-pending {
+	background-color: var(--mainnav-link-active-color, #c62144);
+	color: #fff;
+}
+
+[data-bs-theme="dark"] .badge.collector-status-pending {
+	color: var(--t4-body-bg, #1b1c27);
+}
+
+.badge.collector-status-active {
+	background-color: var(--body-link-color, #2b2d33);
+	color: var(--t4-body-bg, #fff);
+}
+
+.badge.collector-status-archived {
+	background-color: transparent;
+	color: var(--t4-secondary-color, #6c757d);
+	border: 1px solid var(--t4-border-color, #dee2e6);
+}
+
+.collector-version-active > td {
+	font-weight: 600;
+}
+
+/* Formulaires d'objet (proposition, modification) sur mobile : libellé au-dessus du champ.
+   Le template décale les champs de 220 px à toutes les largeurs, ce qui les écrase sur un petit écran. */
+@media (max-width: 767.98px) {
+	.edit.item-page form .control-group .control-label {
+		float: none;
+		padding-top: 0;
+	}
+
+	.edit.item-page form .control-group .controls {
+		margin-left: 0;
 	}
 }

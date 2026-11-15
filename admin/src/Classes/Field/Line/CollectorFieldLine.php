@@ -143,7 +143,7 @@ class CollectorFieldLine extends CollectorField
 		}
  
 		// Valeurs identiques : affichage formaté normal (liens, emails masqués…)
-		$display = $this->display($value, false, new \Joomla\Registry\Registry());
+		$display = $this->display($value, false, new \Joomla\Registry\Registry(['compare_view' => true]));
 		return ($display !== false && $display !== '') ? $display : htmlspecialchars((string)$value, ENT_QUOTES);
 	}
 }

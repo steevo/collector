@@ -49,6 +49,8 @@ class ItemstovalidateModel extends ListModel
 
 		$query = $db->getQuery(true)
 			->select('i.id, i.alias, i.fulltitle, i.collection, i.to_validate, i.ordering, i.state')
+			// version validée : aucune pour une proposition (objet jamais validé)
+			->select('h.id AS active_version')
 			->from($db->quoteName('#__collector_items', 'i'))
 			->join('LEFT', $db->quoteName('#__collector_items_history_' . $collection->id, 'h') . ' ON h.item = i.id AND h.state = 1')
 			->where($db->quoteName('i.collection') . ' = ' . (int) $collection->id)
