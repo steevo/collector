@@ -41,7 +41,7 @@ if ($this->params->get('comments') != 0)
 	}
 }
 if ( $this->params->get('navigation',1) ) {
-	echo '<div width="100%" align="right">'.$this->navigation.'</div>';
+	echo $this->navigation;
 }
 ?>
 <?php if (!empty($this->userlistsStatus)): ?>

@@ -259,6 +259,11 @@ class com_collectorInstallerScript
 			$site . '/collector.php',
 			$site . '/controller.php',
 			$site . '/assets/css/select.css',
+			// anciennes flèches de navigation d'une fiche (remplacées par une barre de navigation)
+			$site . '/assets/images/leftarrow.png',
+			$site . '/assets/images/rightarrow.png',
+			$site . '/assets/images/uparrow.png',
+			$site . '/assets/images/empty.png',
 			$admin . '/src/Classes/CollectorUser.php',
 			$admin . '/src/Classes/collection.php',
 			// type nombre : liste « méthode de recherche » remplacée par une liste standard avec showon

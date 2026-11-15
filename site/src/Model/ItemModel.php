@@ -1108,14 +1108,51 @@ class ItemModel extends AdminModel
 			. ($Itemid ? '&Itemid=' . $Itemid : '');
 		$itemUrl = fn ($row) => Route::_('index.php?option=com_collector&view=item&collection=' . $cid . '&id=' . (int) $row->id . ':' . $row->alias
 			. '&liste=' . $liste . ($other ? '&liste_user=' . $other : '') . ($Itemid ? '&Itemid=' . $Itemid : ''));
-		$esc     = fn ($text) => htmlspecialchars((string) $text, ENT_QUOTES, 'UTF-8');
-		$img     = './components/com_collector/assets/images/';
 		$prev    = $items[$pos - 1] ?? null;
 		$next    = $items[$pos + 1] ?? null;
 
-		return ($prev ? '<a title="' . $esc($prev->fulltitle) . '" href="' . $itemUrl($prev) . '"><img src="' . $img . 'leftarrow.png" /></a>' : '<img src="' . $img . 'empty.png" />')
-			. '<a title="' . $esc(Text::_('COM_COLLECTOR_RETURN_TO_LIST')) . '" href="' . Route::_($listUrl) . '"><img src="' . $img . 'uparrow.png" /></a>'
-			. ($next ? '<a title="' . $esc($next->fulltitle) . '" href="' . $itemUrl($next) . '"><img src="' . $img . 'rightarrow.png" /></a>' : '<img src="' . $img . 'empty.png" />');
+		return $this->navigationHtml(
+			$prev ? $itemUrl($prev) : null, (string) ($prev->fulltitle ?? ''),
+			Route::_($listUrl),
+			$next ? $itemUrl($next) : null, (string) ($next->fulltitle ?? '')
+		);
+	}
+
+	/**
+	 * Barre de navigation d'une fiche : précédent, retour à la liste, suivant.
+	 * Même balisage que la pagination de Joomla : elle prend les couleurs que le template donne à sa
+	 * pagination (mode sombre compris). Icônes intégrées ; sur mobile, les libellés sont masqués.
+	 *
+	 * @param   string|null  $prevUrl  adresse de l'objet précédent (routée), null s'il n'y en a pas
+	 * @param   string|null  $nextUrl  adresse de l'objet suivant (routée), null s'il n'y en a pas
+	 */
+	protected function navigationHtml(?string $prevUrl, string $prevTitle, string $listUrl, ?string $nextUrl, string $nextTitle): string
+	{
+		$esc  = fn ($text) => htmlspecialchars((string) $text, ENT_QUOTES, 'UTF-8');
+		$svg  = fn ($path) => '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="' . $path . '"/></svg>';
+		$prevIcon = $svg('M10 3 5 8l5 5');
+		$nextIcon = $svg('M6 3l5 5-5 5');
+		$listIcon = '<svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><g fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1.75" y="1.75" width="5" height="5" rx="1"/><rect x="9.25" y="1.75" width="5" height="5" rx="1"/><rect x="1.75" y="9.25" width="5" height="5" rx="1"/><rect x="9.25" y="9.25" width="5" height="5" rx="1"/></g></svg>';
+
+		$item = function (?string $url, string $icon, string $label, string $title, bool $iconAfter = false) use ($esc): string {
+			$content = $iconAfter
+				? '<span class="collector-item-nav-label">' . $esc($label) . '</span>' . $icon
+				: $icon . '<span class="collector-item-nav-label">' . $esc($label) . '</span>';
+
+			if ($url === null) {
+				return '<li class="page-item disabled"><span class="page-link" aria-disabled="true">' . $content . '</span></li>';
+			}
+
+			return '<li class="page-item"><a class="page-link" href="' . $url . '" title="' . $esc($title) . '" aria-label="' . $esc($title) . '">' . $content . '</a></li>';
+		};
+
+		$list = Text::_('COM_COLLECTOR_RETURN_TO_LIST');
+
+		return '<nav class="collector-item-nav" aria-label="' . $esc(Text::_('COM_COLLECTOR_ITEM_NAVIGATION')) . '"><ul class="pagination">'
+			. $item($prevUrl, $prevIcon, Text::_('JPREV'), $prevTitle !== '' ? Text::_('JPREV') . ' : ' . $prevTitle : Text::_('JPREV'))
+			. $item($listUrl, $listIcon, Text::_('COM_COLLECTOR_ITEM_NAVIGATION_LIST'), $list)
+			. $item($nextUrl, $nextIcon, Text::_('JNEXT'), $nextTitle !== '' ? Text::_('JNEXT') . ' : ' . $nextTitle : Text::_('JNEXT'), true)
+			. '</ul></nav>';
 	}
 
 	/**
@@ -1144,7 +1181,6 @@ class ItemModel extends AdminModel
 			
 			$prev = $this->_prev_id;
 			$next = $this->_next_id;
-			$img_base = './components/com_collector/assets/images/';
 			$link_base = 'index.php';
 			$link_back = $link_base;
 
@@ -1156,25 +1192,11 @@ class ItemModel extends AdminModel
 			$link_base .= '?option='.$option.'&view=item&collection='.$collection.'&Itemid='.$Itemid;
 			$link_back .= '?option='.$option.'&view=collection&reset=0&id='.$collection.'&limitstart='.$this->_limitstart.'&Itemid='.$Itemid;
 
-			if ($prev == 0)
-			{
-				$this->_navigation .= '<img src="'.$img_base.'empty.png" />';
-			}
-			else
-			{
-				$this->_navigation .= '<a title="'.$this->_prev_title.'" href="'.Route::_($link_base.'&id='. $prev) .'" ><img src="'.$img_base.'leftarrow.png" /></a>';
-			}
-
-			$this->_navigation .= '<a title="'.Text::_("COM_COLLECTOR_RETURN_TO_LIST").'" href="'.Route::_($link_back).'" ><img src="'.$img_base.'uparrow.png" /></a>';
-
-			if ($next == 0)
-			{
-				$this->_navigation .= '<img src="'.$img_base.'empty.png" />';
-			}
-			else
-			{
-				$this->_navigation .= '<a title="'.$this->_next_title.'" href="'.Route::_($link_base.'&id='. $next) .'" ><img src="'.$img_base.'rightarrow.png" /></a>';
-			}
+			$this->_navigation = $this->navigationHtml(
+				$prev ? Route::_($link_base . '&id=' . $prev) : null, (string) ($this->_prev_title ?? ''),
+				Route::_($link_back),
+				$next ? Route::_($link_base . '&id=' . $next) : null, (string) ($this->_next_title ?? '')
+			);
 		}
 		return $this->_navigation;
 	}

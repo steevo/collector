@@ -139,6 +139,47 @@ html joomla-tab[view=accordion] > button:hover {
 	flex: none;
 }
 
+/* Navigation d'une fiche (précédent, liste, suivant) : balisage de la pagination de Joomla, donc ses
+   couleurs dans le template (clair et sombre) ; icônes intégrées, libellés masqués sur mobile. */
+.collector-item-nav {
+	display: flex;
+	justify-content: flex-end;
+	margin: 0 0 .75rem;
+}
+
+.collector-item-nav .pagination {
+	margin: 0;
+}
+
+.collector-item-nav .page-link {
+	display: inline-flex;
+	align-items: center;
+	gap: .4em;
+	height: 100%;
+}
+
+.collector-item-nav .page-link svg {
+	width: 1em;
+	height: 1em;
+	flex: none;
+}
+
+@media (max-width: 575.98px) {
+	/* sur mobile, le contenu commence juste sous le bandeau de menu : un peu d'air au-dessus */
+	.collector-item-nav {
+		margin-top: .75rem;
+	}
+
+	.collector-item-nav .collector-item-nav-label {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		white-space: nowrap;
+	}
+}
+
 /* Bouton « Lire en ligne » (champ Liseuse) : bouton à contour de la couleur principale du template,
    gris foncé, invisible sur le fond sombre ; en mode sombre, il prend la couleur du texte. */
 [data-bs-theme="dark"] .collector-flipbook .btn-outline-primary {
