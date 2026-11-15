@@ -60,14 +60,12 @@ class ItemController extends FormController
 	public function save($key = null, $urlVar = null)
 	{
 		$app    = Factory::getApplication();
-		$params = ComponentHelper::getParams('com_collector');
-
 		$isNew  = empty($app->input->get('jform', [], 'array')['id']);
 		$result = parent::save($key, $urlVar);
 
-		// Version en attente de validation (validation automatique désactivée, ou proposition sans
-		// publication automatique) : remplacer le message de succès
-		if ($result && (!$params->get('auto_validate', 1) || $app->get('com_collector.version_pending'))) {
+		// Version enregistrée en attente de validation (modification sans validation automatique, ou
+		// proposition sans publication automatique, d'après le modèle) : remplacer le message de succès
+		if ($result && $app->get('com_collector.version_pending')) {
 			// Le message de succès de FormController (« Élément enregistré », « objet ajouté à la collection »)
 			// n'est affiché qu'à la redirection : on le remplace par celui de l'attente de validation
 			$this->setMessage(

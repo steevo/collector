@@ -545,7 +545,8 @@ class ItemModel extends AdminModel
 	{
 		// Initialise variables;
 		$app = Factory::getApplication();
-		$params = ComponentHelper::getParams( 'com_collector' );
+		// Options du lien de menu (sauvegarde de l'historique, validation automatique), sinon de Collector
+		$params = $app->isClient('site') ? $app->getParams() : ComponentHelper::getParams('com_collector');
 		$table = $this->getTable();
 		$key = $table->getKeyName();
 		$pk = (!empty($data[$key])) ? $data[$key] : (int) $this->getState($this->getName() . '.id');
@@ -581,16 +582,17 @@ class ItemModel extends AdminModel
 				return false;
 			}
 	
-			// Validation automatique des versions : option de Collector
+			// Modification d'un objet : option « Validation automatique » de Collector (onglet Modification)
 			$autoValidate = (int) $params->get('auto_validate', 1);
 
-			// Objet proposé depuis le site par un utilisateur qui ne gère pas la publication, ou sans état choisi
-			// (onglet Publication masqué) :
-			// - validation automatique : version validée et objet publié immédiatement ;
-			// - sinon : version en attente, l'objet apparaît dans les objets à valider ; son état suit l'option
-			//   « Publication automatique » (lien de menu, sinon composant) et la validation le publie
+			// Nouvel objet proposé depuis le site par un utilisateur qui ne gère pas la publication, ou sans état
+			// choisi (onglet Publication masqué) : option « Publication automatique » (onglet Proposition d'objet,
+			// lien de menu sinon Collector) :
+			// - oui : version validée et objet publié immédiatement ;
+			// - non : objet dépublié, version en attente : il apparaît dans les objets à valider, la validation le publie
 			if ($isNew && (!$this->canEditState((object) $data) || !isset($data['state']) || $data['state'] === '')) {
-				$table->state = $autoValidate ? 1 : (int) $app->getParams()->get('auto_publish', 1);
+				$autoValidate = (int) (bool) $app->getParams()->get('auto_publish', 1);
+				$table->state = $autoValidate;
 			}
 
 			// Prepare the row for saving

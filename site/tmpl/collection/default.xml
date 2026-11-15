@@ -279,7 +279,17 @@
 				<option value="0">JNO</option>
 				<option value="1">JYES</option>
 			</field>
-			
+
+			<field
+				name="auto_validate"
+				type="list"
+				useglobal="true"
+				label="COM_COLLECTOR_HISTORY_AUTO_VALIDATE"
+				description="COM_COLLECTOR_HISTORY_AUTO_VALIDATE_DESC">
+				<option value="0">JNO</option>
+				<option value="1">JYES</option>
+			</field>
+
 			<field
 				name="show_modification"
 				type="list"
