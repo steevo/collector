@@ -81,23 +81,23 @@
 		</files>
 		
 		<languages folder="admin">
-			<language tag="fr-FR">languages/fr-FR/fr-FR.com_collector.ini</language>
-			<language tag="fr-FR">languages/fr-FR/fr-FR.com_collector.menu.ini</language>
-			<language tag="fr-FR">languages/fr-FR/fr-FR.com_collector.sys.ini</language>
-			<language tag="en-GB">languages/en-GB/en-GB.com_collector.ini</language>
-			<language tag="en-GB">languages/en-GB/en-GB.com_collector.menu.ini</language>
-			<language tag="en-GB">languages/en-GB/en-GB.com_collector.sys.ini</language>
-			<language tag="es-ES">languages/es-ES/es-ES.com_collector.ini</language>
-			<language tag="es-ES">languages/es-ES/es-ES.com_collector.menu.ini</language>
-			<language tag="es-ES">languages/es-ES/es-ES.com_collector.sys.ini</language>
-			<language tag="de-DE">languages/de-DE/de-DE.com_collector.ini</language>
-			<language tag="de-DE">languages/de-DE/de-DE.com_collector.menu.ini</language>
-			<language tag="de-DE">languages/de-DE/de-DE.com_collector.sys.ini</language>
-			<language tag="el-GR">languages/el-GR/el-GR.com_collector.menu.ini</language>
-			<language tag="el-GR">languages/el-GR/el-GR.com_collector.sys.ini</language>
-			<language tag="pl-PL">languages/pl-PL/pl-PL.com_collector.ini</language>
-			<language tag="pl-PL">languages/pl-PL/pl-PL.com_collector.menu.ini</language>
-			<language tag="pl-PL">languages/pl-PL/pl-PL.com_collector.sys.ini</language>
+			<language tag="fr-FR">language/fr-FR/fr-FR.com_collector.ini</language>
+			<language tag="fr-FR">language/fr-FR/fr-FR.com_collector.menu.ini</language>
+			<language tag="fr-FR">language/fr-FR/fr-FR.com_collector.sys.ini</language>
+			<language tag="en-GB">language/en-GB/en-GB.com_collector.ini</language>
+			<language tag="en-GB">language/en-GB/en-GB.com_collector.menu.ini</language>
+			<language tag="en-GB">language/en-GB/en-GB.com_collector.sys.ini</language>
+			<language tag="es-ES">language/es-ES/es-ES.com_collector.ini</language>
+			<language tag="es-ES">language/es-ES/es-ES.com_collector.menu.ini</language>
+			<language tag="es-ES">language/es-ES/es-ES.com_collector.sys.ini</language>
+			<language tag="de-DE">language/de-DE/de-DE.com_collector.ini</language>
+			<language tag="de-DE">language/de-DE/de-DE.com_collector.menu.ini</language>
+			<language tag="de-DE">language/de-DE/de-DE.com_collector.sys.ini</language>
+			<language tag="el-GR">language/el-GR/el-GR.com_collector.menu.ini</language>
+			<language tag="el-GR">language/el-GR/el-GR.com_collector.sys.ini</language>
+			<language tag="pl-PL">language/pl-PL/pl-PL.com_collector.ini</language>
+			<language tag="pl-PL">language/pl-PL/pl-PL.com_collector.menu.ini</language>
+			<language tag="pl-PL">language/pl-PL/pl-PL.com_collector.sys.ini</language>
 		</languages>
 	
 	</administration>

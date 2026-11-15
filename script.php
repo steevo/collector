@@ -125,7 +125,9 @@ class com_collectorInstallerScript
 		$msg[] = '<table width="100%" style="border:0px; margin-bottom:10px;">';
 		$msg[] = '<tr>';
 		$msg[] = '<td align="center" colspan="2">';
-		$msg[] = '<img src="' . $imagepath . '" border="0" alt="Collector" /><br />Version 0.7.0';
+		// version installée : celle du manifeste (elle était écrite en dur)
+		$version = (string) ($parent->getManifest()->version ?? '');
+		$msg[] = '<img src="' . $imagepath . '" border="0" alt="Collector" /><br />Version ' . htmlspecialchars($version, ENT_QUOTES, 'UTF-8');
 		$msg[] = '</td>';
 		$msg[] = '</tr>';
 		$msg[] = '<tr>';
