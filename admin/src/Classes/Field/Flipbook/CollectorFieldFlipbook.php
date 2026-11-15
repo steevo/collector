@@ -106,8 +106,14 @@ class CollectorFieldFlipbook extends CollectorField
 	 */
 	public static function readerLink(object $book, int $page = 0): string
 	{
-		return (string) Route::_('index.php?option=com_flipbook&view=book&id=' . (int) $book->id . ':' . $book->alias
-			. ($page > 0 ? '&page=' . $page : ''), false);
+		$url = 'index.php?option=com_flipbook&view=book&id=' . (int) $book->id . ':' . $book->alias . ($page > 0 ? '&page=' . $page : '');
+
+		// Dans l'administration (aperçu d'une version), la liseuse est celle du site
+		if (Factory::getApplication()->isClient('administrator')) {
+			return (string) Route::link('site', $url, false, Route::TLS_IGNORE, true);
+		}
+
+		return (string) Route::_($url, false);
 	}
 
 	function display($value, $listing = true, $params = array(), $itemId = 0)

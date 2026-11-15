@@ -108,6 +108,16 @@ function openCompare() {
     window.open(url, '<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE'); ?>', 'width=1000,height=750,scrollbars=yes,resizable=yes');
 }
 
+// Lien sur la date d'une version : ouvre son aperçu dans une fenêtre
+document.addEventListener('click', function (event) {
+    const link = event.target.closest('.js-link-open-window');
+
+    if (link && link.dataset.url) {
+        event.preventDefault();
+        window.open(link.dataset.url, 'versionpreview', 'width=1000,height=750,scrollbars=yes,resizable=yes');
+    }
+});
+
 function openPreview() {
     const casesCochees = document.querySelectorAll('input[name="cid[]"]:checked');
 
@@ -133,7 +143,7 @@ function openPreview() {
     const item = <?php echo (int) $this->item; ?>;
 	const collection = <?php echo (int) $this->collection; ?>;
 
-    const url = `index.php?option=com_collector&view=versionpreview&tmpl=component$collection=$(collection)&item=${item}&v_id=${v_id}`;
+    const url = `index.php?option=com_collector&view=versionpreview&tmpl=component&collection=${collection}&item=${item}&v_id=${v_id}`;
     window.open(url, '<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_PREVIEW'); ?>', 'width=1000,height=750,scrollbars=yes,resizable=yes');
 }
 
@@ -239,7 +249,7 @@ window.addEventListener('message', function (event) {
 							<?php // echo HTMLHelper::_('jgrid.published', $item->state, $i, 'itemversions.', false, 'cb'); ?>
 						</td>
 						<th scope="row">
-							<a href="#" class="js-link-open-window save-date" data-url="<?php echo Route::_('index.php?option=com_collector&view=previewhistory&layout=preview&tmpl=component&' . Session::getFormToken() . '=1&item=' . $item->id); ?>">
+							<a href="#" class="js-link-open-window save-date" data-url="<?php echo Route::_('index.php?option=com_collector&view=versionpreview&tmpl=component&collection=' . (int) $this->collection . '&item=' . (int) $this->item . '&v_id=' . (int) $item->id); ?>">
                                 <?php echo HTMLHelper::_('date', $item->modified, Text::_('DATE_FORMAT_LC6')); ?>
                             </a>
 							<?php if ($item->state === 2 && !empty($item->refuse_note)): ?>
