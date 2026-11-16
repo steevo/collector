@@ -360,7 +360,8 @@ $listTypes = [
 					<p class="mb-2"><strong><?php echo Text::_('COM_COLLECTOR_THANKS'); ?></strong>
 						<a href="http://www.cyrill-baur.ch/" target="_blank" rel="noopener">Cyrill Baur</a> (<?php echo Text::_('COM_COLLECTOR_GERMAN_TRANSLATION'); ?>),
 						Sebastian Pućko (<?php echo Text::_('COM_COLLECTOR_POLISH_TRANSLATION'); ?>),
-						Mora (<?php echo Text::_('COM_COLLECTOR_SPANISH_TRANSLATION'); ?>).
+						Mora (<?php echo Text::_('COM_COLLECTOR_SPANISH_TRANSLATION'); ?>),
+						<?php echo Text::_('COM_COLLECTOR_DASHBOARD_TRANSLATION_INIT'); ?>
 					</p>
 					<p class="mb-0"><?php echo Text::_('COM_COLLECTOR_DISTRIBUTED'); ?>
 						<a href="https://www.gnu.org/licenses/gpl-2.0.html" target="_blank" rel="noopener"><?php echo Text::_('COM_COLLECTOR_GPLV2'); ?></a>.
