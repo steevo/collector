@@ -151,9 +151,21 @@ foreach ( $this->fields as $field )
 			echo $field->submitSearchArea();
 		}
 		?>
-		
+
+		if (form.limitstart) form.limitstart.value = 0;
 		form.submit();
 	}
+
+	// Entrée dans un champ de la zone de recherche : même recherche que le bouton (le formulaire n'a pas de bouton
+	// « submit » et peut contenir plusieurs champs texte, le navigateur ne l'enverrait donc pas lui-même)
+	document.addEventListener('keydown', function (e) {
+		var t = e.target;
+		if (e.key !== 'Enter' || e.isComposing || !t.form || t.form.id !== 'adminForm' || !t.closest('.search-area')) return;
+		if (['text', 'search', 'number', 'date', 'email', 'tel'].indexOf(t.type) === -1) return;
+		e.preventDefault();
+		t.dispatchEvent(new Event('change', { bubbles: true }));
+		submitsearchbox();
+	});
 </script>
 <div class="category-list<?php echo $this->pageclass_sfx;?>">
 	<?php if ($this->params->get('show_page_heading', 1)) : ?>

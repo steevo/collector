@@ -176,6 +176,17 @@ function submitsearchbox()
 	form.submit();
 }
 
+// Entrée dans un champ de la zone de recherche : même recherche que le bouton (le formulaire n'a pas de bouton
+// « submit » et peut contenir plusieurs champs texte, le navigateur ne l'enverrait donc pas lui-même)
+document.addEventListener('keydown', function (e) {
+	var t = e.target;
+	if (e.key !== 'Enter' || e.isComposing || !t.form || t.form.id !== 'adminForm' || !t.closest('.search-area')) return;
+	if (['text', 'search', 'number', 'date', 'email', 'tel'].indexOf(t.type) === -1) return;
+	e.preventDefault();
+	t.dispatchEvent(new Event('change', { bubbles: true }));
+	submitsearchbox();
+});
+
 async function removeFromUserlist(itemId, userslistId, btn) {
     if (!confirm('<?php echo Text::_('COM_COLLECTOR_USERLIST_REMOVE_CONFIRM', true); ?>')) return;
 
