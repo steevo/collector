@@ -121,7 +121,6 @@ class FieldsModel extends ListModel
 
 		$published = $this->getUserStateFromRequest($this->context.'.filter.published', 'filter_published', '');
 		$this->setState('filter.published', $published);
-error_log('ITEMS/FIELDS setting shared collection=' . $collection);
 $app->setUserState('com_collector.current_collection', $collection);
 		// List state information.
 		parent::populateState('f.ordering', 'asc');

@@ -348,10 +348,7 @@ class CollectorItemsTable extends Table
 		$this->history->item = $this->id;
 		if ($auto_validate == 0) {
 			$this->history->id = null;
-			error_log('storeVersion: forcing new pending version, item=' . $this->id . ' current active will be preserved');
 		}
-		
-		error_log('storeVersion: history->id=' . var_export($this->history->id, true) . ' history->state=' . $this->history->state);
 		
 		if (!$this->history->store())
 		{
@@ -368,14 +365,6 @@ class CollectorItemsTable extends Table
 
 			return false;
 		}
-		
-		error_log('storeVersion: after store, history->id=' . $this->history->id);
-		
-		// Vérifier que la version active existe encore
-    $check = $this->_db->setQuery(
-        'SELECT COUNT(*) FROM `#__collector_items_history_' . $this->collection . '` WHERE item=' . $this->id . ' AND state=1'
-    )->loadResult();
-    error_log('storeVersion: active versions count after store=' . $check);
 		
 		if ($auto_validate == 0)
 		{

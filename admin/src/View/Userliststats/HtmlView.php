@@ -56,8 +56,6 @@ class HtmlView extends BaseHtmlView
 
         $this->matchingItems = $model->getMatchingItems(20);
         $this->activity      = $model->getActivityByMonth(12);
-error_log('topItems type=0 : ' . json_encode($this->topItemsByType[0]));
-error_log('matchingItems : ' . json_encode($this->matchingItems));
         $this->addToolbar();
         parent::display($tpl);
     }

@@ -145,10 +145,6 @@ class ItemsModel extends ListModel
 	 */
 	protected function getListQuery()
 	{
-		error_log('getListQuery limit=' . $this->getState('list.limit') 
-        . ' start=' . $this->getState('list.start')
-        . ' ordering=' . $this->getState('list.ordering'));
-		
 		// Get collection
 		$collection = $this->getState('filter.collection');
 		$fields = $this->getFields();
