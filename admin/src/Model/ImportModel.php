@@ -460,6 +460,8 @@ class ImportModel extends ListModel
 			'dry_run_multiconflicts' => (int) ($sessionData['dry_run_multiconflicts'] ?? 0),
 			'dry_run_virtual'        => array_values((array) ($sessionData['dry_run_virtual'] ?? [])),
 			'import_history_id'      => (int) ($sessionData['import_history_id'] ?? 0),
+			'decisions'              => is_array($sessionData['decisions'] ?? null) ? $sessionData['decisions'] : [],
+			'default_decision'       => (string) ($sessionData['default_decision'] ?? 'ask'),
 		];
 		$mapping = json_encode($mappingPayload);
 
@@ -569,6 +571,8 @@ class ImportModel extends ListModel
 			'updated'                => $row->updated,
 			'errors'                 => (int) ($payload['errors'] ?? 0),
 			'import_history_id'      => (int) ($payload['import_history_id'] ?? 0),
+			'decisions'              => is_array($payload['decisions'] ?? null) ? $payload['decisions'] : [],
+			'default_decision'       => (string) ($payload['default_decision'] ?? 'ask'),
 		];
 	}
 

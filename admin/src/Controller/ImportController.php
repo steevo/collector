@@ -34,6 +34,9 @@ use Joomla\Database\DatabaseInterface;
 class ImportController extends AdminController
 {
     private const ALLOWED_EXTS = ImportReader::EXTENSIONS;
+
+    /** Décisions possibles face à un doublon */
+    private const DECISIONS = ['skip', 'merge', 'import'];
     private const BATCH_SIZE   = 10;
 
     private function uploadDir(): string
@@ -368,6 +371,23 @@ class ImportController extends AdminController
 			'publish_down' => $data['publish_down'] ?: null,
 		];
 		$session['step'] = 5;
+
+		// Import réel lancé directement (sans simulation) : repartir d'un état propre,
+		// sans décisions enregistrées
+		$session['dry_run']                = false;
+		$session['dry_run_report']         = [];
+		$session['dry_run_conflicts']      = 0;
+		$session['dry_run_multiconflicts'] = 0;
+		$session['dry_run_virtual']        = [];
+		$session['import_history_id']      = 0;
+		$session['imported']               = 0;
+		$session['skipped']                = 0;
+		$session['merged']                 = 0;
+		$session['errors']                 = 0;
+		$session['current_row']            = $session['first_line'];
+		$session['decisions']              = [];
+		$session['default_decision']       = 'ask';
+
 		$model->saveSession($collection, $userId, $session);
 
 		$this->setRedirect(Route::_(
@@ -450,7 +470,8 @@ class ImportController extends AdminController
             $fields = $model->getFields();
 
 			$conflictResult = null;
-			
+			$autoLog        = []; // décisions appliquées automatiquement dans ce lot
+
 			$importedItems = [];
 			$mergedItems = [];
 			
@@ -551,6 +572,15 @@ class ImportController extends AdminController
 								continue;
 							}
 							
+							// Décision enregistrée (rapport de simulation ou « faire de même ») ?
+							$auto = $this->autoDecision($session, $row, array_map(fn($ex) => (int) $ex->id, $existing));
+							if ($auto !== null) {
+								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
+									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
+								$autoLog[] = ['row' => $row] + $auto;
+								continue;
+							}
+
 							// Plusieurs matchs — envoyer la liste pour que l'utilisateur choisisse
 							$matchList = [];
 							foreach ($existing as $ex) {
@@ -611,7 +641,16 @@ class ImportController extends AdminController
 								continue;
 							}
 							
-							// Conflit simple — comportement actuel
+							// Décision enregistrée (rapport de simulation ou « faire de même ») ?
+							$auto = $this->autoDecision($session, $row, [(int) $existing->id]);
+							if ($auto !== null) {
+								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
+									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
+								$autoLog[] = ['row' => $row] + $auto;
+								continue;
+							}
+
+							// Conflit simple : demander à l'utilisateur
 							$conflictResult = [
 								'success'         => true,
 								'state'           => 'conflict',
@@ -673,7 +712,11 @@ class ImportController extends AdminController
 			}
 
 			if ($conflictResult !== null) {
+				if ($importHistoryId) {
+					$model->updateImportHistory($importHistoryId, $imported, $merged, $skipped, $errors);
+				}
 				$this->persistSession($model, $collection, $userId, $session, $colMap, $valueMap);
+				$conflictResult['auto'] = $autoLog;
 				return $conflictResult;
 			}
 
@@ -722,6 +765,7 @@ class ImportController extends AdminController
                 'skipped'  => $skipped,
                 'merged'   => $merged,
 				'errors'   => $errors,
+				'auto'     => $autoLog,
 				'dry_run'         => $isDryRun,
 				'dry_run_entries' => $dryRunEntries,
 				'dry_run_conflicts'      => $dryConflicts,
@@ -845,56 +889,17 @@ class ImportController extends AdminController
 			$errors   = $session['errors'] ?? 0;
 			$importHistoryId = (int) ($session['import_history_id'] ?? 0);
 			
-			$importedItems = [];
-			$mergedItems = [];
+            if (!in_array($decision, self::DECISIONS, true)) {
+                $decision = 'skip';
+            }
 
-            try {
-				switch ($decision) {
-					case 'import':
-						$insertResult = $this->insertRow($collection, $data, $params, $publishing);
-						if ($insertResult !== false) {
-							$imported++;
-							$importedItems[] = $insertResult;
-							if ($importHistoryId) {
-								$model->addImportHistoryItem(
-									$importHistoryId,
-									$insertResult['item_id'],
-									'imported',
-									null,
-									$insertResult['version_after']
-								);
-							}
-						} else {
-							$errors++;
-						}
-						break;
-					case 'merge':
-						$mergeResult = $model->mergeItem($collection, $existingId, $data, $params, $publishing);
-						if ($mergeResult !== false) {
-							$merged++;
-							$mergedItems[] = $mergeResult;
-							if ($importHistoryId) {
-								$model->addImportHistoryItem(
-									$importHistoryId,
-									$mergeResult['item_id'],
-									'merged',
-									$mergeResult['version_before'],
-									$mergeResult['version_after']
-								);
-							}
-						} else {
-							$errors++;
-						}
-						break;
-					case 'skip':
-					default:
-						$skipped++;
-						break;
-				}
-			} catch (\Throwable $e) {
-				error_log('ImportController resolve row=' . $session['current_row'] . ' : ' . $e->getMessage());
-				$errors++;
-			}
+            $this->applyDecision($decision, $existingId, $data, $collection, $publishing, $params,
+                $model, $importHistoryId, $imported, $merged, $skipped, $errors);
+
+            // « Faire de même pour les conflits suivants » : devient la règle générale
+            if ($this->input->getInt('apply_to_next')) {
+                $session['default_decision'] = $decision;
+            }
 
             $nextRow = $session['current_row'] + 1;
             $isEnd   = $nextRow > $session['total_rows'];
@@ -945,6 +950,8 @@ class ImportController extends AdminController
 		}
 
 		// Réinitialiser les compteurs et activer le mode simulation
+		$session['decisions']              = [];
+		$session['default_decision']       = 'ask';
 		$session['dry_run']                = true;
 		$session['step']                   = 5;
 		$session['imported']               = 0;
@@ -974,7 +981,7 @@ class ImportController extends AdminController
 	
 	public function launchfromdryrun(): void
 	{
-		if (!Session::checkToken('get')) {
+		if (!Session::checkToken('request')) {
 			$this->setRedirect(Route::_('index.php?option=com_collector&view=import', false));
 			return;
 		}
@@ -988,6 +995,22 @@ class ImportController extends AdminController
 			$this->setRedirect(Route::_('index.php?option=com_collector&view=import&collection=' . $collection, false));
 			return;
 		}
+
+		// Décisions prises dans le rapport de simulation :
+		//   decisions[ligne] = 'skip' | 'import' | 'merge:ID' | 'merge:'  (absent = règle générale)
+		$decisions = [];
+		foreach ((array) $this->input->post->get('decisions', [], 'ARRAY') as $row => $value) {
+			[$action, $target] = array_pad(explode(':', (string) $value, 2), 2, '');
+			if ((int) $row > 0 && in_array($action, self::DECISIONS, true)) {
+				$decisions[(int) $row] = [
+					'action' => $action,
+					'target' => $action === 'merge' && (int) $target > 0 ? (int) $target : null,
+				];
+			}
+		}
+		$default = $this->input->post->getCmd('default_decision', 'ask');
+		$session['decisions']        = $decisions;
+		$session['default_decision'] = in_array($default, self::DECISIONS, true) ? $default : 'ask';
 
 		// Désactiver le mode simulation et réinitialiser les compteurs
 		$session['dry_run']              = false;
@@ -1008,6 +1031,92 @@ class ImportController extends AdminController
 	}
 
     // ── Helpers privés ────────────────────────────────────────────────────────
+
+    /**
+     * Décision à appliquer sans demander, ou null s'il faut demander à l'utilisateur.
+     *
+     * Décision de la ligne (rapport de simulation), sinon règle générale. Par prudence,
+     * on demande quand même si la situation n'est plus celle de la simulation :
+     * fusion vers un objet qui ne correspond plus, ou fusion sans cible alors que
+     * plusieurs objets correspondent.
+     *
+     * @param  int[]  $matchIds  Objets en base correspondant à la ligne
+     * @return array{action: string, target: int}|null
+     */
+    private function autoDecision(array $session, int $row, array $matchIds): ?array
+    {
+        $decision = $session['decisions'][$row] ?? null;
+
+        if (is_array($decision) && in_array($decision['action'] ?? '', self::DECISIONS, true)) {
+            $action = $decision['action'];
+            $target = (int) ($decision['target'] ?? 0);
+
+            if ($action !== 'merge') {
+                return ['action' => $action, 'target' => 0];
+            }
+            if ($target > 0) {
+                return in_array($target, $matchIds, true) ? ['action' => 'merge', 'target' => $target] : null;
+            }
+            // Fusion sans cible (conflit entre deux lignes du fichier) : un seul objet possible
+            return count($matchIds) === 1 ? ['action' => 'merge', 'target' => $matchIds[0]] : null;
+        }
+
+        $default = (string) ($session['default_decision'] ?? 'ask');
+
+        if ($default === 'skip' || $default === 'import') {
+            return ['action' => $default, 'target' => 0];
+        }
+        if ($default === 'merge' && count($matchIds) === 1) {
+            return ['action' => 'merge', 'target' => $matchIds[0]];
+        }
+
+        return null;
+    }
+
+    /**
+     * Applique une décision face à un doublon et met à jour compteurs et historique.
+     * Fusion : les valeurs non vides de $data remplacent celles de l'objet existant.
+     */
+    private function applyDecision(string $decision, int $existingId, array $data, int $collection,
+                                   array $publishing, object $params, object $model, int $importHistoryId,
+                                   int &$imported, int &$merged, int &$skipped, int &$errors): void
+    {
+        try {
+            switch ($decision) {
+                case 'import':
+                    $result = $this->insertRow($collection, $data, $params, $publishing);
+                    if ($result === false) {
+                        $errors++;
+                        break;
+                    }
+                    $imported++;
+                    if ($importHistoryId) {
+                        $model->addImportHistoryItem($importHistoryId, $result['item_id'], 'imported',
+                            null, $result['version_after']);
+                    }
+                    break;
+
+                case 'merge':
+                    $result = $model->mergeItem($collection, $existingId, $data, $params, $publishing);
+                    if ($result === false) {
+                        $errors++;
+                        break;
+                    }
+                    $merged++;
+                    if ($importHistoryId) {
+                        $model->addImportHistoryItem($importHistoryId, $result['item_id'], 'merged',
+                            $result['version_before'], $result['version_after']);
+                    }
+                    break;
+
+                default:
+                    $skipped++;
+            }
+        } catch (\Throwable $e) {
+            error_log('ImportController ' . $decision . ' item=' . $existingId . ' : ' . $e->getMessage());
+            $errors++;
+        }
+    }
 
     private function sendJson(callable $callback): void
     {

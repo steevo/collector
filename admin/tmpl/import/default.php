@@ -852,6 +852,12 @@ function resolveDbId(input) {
           <span class="icon-plus me-1"></span><?php echo Text::_('COM_COLLECTOR_IMPORT_CONFLICT_IMPORT'); ?>
         </button>
       </div>
+      <div class="form-check mt-2 small">
+        <input class="form-check-input" type="checkbox" id="apply-to-next">
+        <label class="form-check-label" for="apply-to-next">
+          <?php echo Text::_('COM_COLLECTOR_IMPORT_APPLY_TO_NEXT'); ?>
+        </label>
+      </div>
     </div>
 
   </div>
@@ -920,6 +926,19 @@ const T = {
 	conflictImported: <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_CONFLICT_IMPORTED')); ?>,
 	dryRunWarning : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_WARNING')); ?>,
 	dryRunIntraFile : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_INTRA_FILE')); ?>,
+	token           : <?php echo json_encode($token); ?>,
+	decision        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DECISION')); ?>,
+	decisionRule    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DECISION_RULE')); ?>,
+	decisionAsk     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DECISION_ASK')); ?>,
+	decisionDefault : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DECISION_DEFAULT')); ?>,
+	decisionHelp    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DECISION_HELP')); ?>,
+	decisionSkip    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_CONFLICT_SKIP')); ?>,
+	decisionMerge   : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_CONFLICT_MERGE')); ?>,
+	decisionImport  : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_CONFLICT_IMPORT')); ?>,
+	decisionMergeWith : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DECISION_MERGE_WITH')); ?>,
+	autoSkip        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_AUTO_SKIP')); ?>,
+	autoMerge       : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_AUTO_MERGE')); ?>,
+	autoImport      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_AUTO_IMPORT')); ?>,
 };
 
 let state = {
@@ -955,6 +974,7 @@ async function runImport() {
     if (!json.success) { appendLog(json.message, 'text-danger'); finishImport(true); return; }
 
     applyCounters(json);
+    logAutoDecisions(json.auto);
 
 	if (json.state === 'multiconflict') {
 		state.conflict   = json;
@@ -990,6 +1010,7 @@ async function runImport() {
 /* ── Conflit ─────────────────────────────────────────────────────────────── */
 function showConflict(json) {
     state.conflict = json;
+    document.getElementById('apply-to-next').checked = false;
 	
 	// Toujours rétablir les 3 colonnes standard, quelle que soit l'origine
     const thead = document.querySelector('#conflict-panel table thead tr');
@@ -1160,6 +1181,9 @@ async function resolveConflict(decision) {
     const fd = buildFd();
     fd.append('decision', decision);
     fd.append('existingId', json.existingId);
+    if (document.getElementById('apply-to-next').checked) {
+        fd.append('apply_to_next', '1');
+    }
 
     if (decision === 'merge') {
 		document.querySelectorAll('#conflict-tbody tr[data-col]').forEach(tr => {
@@ -1251,7 +1275,9 @@ function renderDryRunReport() {
         .map(col => FIELDS.find(f => f.col === col))
         .filter(Boolean);
 
-    let html = '<div class="px-3 py-3 border-top">';
+    // Le rapport est un formulaire : « Lancer l'import réel » enregistre les décisions
+    let html = '<form method="post" action="' + esc(T.dryRunLaunchUrl) + '" class="px-3 py-3 border-top">';
+    html += '<input type="hidden" name="' + esc(T.token) + '" value="1">';
     html += '<h6 class="fw-semibold mb-3">' + T.dryRunTitle + '</h6>';
 
     // Résumé
@@ -1263,6 +1289,20 @@ function renderDryRunReport() {
     if (multiconflicts.length > 0)
         html += '<li class="text-danger">⚠ ' + multiconflicts.length + ' ' + T.dryRunWouldMultiConflict + '</li>';
     html += '</ul>';
+
+    // Règle générale pour les conflits laissés sur « Règle générale »
+    if (conflicts.length + multiconflicts.length > 0) {
+        html += '<div class="mb-3">';
+        html += '<p class="small text-muted mb-2">' + esc(T.decisionHelp) + '</p>';
+        html += '<label class="form-label small fw-semibold mb-1" for="default-decision">' + esc(T.decisionDefault) + '</label>';
+        html += '<select class="form-select form-select-sm w-auto" name="default_decision" id="default-decision">'
+             + '<option value="ask">' + esc(T.decisionAsk) + '</option>'
+             + '<option value="skip">' + esc(T.decisionSkip) + '</option>'
+             + '<option value="merge">' + esc(T.decisionMerge) + '</option>'
+             + '<option value="import">' + esc(T.decisionImport) + '</option>'
+             + '</select>';
+        html += '</div>';
+    }
 
     // Accordéon conflits simples
     if (conflicts.length > 0) {
@@ -1292,14 +1332,14 @@ function renderDryRunReport() {
 	html += '<span>' + T.dryRunWarning + '</span>';
 	html += '</div>';
 
-	// Bouton lancer l'import réel
+	// Bouton lancer l'import réel (enregistre les décisions)
 	html += '<div class="mt-3 pt-3 border-top">';
-	html += '<a href="' + T.dryRunLaunchUrl + '" class="btn btn-primary">';
+	html += '<button type="submit" class="btn btn-primary">';
 	html += '<span class="icon-upload me-1"></span>' + T.dryRunLaunchBtn;
-	html += '</a>';
+	html += '</button>';
 	html += '</div>';
 
-    html += '</div>';
+    html += '</form>';
 
     const footer = document.getElementById('summary-footer');
 	if (footer) footer.insertAdjacentHTML('beforebegin', html);
@@ -1310,13 +1350,13 @@ function buildAccordion(id, titleHtml, content) {
     <div class="accordion mb-3" id="acc-${id}">
       <div class="accordion-item">
         <h2 class="accordion-header">
-          <button class="accordion-button collapsed py-2 small fw-semibold"
+          <button class="accordion-button py-2 small fw-semibold"
                   type="button" data-bs-toggle="collapse"
                   data-bs-target="#acc-body-${id}">
             ${titleHtml}
           </button>
         </h2>
-        <div id="acc-body-${id}" class="accordion-collapse collapse">
+        <div id="acc-body-${id}" class="accordion-collapse collapse show">
           <div class="accordion-body p-0">${content}</div>
         </div>
       </div>
@@ -1331,6 +1371,7 @@ function buildConflictTable(entries, displayCols, isMulti) {
         html += '<th class="small">' + esc(f.label) + '</th>';
     });
 	html += '<th class="small">' + T.dryRunExistingId + '</th>';
+	html += '<th class="small">' + esc(T.decision) + '</th>';
     html += '</tr></thead><tbody>';
 
     entries.forEach(e => {
@@ -1344,6 +1385,8 @@ function buildConflictTable(entries, displayCols, isMulti) {
                 html += '<td class="small fw-semibold">' + esc(e.importDisplay[f.col] ?? '—') + '</td>';
             });
 			html += '<td></td>';
+			html += '<td class="align-middle" rowspan="' + (e.matches.length + 1) + '">'
+			     + decisionSelect(e.row, e.matches.map(m => m.id)) + '</td>';
             html += '</tr>';
             // Lignes des matchs
             e.matches.forEach(match => {
@@ -1370,7 +1413,9 @@ function buildConflictTable(entries, displayCols, isMulti) {
 				html += '<td class="small fw-semibold">'
 					 + esc((e.importDisplay ?? {})[f.col] ?? '—') + '</td>';
 			});
-			html += '</td><td>';
+				html += '<td></td>';
+				html += '<td class="align-middle" rowspan="2">'
+				     + decisionSelect(e.row, e.intraFile ? [null] : [e.existingId]) + '</td>';
 			html += '</tr><tr>';
 			displayCols.forEach(f => {
 				const imp     = String((e.importDisplay   ?? {})[f.col] ?? '');
@@ -1399,6 +1444,32 @@ function buildConflictTable(entries, displayCols, isMulti) {
 
     html += '</tbody></table>';
     return html;
+}
+
+/**
+ * Liste de choix d'un conflit du rapport.
+ * targets : objets avec lesquels fusionner (null = l'objet créé par une autre ligne du fichier).
+ */
+function decisionSelect(row, targets) {
+    let html = '<select class="form-select form-select-sm" name="decisions[' + row + ']">';
+    html += '<option value="">' + esc(T.decisionRule) + '</option>';
+    html += '<option value="skip">' + esc(T.decisionSkip) + '</option>';
+    targets.forEach(id => {
+        html += id
+            ? '<option value="merge:' + id + '">' + esc(T.decisionMergeWith.replace('%d', id)) + '</option>'
+            : '<option value="merge:">' + esc(T.decisionMerge) + '</option>';
+    });
+    html += '<option value="import">' + esc(T.decisionImport) + '</option>';
+    html += '</select>';
+    return html;
+}
+
+/** Note dans le journal les conflits tranchés sans demander. */
+function logAutoDecisions(list) {
+    (list || []).forEach(a => {
+        const tpl = a.action === 'merge' ? T.autoMerge : (a.action === 'import' ? T.autoImport : T.autoSkip);
+        appendLog(tpl.replace('%1$d', a.row).replace('%2$d', a.target), 'text-primary');
+    });
 }
 
 /* ── Utilitaires ─────────────────────────────────────────────────────────── */
