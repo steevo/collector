@@ -363,7 +363,7 @@ function changeCollection(sel) {
     $preview   = $this->preview;
     $header    = $preview['header'] ?? [];
     $prevRows  = $preview['rows']   ?? [];
-    $colCount  = max(count($header), !empty($prevRows) ? count($prevRows[0]) : 0);
+    $colCount  = max(count($header), !empty($prevRows) ? count(reset($prevRows)) : 0);
     // Lettres de colonnes (A, B, C…)
     $colLetters = [];
     for ($c = 0; $c < $colCount; $c++) {
@@ -402,9 +402,9 @@ function changeCollection(sel) {
           </tr>
         </thead>
         <tbody>
-          <?php foreach ($prevRows as $ri => $row): ?>
+          <?php foreach ($prevRows as $rowNum => $row): ?>
           <tr>
-            <th class="text-muted small"><?php echo ($session['first_line'] ?? 2) + $ri; ?></th>
+            <th class="text-muted small"><?php echo (int) $rowNum; ?></th>
             <?php for ($c = 0; $c < $colCount; $c++): ?>
             <td><?php echo htmlspecialchars((string)($row[$c] ?? ''), ENT_QUOTES); ?></td>
             <?php endfor; ?>
@@ -732,7 +732,15 @@ function resolveDbId(input) {
 <?php else:
 	$totalRows = (int)($session['total_rows'] ?? 0);
 	$firstLine = (int)($session['first_line'] ?? 2);
-	$dataRows  = max(0, $totalRows - $firstLine + 1);
+	// Lignes de données réellement présentes (les lignes vides du fichier sont ignorées par l'import)
+	$fileRows   = \Steevo\Component\Collector\Administrator\Classes\ImportReader::rows(
+		\Steevo\Component\Collector\Administrator\Classes\ImportReader::dir() . ($session['file'] ?? '')
+	);
+	$emptyRows  = [];
+	for ($r = $firstLine; $r <= $totalRows; $r++) {
+		if (!isset($fileRows[$r])) $emptyRows[] = $r;
+	}
+	$dataRows  = max(0, $totalRows - $firstLine + 1 - count($emptyRows));
 	$startRow  = (int)($session['current_row'] ?: ($session['first_line'] ?? 2));
     $imported  = (int)($session['imported'] ?? 0);
     $skipped   = (int)($session['skipped']  ?? 0);
@@ -874,6 +882,7 @@ const COLLECTION = <?php echo $collection; ?>;
 const TOTAL_ROWS = <?php echo $totalRows; ?>;
 const FIRST_LINE = <?php echo $firstLine; ?>;
 const DATA_ROWS  = <?php echo $dataRows; ?>;
+const EMPTY_ROWS = <?php echo json_encode($emptyRows); ?>; // lignes vides, non comptées
 const FIELDS     = <?php echo $fieldsJs; ?>;
 const FULLTITLE_COLS = <?php echo json_encode($this->fulltitleCols ?? []); ?>;
 const COMPOSITE_COLS = <?php echo json_encode($session['composite_fields'] ?? []); ?>;
@@ -898,6 +907,7 @@ const T = {
     dryRunConflictsTitle     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_CONFLICTS_TITLE')); ?>,
     dryRunMultiConflictsTitle: <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_MULTI_CONFLICTS_TITLE')); ?>,
     dryRunRow                : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_ROW')); ?>,
+    progressCount            : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_PROGRESS_COUNT')); ?>,
     dryRunImportData         : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_IMPORT_DATA')); ?>,
     dryRunExistingData       : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_EXISTING_DATA')); ?>,
     dryRunMatchCount         : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_MATCH_COUNT')); ?>,
@@ -1324,7 +1334,7 @@ function buildConflictTable(entries, displayCols, isMulti) {
     html += '</tr></thead><tbody>';
 
     entries.forEach(e => {
-        const dataRow = e.row - (FIRST_LINE - 1);
+        const dataRow = e.row; // numéro de ligne Excel, comme à l'étape 2 et dans les conflits
 
         if (isMulti) {
             // Ligne d'import
@@ -1373,7 +1383,7 @@ function buildConflictTable(entries, displayCols, isMulti) {
 			html += '<td class="small align-middle">';
 			if (e.intraFile) {
 				html += '<span class="badge bg-info">'
-					 + T.dryRunIntraFile.replace('%d', (e.existingRow ?? 0) - (FIRST_LINE - 1))
+					 + T.dryRunIntraFile.replace('%d', e.existingRow ?? 0)
 					 + '</span>';
 			} else if (e.existingId) {
 				html += '<a href="index.php?option=com_collector&task=item.edit&collection='
@@ -1432,13 +1442,14 @@ function applyCounters(resp) {
 
 function updateBar() {
     if (!TOTAL_ROWS) return;
-    const done = state.imported + state.skipped + state.merged;
-    const pct = Math.min(100, Math.round(done / DATA_ROWS * 100));
+    // Nombre d'objets du fichier déjà traités (lignes vides exclues)
+    const nextRow = Math.min(Math.max(state.currentRow, FIRST_LINE), TOTAL_ROWS + 1);
+    const done = Math.min(DATA_ROWS, Math.max(0, nextRow - FIRST_LINE - EMPTY_ROWS.filter(r => r < nextRow).length));
+    const pct = DATA_ROWS ? Math.min(100, Math.round(done / DATA_ROWS * 100)) : 100;
     const bar  = document.getElementById('progress-bar');
     bar.style.width = pct + '%';
     bar.textContent = pct + '%';
-	const dataRow = Math.min(state.currentRow - FIRST_LINE + 1, DATA_ROWS);
-	document.getElementById('row-indicator').textContent = 'Ligne ' + Math.max(1, dataRow) + ' / ' + DATA_ROWS;
+	document.getElementById('row-indicator').textContent = T.progressCount.replace('%1$d', done).replace('%2$d', DATA_ROWS);
 }
 
 function appendLog(msg, cls) {

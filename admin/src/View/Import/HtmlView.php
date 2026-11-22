@@ -16,6 +16,7 @@ use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
 use Joomla\CMS\Toolbar\ToolbarHelper;
+use Steevo\Component\Collector\Administrator\Classes\ImportReader;
 
 class HtmlView extends BaseHtmlView
 {
@@ -185,16 +186,15 @@ class HtmlView extends BaseHtmlView
 
     private function getFileList(): array
     {
-        $dir = JPATH_ADMINISTRATOR . '/components/com_collector/import_tmp/';
+        $dir = ImportReader::dir();
         if (!is_dir($dir)) return [];
 
-        $files   = [];
-        $allowed = ['xlsx', 'csv'];
+        $files = [];
 
         foreach (scandir($dir) as $name) {
             if ($name[0] === '.') continue;
             $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-            if (!in_array($ext, $allowed, true)) continue;
+            if (!in_array($ext, ImportReader::EXTENSIONS, true)) continue;
             $path    = $dir . $name;
             $size    = filesize($path);
             $files[] = [
@@ -209,61 +209,26 @@ class HtmlView extends BaseHtmlView
         return $files;
     }
 
+    /**
+     * Aperçu : ligne 1 (en-têtes) et les 5 premières lignes de données.
+     *
+     * @return array{header: string[], rows: array<int, string[]>}  rows indexé par numéro de ligne
+     */
     private function loadPreview(string $filename, int $firstLine): array
     {
-        $filepath = JPATH_ADMINISTRATOR . '/components/com_collector/import_tmp/' . $filename;
-        if (!is_file($filepath)) return [];
+        $rows = ImportReader::rows(ImportReader::dir() . $filename);
+        if (!$rows) return [];
 
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-
-        if ($ext === 'csv') {
-            return $this->previewCsv($filepath, $firstLine);
+        $preview = [];
+        foreach ($rows as $n => $row) {
+            if ($n < $firstLine || $n === 1) continue;
+            $preview[$n] = $row;
+            if (count($preview) >= 5) break;
         }
-        return $this->previewXlsx($filepath, $firstLine);
+
+        return ['header' => $rows[1] ?? [], 'rows' => $preview];
     }
 
-    private function previewXlsx(string $filepath, int $firstLine): array
-    {
-        $lib = JPATH_ADMINISTRATOR . '/components/com_collector/libraries/SimpleXLSX.php';
-        if (!file_exists($lib)) return [];
-        require_once $lib;
-        $class = class_exists('\Shuchkin\SimpleXLSX') ? '\Shuchkin\SimpleXLSX'
-               : (class_exists('\SimpleXLSX')         ? '\SimpleXLSX' : null);
-        if (!$class) return [];
-        $xlsx = $class::parse($filepath);
-        if (!$xlsx) return [];
-
-        $header = [];
-        $rows   = [];
-        foreach ($xlsx->readRows(0) as $idx => $row) {
-            $n = $idx + 1;
-            if ($n === 1)                      { $header = array_values($row); continue; }
-            if ($n < $firstLine)               { continue; }
-            if (count($rows) >= 5)             { break; }
-            $rows[] = array_values($row);
-        }
-        return ['header' => $header, 'rows' => $rows];
-    }
-
-    private function previewCsv(string $filepath, int $firstLine): array
-    {
-        $h = fopen($filepath, 'r');
-        if (!$h) return [];
-        if (fread($h, 3) !== "\xEF\xBB\xBF") rewind($h);
-
-        $header = [];
-        $rows   = [];
-        $n      = 0;
-        while (($row = fgetcsv($h, 0, ';')) !== false) {
-            $n++;
-            if ($n === 1)                  { $header = array_values($row); continue; }
-            if ($n < $firstLine)           { continue; }
-            if (count($rows) >= 5)         { break; }
-            $rows[] = array_values($row);
-        }
-        fclose($h);
-        return ['header' => $header, 'rows' => $rows];
-    }
     /**
      * Extrait les valeurs uniques présentes dans le fichier pour chaque champ define.
      * Seules les colonnes mappées à un champ ayant getImportMapping() !== null sont lues.
@@ -277,11 +242,6 @@ class HtmlView extends BaseHtmlView
      */
     public function loadFileValues(string $filename, array $colMap, int $firstLine): array
     {
-        $filepath = JPATH_ADMINISTRATOR . '/components/com_collector/import_tmp/' . $filename;
-        if (!is_file($filepath)) return [];
-
-        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-
         // Identifier les colonnes define et leur index dans le fichier
         $defineColIndexes = []; // [tablecolumn => colIndex 0-based]
         foreach ($this->fields as $field) {
@@ -289,22 +249,19 @@ class HtmlView extends BaseHtmlView
             $tc     = $field->_field->tablecolumn;
             $letter = strtoupper(trim($colMap[$tc] ?? ''));
             if ($letter === '') continue;
-            // Convertir lettre(s) → index 0-based
-            $idx = 0;
-            foreach (str_split($letter) as $c) {
-                $idx = $idx * 26 + ord($c) - 64;
-            }
-            $defineColIndexes[$tc] = $idx - 1;
+            $defineColIndexes[$tc] = ImportReader::colIndex($letter);
         }
 
         if (empty($defineColIndexes)) return [];
 
         $unique = array_fill_keys(array_keys($defineColIndexes), []);
 
-        if ($ext === 'csv') {
-            $this->scanCsvValues($filepath, $firstLine, $defineColIndexes, $unique);
-        } else {
-            $this->scanXlsxValues($filepath, $firstLine, $defineColIndexes, $unique);
+        // Même lecture que l'import (cellules fusionnées comprises)
+        foreach (ImportReader::rows(ImportReader::dir() . $filename) as $n => $row) {
+            if ($n < $firstLine) continue;
+            foreach ($defineColIndexes as $tc => $colIdx) {
+                $unique[$tc][] = trim((string) ($row[$colIdx] ?? ''));
+            }
         }
 
         // Dédupliquer (comparaison exacte) puis trier alphabétiquement
@@ -314,177 +271,6 @@ class HtmlView extends BaseHtmlView
         }
 
         return $unique;
-    }
-
-    private function scanXlsxValues(string $filepath, int $firstLine, array $colIndexes, array &$unique): void
-	{
-		$zip = new \ZipArchive();
-		if ($zip->open($filepath) !== true) return;
-		$ssXml    = $zip->getFromName('xl/sharedStrings.xml') ?: '';
-		$sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml') ?: '';
-		$zip->close();
-
-		if (empty($sheetXml)) return;
-
-		// Résolution des shared strings — identique à ImportController::getXlsxRowsCache()
-		$shared = [];
-		preg_match_all('/<si>(.*?)<\/si>/s', $ssXml, $sm);
-		foreach ($sm[1] as $si) {
-			preg_match_all('/<t[^>]*>([^<]*)<\/t>/', $si, $tm);
-			$shared[] = implode('', $tm[1]);
-		}
-
-		// Parse ligne par ligne (split sur </row>)
-		$parts = explode('</row>', $sheetXml);
-
-		foreach ($parts as $part) {
-			$rowStart = strpos($part, '<row');
-			if ($rowStart === false) continue;
-
-			$rowChunk = substr($part, $rowStart) . '</row>';
-
-			if (!preg_match('/<row[^>]*\br="(\d+)"/', $rowChunk, $rm)) continue;
-			$n = (int) $rm[1];
-			if ($n < $firstLine) continue;
-
-			// 1. Ne matcher QUE les cellules non auto-fermées (celles qui ont un contenu <v>)
-			preg_match_all('/<c\b([^>]*)(?<!\/)>(.*?)<\/c>/s', $rowChunk, $cellMatches, PREG_SET_ORDER);
-
-			if (empty($cellMatches)) continue;
-
-			$cells = [];
-			foreach ($cellMatches as $cell) {
-				$cellAttrs   = $cell[1];
-				$cellContent = $cell[2];
-
-				// Extraire la référence de colonne (ex: "B", "AA")
-				if (!preg_match('/\br="([A-Z]+)\d+"/', $cellAttrs, $refM)) continue;
-				// Extraire la valeur <v>
-				if (!preg_match('/<v>([^<]*)<\/v>/', $cellContent, $vM)) continue;
-
-				// Convertir lettre(s) → index 0-based
-				$idx = 0;
-				foreach (str_split(strtoupper($refM[1])) as $ch) {
-					$idx = $idx * 26 + ord($ch) - 64;
-				}
-				$colIdx = $idx - 1;
-
-				// Détecter t="s" (shared string)
-				$type = preg_match('/\bt="([^"]*)"/', $cellAttrs, $tM) ? $tM[1] : '';
-				$raw  = $vM[1];
-
-				$cells[$colIdx] = ($type === 's' && is_numeric($raw))
-					? ($shared[(int)$raw] ?? '')
-					: $raw;
-			}
-
-			// Extraire les valeurs pour chaque colonne define
-			foreach ($colIndexes as $tc => $colIdx) {
-				$val = trim((string) ($cells[$colIdx] ?? ''));
-				$unique[$tc][] = $val;
-			}
-		}
-
-		// Appliquer le mergeMap : propager la valeur source aux lignes couvertes par les fusions
-		$mergeMap = $this->buildMergeMap($filepath);
-		foreach ($mergeMap as $r => $cols) {
-			if ($r < $firstLine) continue;
-			foreach ($cols as $colIdx => $mergedVal) {
-				foreach ($colIndexes as $tc => $ci) {
-					if ($ci === $colIdx) {
-						$unique[$tc][] = trim((string) $mergedVal);
-					}
-				}
-			}
-		}
-	}
-
-    private function scanCsvValues(string $filepath, int $firstLine, array $colIndexes, array &$unique): void
-    {
-        $h = fopen($filepath, 'r');
-        if (!$h) return;
-        if (fread($h, 3) !== "\xEF\xBB\xBF") rewind($h);
-
-        $n = 0;
-        while (($row = fgetcsv($h, 0, ';')) !== false) {
-            $n++;
-            if ($n < $firstLine) continue;
-            foreach ($colIndexes as $tc => $colIdx) {
-                $val = trim((string) ($row[$colIdx] ?? ''));
-                $unique[$tc][] = $val;
-            }
-        }
-        fclose($h);
-    }
-
-
-    /**
-     * Carte des cellules fusionnées — même logique que ImportController::buildMergeMap()
-     * mais utilisée pour la prévisualisation et le scan des valeurs define.
-     */
-    private function buildMergeMap(string $filepath): array
-    {
-        $mergeMap = [];
-        try {
-            $zip = new \ZipArchive();
-            if ($zip->open($filepath) !== true) return [];
-            $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-            $ssXml    = $zip->getFromName('xl/sharedStrings.xml');
-            $zip->close();
-            if ($sheetXml === false) return [];
-
-            $sharedStrings = [];
-            if ($ssXml !== false) {
-                preg_match_all('/<si>(.*?)<\/si>/s', $ssXml, $sm);
-                foreach ($sm[1] as $si) {
-                    preg_match_all('/<t[^>]*>([^<]*)<\/t>/', $si, $tm);
-                    $sharedStrings[] = implode('', $tm[1]);
-                }
-            }
-
-            preg_match_all('/<mergeCell[^>]*ref="([^"]+)"/', $sheetXml, $mm);
-            if (empty($mm[1])) return [];
-
-            preg_match_all('/<c\b([^>]*)(?<!\/)>(.*?)<\/c>/s', $sheetXml, $cm, PREG_SET_ORDER);
-            $cellValues = [];
-            foreach ($cm as $c) {
-                if (!preg_match('/\br="([A-Z]+\d+)"/', $c[1], $refM)) continue;
-                if (!preg_match('/<v>([^<]*)<\/v>/', $c[2], $vM))     continue;
-                $type = preg_match('/\bt="([^"]*)"/', $c[1], $tM) ? $tM[1] : '';
-                $raw  = $vM[1];
-                $v    = ($type === 's') ? ($sharedStrings[(int)$raw] ?? '') : $raw;
-                $cellValues[$refM[1]] = $v;
-            }
-
-            foreach ($mm[1] as $ref) {
-                if (!str_contains($ref, ':')) continue;
-                [$topLeft, $bottomRight] = explode(':', $ref, 2);
-                [$srcCol, $srcRow] = $this->cellRefToColRow($topLeft);
-                [$endCol, $endRow] = $this->cellRefToColRow($bottomRight);
-                $val = $cellValues[$topLeft] ?? '';
-                for ($r = $srcRow; $r <= $endRow; $r++) {
-                    for ($c = $srcCol; $c <= $endCol; $c++) {
-                        if ($r === $srcRow && $c === $srcCol) continue;
-                        $mergeMap[$r][$c - 1] = $val;
-                    }
-                }
-            }
-        } catch (\Throwable $e) {
-            return [];
-        }
-        return $mergeMap;
-    }
-
-    private function cellRefToColRow(string $ref): array
-    {
-        preg_match('/^([A-Z]+)(\d+)$/i', strtoupper(trim($ref)), $m);
-        $letters = $m[1] ?? 'A';
-        $row     = (int) ($m[2] ?? 1);
-        $col     = 0;
-        foreach (str_split($letters) as $c) {
-            $col = $col * 26 + (ord($c) - 64);
-        }
-        return [$col, $row];
     }
 
 	/**

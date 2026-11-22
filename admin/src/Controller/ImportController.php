@@ -10,6 +10,7 @@ namespace Steevo\Component\Collector\Administrator\Controller;
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Component\ComponentHelper;
+use Steevo\Component\Collector\Administrator\Classes\ImportReader;
 use Steevo\Component\Collector\Administrator\Table\CollectorItemsTable;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
@@ -32,12 +33,12 @@ use Joomla\Database\DatabaseInterface;
  */
 class ImportController extends AdminController
 {
-    private const ALLOWED_EXTS = ['xlsx', 'csv'];
+    private const ALLOWED_EXTS = ImportReader::EXTENSIONS;
     private const BATCH_SIZE   = 10;
 
     private function uploadDir(): string
     {
-        return JPATH_ADMINISTRATOR . '/components/com_collector/import_tmp/';
+        return ImportReader::dir();
     }
 
     public function getModel(
@@ -142,9 +143,20 @@ class ImportController extends AdminController
         }
 
 		$model     = $this->getModel();
-		$ext       = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
-		$totalRows = $this->countRows($this->uploadDir() . $filename, $ext);
+		$totalRows = ImportReader::lastRow($this->uploadDir() . $filename);
 		$userId    = Factory::getApplication()->getIdentity()->get('id');
+
+		if ($totalRows === 0) {
+			$error = ImportReader::lastError();
+			$this->setMessage(
+				$error !== ''
+					? Text::sprintf('COM_COLLECTOR_IMPORT_FILE_UNREADABLE', $error)
+					: Text::_('COM_COLLECTOR_IMPORT_FILE_EMPTY'),
+				'error'
+			);
+			$this->setRedirect($this->getStep1Url());
+			return;
+		}
         
 		// Récupérer les préférences sauvegardées pour cette collection
 		$savedConfig = $model->getConfig($collection);
@@ -388,7 +400,7 @@ class ImportController extends AdminController
             }
 
             $filepath  = $this->uploadDir() . $session['file'];
-            $ext       = strtolower(pathinfo($session['file'], PATHINFO_EXTENSION));
+            $allRows   = ImportReader::rows($filepath);
             $totalRows = $session['total_rows'];
             $rowStart  = $session['current_row'] ?: $session['first_line'];
             $imported  = $session['imported'];
@@ -444,8 +456,8 @@ class ImportController extends AdminController
 				if ($row > $totalRows) break;
 
 				try {
-					$rawRow = $this->readRows($filepath, $ext, $row, $row);
-					if (empty($rawRow)) continue;
+					$rawRow = $allRows[$row] ?? null;
+					if ($rawRow === null) continue; // ligne vide
 
 					$updated = $this->refreshCreatedMappings($valueMap, $fields);
 					if ($updated !== $valueMap) {
@@ -453,7 +465,7 @@ class ImportController extends AdminController
 						$session['value_mapping'] = $valueMap;
 					}
 
-					$data     = $this->buildData($rawRow[0], $fields, $colMap, $valueMap, $collection);
+					$data     = $this->buildData($rawRow, $fields, $colMap, $valueMap, $collection);
 					
 					$updated = $this->refreshCreatedMappings($valueMap, $fields);
 					if ($updated !== $valueMap) {
@@ -1004,7 +1016,7 @@ class ImportController extends AdminController
         foreach ($fields as $field) {
             $col    = $field->_field->tablecolumn;
             $letter = strtoupper(trim($colMap[$col] ?? ''));
-            $raw    = $letter !== '' ? (string) ($row[$this->colIndex($letter)] ?? '') : '';
+            $raw    = $letter !== '' ? (string) ($row[ImportReader::colIndex($letter)] ?? '') : '';
             $map    = $valueMap[$col] ?? [];
             $data[$col] = $field->getImportedValue($raw, (array) $map);
         }
@@ -1050,165 +1062,6 @@ class ImportController extends AdminController
     /** @var string Dernière erreur d'insertion (debug) */
     private string $lastInsertError = '';
 
-    private function readRows(string $filepath, string $ext, int $from, int $to): array
-    {
-        return $ext === 'csv'
-            ? $this->readCsv($filepath, $from, $to)
-            : $this->readXlsx($filepath, $from, $to);
-    }
-
-    private function readXlsx(string $filepath, int $from, int $to): array
-    {
-        // Toutes les lignes sont parsées UNE SEULE FOIS et mises en cache.
-        // Les requêtes AJAX suivantes ne font que charger le cache et trancher.
-        $allRows = $this->getXlsxRowsCache($filepath);
-        $mergeMap = $this->getCachedMergeMap($filepath);
-
-        $result = [];
-        foreach ($allRows as $n => $row) {
-            if ($n < $from) continue;
-            if ($n > $to)   break;
-            if (isset($mergeMap[$n])) {
-                foreach ($mergeMap[$n] as $colIdx => $value) {
-                    while (count($row) <= $colIdx) $row[] = '';
-                    $row[$colIdx] = $value;
-                }
-            }
-            $result[] = $row;
-        }
-        return $result;
-    }
-
-    /**
-     * Parse toutes les lignes du fichier xlsx et les met en cache.
-     * Retourne un tableau [rowNum 1-based => [col0, col1, ...]]
-     */
-    /**
-     * Parse toutes les lignes xlsx avec des données et les met en cache.
-     * Approche : split sur </row> — chaque fragment est petit (~500 octets),
-     * évite les problèmes PCRE (backtrack limit) sur le XML complet.
-     * Retourne [rowNum 1-based => [col0, col1, ...]] (uniquement les lignes avec données).
-     */
-    private function getXlsxRowsCache(string $filepath): array
-    {
-        $cacheFile = sys_get_temp_dir() . '/collector_rows_'
-            . md5($filepath . filemtime($filepath)) . '.ser';
-
-        if (file_exists($cacheFile)) {
-            $rows = unserialize(file_get_contents($cacheFile));
-            if (is_array($rows) && !empty($rows)) return $rows;
-        }
-
-        $zip = new \ZipArchive();
-        if ($zip->open($filepath) !== true) return [];
-        $ssXml    = $zip->getFromName('xl/sharedStrings.xml') ?: '';
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml') ?: '';
-        $zip->close();
-
-        if (empty($sheetXml)) return [];
-
-        // ── Shared strings ────────────────────────────────────────────────────
-        $shared = [];
-        preg_match_all('/<si>(.*?)<\/si>/s', $ssXml, $sm);
-        foreach ($sm[1] as $si) {
-            preg_match_all('/<t[^>]*>([^<]*)<\/t>/', $si, $tm);
-            $shared[] = implode('', $tm[1]);
-        }
-
-        // ── Parse par fragment de ligne (split sur </row>) ────────────────────
-        // Chaque fragment est ~500 octets → pas de problème PCRE.
-        // Contrairement à XMLReader, pas de gestion d'état complexe.
-        $rows  = [];
-        $parts = explode('</row>', $sheetXml);
-
-        foreach ($parts as $part) {
-            $rowStart = strpos($part, '<row');
-            if ($rowStart === false) continue;
-
-            $rowChunk = substr($part, $rowStart) . '</row>';
-
-            // Numéro de ligne
-            if (!preg_match('/<row[^>]*\br="(\d+)"/', $rowChunk, $rm)) continue;
-            $n = (int) $rm[1];
-
-            // Cellules de cette ligne
-            // 1. Ne matcher QUE les cellules non auto-fermées (celles qui ont un contenu <v>)
-			preg_match_all('/<c\b([^>]*)(?<!\/)>(.*?)<\/c>/s', $rowChunk, $cellMatches, PREG_SET_ORDER);
-
-			if (empty($cellMatches)) continue;
-
-			$cells = [];
-			foreach ($cellMatches as $cell) {
-				$cellAttrs   = $cell[1];
-				$cellContent = $cell[2];
-
-				if (!preg_match('/\br="([A-Z]+)\d+"/', $cellAttrs, $refM)) continue;
-				if (!preg_match('/<v>([^<]*)<\/v>/', $cellContent, $vM))   continue;
-
-				$idx = 0;
-				foreach (str_split(strtoupper($refM[1])) as $ch) {
-					$idx = $idx * 26 + ord($ch) - 64;
-				}
-				$colIdx = $idx - 1;
-
-				$type = preg_match('/\bt="([^"]*)"/', $cellAttrs, $tM) ? $tM[1] : '';
-				$raw  = $vM[1];
-
-				$cells[$colIdx] = ($type === 's' && is_numeric($raw))
-					? ($shared[(int)$raw] ?? '')
-					: $raw;
-			}
-
-            $maxCol     = max(array_keys($cells));
-            $row        = [];
-            for ($i = 0; $i <= $maxCol; $i++) {
-                $row[] = $cells[$i] ?? '';
-            }
-            $rows[$n] = $row;
-        }
-
-        file_put_contents($cacheFile, serialize($rows));
-        return $rows;
-    }
-
-
-    private function readCsv(string $filepath, int $from, int $to): array
-    {
-        $h = fopen($filepath, 'r');
-        if (!$h) return [];
-        if (fread($h, 3) !== "\xEF\xBB\xBF") rewind($h);
-        $result = [];
-        $n      = 0;
-        while (($row = fgetcsv($h, 0, ';')) !== false) {
-            $n++;
-            if ($n < $from) continue;
-            if ($n > $to)   break;
-            $result[] = array_values($row);
-        }
-        fclose($h);
-        return $result;
-    }
-
-    private function countRows(string $filepath, string $ext): int
-    {
-        if ($ext === 'csv') {
-            $h = fopen($filepath, 'r');
-            if (!$h) return 0;
-            if (fread($h, 3) !== "\xEF\xBB\xBF") rewind($h);
-            $c = 0;
-            while (fgetcsv($h, 0, ';') !== false) $c++;
-            fclose($h);
-            return $c;
-        }
-
-        // Utiliser le cache de lignes parsées (ne compte que les lignes avec données)
-        $rows = $this->getXlsxRowsCache($filepath);
-        if (!empty($rows)) {
-            return max(array_keys($rows)); // numéro de la dernière ligne avec données
-        }
-        return 0;
-    }
-
     private function getStep1Url(): string
     {
         return Route::_(
@@ -1217,151 +1070,8 @@ class ImportController extends AdminController
         );
     }
 
-    /**
-     * Supprime tous les fichiers de cache XLSX pour un fichier donné.
-     * Appelé lors de la sélection d'un nouveau fichier pour éviter
-     * de réutiliser un cache créé lors d'une exécution précédente.
-     */
-    private function clearXlsxCache(string $filepath): void
-    {
-        $pattern = sys_get_temp_dir() . '/collector_xlsx_*';
-        // Supprimer tous les caches collector_xlsx (peu nombreux en pratique)
-        foreach (glob($pattern) as $f) {
-            @unlink($f);
-        }
-        // Supprimer aussi le cache merge
-        $mergePattern = sys_get_temp_dir() . '/collector_merge_*';
-        foreach (glob($mergePattern) as $f) {
-            @unlink($f);
-        }
-    }
-
     private function sanitize(string $name): string
     {
         return preg_replace('/[^a-zA-Z0-9._-]/', '_', basename($name));
-    }
-
-    private function colIndex(string $letter): int
-    {
-        $idx = 0;
-        foreach (str_split(strtoupper($letter)) as $c) {
-            $idx = $idx * 26 + ord($c) - 64;
-        }
-        return $idx - 1;
-    }
-
-    private function colLetter(int $idx): string
-    {
-        $s = '';
-        $n = $idx + 1;
-        while ($n > 0) {
-            $r = ($n - 1) % 26;
-            $s = chr(65 + $r) . $s;
-            $n = (int) (($n - $r - 1) / 26);
-        }
-        return $s;
-    }
-
-    private function getCachedMergeMap(string $filepath): array
-    {
-        $cacheFile = sys_get_temp_dir() . '/collector_merge_'
-            . md5($filepath . filemtime($filepath)) . '.ser';
-
-        if (file_exists($cacheFile)) {
-            $map = unserialize(file_get_contents($cacheFile));
-            if (is_array($map)) return $map;
-        }
-
-        $map = $this->buildMergeMap($filepath);
-        file_put_contents($cacheFile, serialize($map));
-        return $map;
-    }
-
-    /**
-     * Convertit une référence cellule Excel (ex: "AB12") en [col 1-based, row 1-based].
-     */
-    private function cellRefToColRow(string $ref): array
-    {
-        preg_match('/^([A-Z]+)(\\d+)$/i', strtoupper(trim($ref)), $m);
-        $letters = $m[1] ?? 'A';
-        $row     = (int) ($m[2] ?? 1);
-        $col     = 0;
-        foreach (str_split($letters) as $c) {
-            $col = $col * 26 + (ord($c) - 64);
-        }
-        return [$col, $row];
-    }
-
-    /**
-     * Construit la carte des cellules fusionnées en lisant le XML directement.
-     *
-     * Lit les valeurs des cellules source depuis xl/worksheets/sheet1.xml
-     * et xl/sharedStrings.xml sans passer par SimpleXLSX (plus rapide,
-     * évite les problèmes de signature getCell).
-     *
-     * @return array<int, array<int, string>>  [row 1-based][col 0-based] => value
-     */
-    private function buildMergeMap(string $filepath): array
-    {
-        $mergeMap = [];
-
-        try {
-            $zip = new \ZipArchive();
-            if ($zip->open($filepath) !== true) return [];
-
-            $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-            $ssXml    = $zip->getFromName('xl/sharedStrings.xml');
-            $zip->close();
-
-            if ($sheetXml === false) return [];
-
-            // ── Shared strings (valeurs texte référencées par index) ──────────
-            $sharedStrings = [];
-            if ($ssXml !== false) {
-                preg_match_all('/<si>(.*?)<\/si>/s', $ssXml, $sm);
-                foreach ($sm[1] as $si) {
-                    preg_match_all('/<t[^>]*>([^<]*)<\/t>/', $si, $tm);
-                    $sharedStrings[] = implode('', $tm[1]);
-                }
-            }
-
-            // ── Merge ranges ──────────────────────────────────────────────────
-            preg_match_all('/<mergeCell[^>]*ref="([^"]+)"/', $sheetXml, $mm);
-            if (empty($mm[1])) return [];
-
-            // ── Valeurs des cellules source (lecture directe du XML) ──────────
-            // Construire un index [ref => raw_value] pour toutes les cellules
-            preg_match_all('/<c\b([^>]*)(?<!\/)>(.*?)<\/c>/s', $sheetXml, $cm, PREG_SET_ORDER);
-			$cellValues = [];
-			foreach ($cm as $c) {
-				if (!preg_match('/\br="([A-Z]+\d+)"/', $c[1], $refM)) continue;
-				if (!preg_match('/<v>([^<]*)<\/v>/', $c[2], $vM))     continue;
-				$type = preg_match('/\bt="([^"]*)"/', $c[1], $tM) ? $tM[1] : '';
-				$raw  = $vM[1];
-				$v    = ($type === 's') ? ($sharedStrings[(int)$raw] ?? '') : $raw;
-				$cellValues[$refM[1]] = function_exists('normalizer_normalize') ? (normalizer_normalize($v) ?: $v) : $v;
-			}
-
-            // ── Remplir la carte ──────────────────────────────────────────────
-            foreach ($mm[1] as $ref) {
-                if (!str_contains($ref, ':')) continue;
-                [$topLeft, $bottomRight] = explode(':', $ref, 2);
-                [$srcCol, $srcRow] = $this->cellRefToColRow($topLeft);
-                [$endCol, $endRow] = $this->cellRefToColRow($bottomRight);
-
-                $sourceValue = $cellValues[$topLeft] ?? '';
-
-                for ($r = $srcRow; $r <= $endRow; $r++) {
-                    for ($c = $srcCol; $c <= $endCol; $c++) {
-                        if ($r === $srcRow && $c === $srcCol) continue;
-                        $mergeMap[$r][$c - 1] = $sourceValue;
-                    }
-                }
-            }
-        } catch (\Throwable $e) {
-            return [];
-        }
-
-        return $mergeMap;
     }
 }

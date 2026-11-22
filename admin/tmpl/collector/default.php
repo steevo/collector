@@ -363,6 +363,9 @@ $listTypes = [
 						Mora (<?php echo Text::_('COM_COLLECTOR_SPANISH_TRANSLATION'); ?>),
 						<?php echo Text::_('COM_COLLECTOR_DASHBOARD_TRANSLATION_INIT'); ?>
 					</p>
+					<p class="mb-2"><?php echo Text::sprintf('COM_COLLECTOR_DASHBOARD_SIMPLEXLSX',
+						'<a href="https://github.com/shuchkin/simplexlsx" target="_blank" rel="noopener">SimpleXLSX</a>'); ?>
+					</p>
 					<p class="mb-0"><?php echo Text::_('COM_COLLECTOR_DISTRIBUTED'); ?>
 						<a href="https://www.gnu.org/licenses/gpl-2.0.html" target="_blank" rel="noopener"><?php echo Text::_('COM_COLLECTOR_GPLV2'); ?></a>.
 					</p>
