@@ -391,10 +391,19 @@ class ImportModel extends ListModel
 			$col       = $field->_field->tablecolumn;
 			$value     = $rawData[$col] ?? '';
 			$displayed = $field->display($value, false, $params);
-			$display[$col] = ($displayed === false || $displayed === '') ? $value : strip_tags((string) $displayed);
+			$display[$col] = self::compactDisplay(($displayed === false || $displayed === '') ? (string) $value : (string) $displayed);
 		}
 
 		return $display;
+	}
+
+	/**
+	 * Texte affichable sur une ligne : sans balises ni blancs superflus
+	 * (le rapport de simulation conserve ces affichages pour chaque conflit).
+	 */
+	private static function compactDisplay(string $html): string
+	{
+		return trim(preg_replace('/\s+/u', ' ', strip_tags($html)) ?? '');
 	}
 
 	/**
@@ -432,7 +441,7 @@ class ImportModel extends ListModel
 			$col       = $field->_field->tablecolumn;
 			$value     = $row->$col ?? '';
 			$displayed = $field->display($value, false, $params);
-			$display[$col] = ($displayed === false || $displayed === '') ? (string) $value : strip_tags((string) $displayed);
+			$display[$col] = self::compactDisplay(($displayed === false || $displayed === '') ? (string) $value : (string) $displayed);
 		}
 
 		return $display;

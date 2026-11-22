@@ -865,7 +865,11 @@ class ImportController extends AdminController
                                 array &$session, array $colMap, array $valueMap): void
 	{
 		$session['value_mapping'] = $valueMap;
-		$model->saveSession($collection, $userId, $session);
+
+		// Un état non enregistré ferait retraiter le même lot indéfiniment : on s'arrête
+		if (!$model->saveSession($collection, $userId, $session)) {
+			throw new \RuntimeException(Text::sprintf('COM_COLLECTOR_IMPORT_SESSION_SAVE_ERROR', $model->getError()));
+		}
 
 		// Fusionner avec la config existante pour préserver les IDs résolus
 		$existingConfig = $model->getConfig($collection) ?? [];
@@ -954,8 +958,9 @@ class ImportController extends AdminController
             if ($isEnd) {
                 // Dernière ligne décidée : import réel terminé
                 $model->deleteSession($collection, $userId);
-            } else {
-                $model->saveSession($collection, $userId, $session);
+            } elseif (!$model->saveSession($collection, $userId, $session)) {
+                return ['success' => false,
+                        'message' => Text::sprintf('COM_COLLECTOR_IMPORT_SESSION_SAVE_ERROR', $model->getError())];
             }
 
             return [
