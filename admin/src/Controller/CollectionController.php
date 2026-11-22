@@ -16,8 +16,13 @@ namespace Steevo\Component\Collector\Administrator\Controller;
 defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\FormController;
+use Joomla\CMS\Response\JsonResponse;
 use Joomla\CMS\Router\Route;
+use Joomla\CMS\Session\Session;
+use Joomla\Database\DatabaseInterface;
+use Steevo\Component\Collector\Administrator\Table\CollectorTable;
 use Joomla\CMS\Versioning\VersionableControllerTrait;
 use Joomla\Utilities\ArrayHelper;
  
@@ -114,6 +119,91 @@ class CollectionController extends FormController
 		// Preset the redirect
 		$this->setRedirect(Route::_('index.php?option=com_collector&view=collections' . $this->getRedirectToListAppend(), false));
 
+		// Duplication : la copie se fait par lots successifs depuis la vue copycollection
+		$vars     = $this->input->post->get('batch', [], 'array');
+		$copyMode = (int) ($vars['copy_mode'] ?? 0);
+
+		if ($copyMode > 0)
+		{
+			$cid = array_values(array_filter((array) $this->input->post->get('cid', [], 'int')));
+
+			if (empty($cid))
+			{
+				$this->setMessage(Text::_('JGLOBAL_NO_ITEM_SELECTED'), 'warning');
+				return false;
+			}
+
+			if (!$this->app->getIdentity()->authorise('core.create', $this->option))
+			{
+				$this->setMessage(Text::_('JLIB_APPLICATION_ERROR_CREATE_RECORD_NOT_PERMITTED'), 'error');
+				return false;
+			}
+
+			if (count($cid) > 1)
+			{
+				$this->app->enqueueMessage(Text::_('COM_COLLECTOR_COLLECTION_COPY_ONLY_FIRST'), 'warning');
+			}
+
+			$this->setRedirect(Route::_('index.php?option=com_collector&view=copycollection'
+				. '&id=' . $cid[0]
+				. '&copy_mode=' . min($copyMode, 3)
+				. '&assetgroup_id=' . (int) ($vars['assetgroup_id'] ?? 0), false));
+
+			return true;
+		}
+
 		return parent::batch($model);
+	}
+
+	/**
+	 * Copie d'une collection, par lots (appel AJAX répété depuis la vue copycollection).
+	 *
+	 * Paramètres POST : id (collection source), mode (1 = champs seuls,
+	 * 2 = champs et objets sans historique, 3 = champs et objets avec historique),
+	 * assetgroup_id (niveau d'accès de la copie, 0 = inchangé),
+	 * new_col (collection de destination, 0 au premier appel).
+	 *
+	 * Répond en JSON (JsonResponse) : data = updated_fields, remaining_fields,
+	 * updated_items, remaining_items, new_col.
+	 *
+	 * @return  void
+	 */
+	public function copy(): void
+	{
+		$this->app->setHeader('Content-Type', 'application/json; charset=utf-8', true);
+
+		try
+		{
+			if (!Session::checkToken('post'))
+			{
+				throw new \RuntimeException(Text::_('JINVALID_TOKEN'), 403);
+			}
+
+			if (!$this->app->getIdentity()->authorise('core.create', $this->option))
+			{
+				throw new \RuntimeException(Text::_('JLIB_APPLICATION_ERROR_CREATE_RECORD_NOT_PERMITTED'), 403);
+			}
+
+			$id     = $this->input->post->getInt('id', 0);
+			$mode   = $this->input->post->getInt('mode', 0);
+			$access = $this->input->post->getInt('assetgroup_id', 0);
+			$newCol = $this->input->post->getInt('new_col', 0);
+
+			if ($id <= 0 || $mode < 1 || $mode > 3)
+			{
+				throw new \RuntimeException(Text::_('COM_COLLECTOR_COLLECTION_COPY_SELECT_A_COLLECTION'), 400);
+			}
+
+			$table    = new CollectorTable(Factory::getContainer()->get(DatabaseInterface::class));
+			$response = $table->copy($id, $mode, $access, $newCol);
+
+			echo new JsonResponse($response);
+		}
+		catch (\Throwable $e)
+		{
+			echo new JsonResponse(null, $e->getMessage(), true);
+		}
+
+		$this->app->close();
 	}
 }

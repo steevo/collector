@@ -1,9 +1,9 @@
 <?php
 /**
- * Joomla! 3.0 component Collector
+ * Joomla! 6 component Collector
  *
  * @package 	Collector
- * @copyright   Copyright (C) 2010 - 2020 Philippe Ousset. All rights reserved.
+ * @copyright   Copyright (C) 2010 - 2026 Philippe Ousset. All rights reserved.
  * @license     GNU General Public License version 2 or later; see LICENSE.txt
  *
  * Collector is a Multi Purpose Listing Tool.
@@ -14,130 +14,114 @@
 // Check to ensure this file is included in Joomla!
 defined('_JEXEC') or die( 'Restricted access' );
 
-HTMLHelper::Behavior::framework();
+use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Router\Route;
+use Joomla\CMS\Session\Session;
+use Joomla\CMS\Uri\Uri;
+
+$copyConfig = [
+	'url'        => Route::_('index.php?option=com_collector&task=collection.copy&format=raw', false),
+	'token'      => Session::getFormToken(),
+	'collection' => (int) $this->collection,
+	'mode'       => (int) $this->copy_mode,
+	'access'     => (int) $this->assetgroup_id,
+	'txtFields'  => Text::_('COM_COLLECTOR_COLLECTION_COPY_FIELDS_COPIED_OUT_OF'),
+	'txtItems'   => Text::_('COM_COLLECTOR_COLLECTION_COPY_ITEMS_COPIED_OUT_OF'),
+	'txtEnd'     => Text::_('COM_COLLECTOR_COLLECTION_COPY_END'),
+	'txtSelect'  => Text::_('COM_COLLECTOR_COLLECTION_COPY_SELECT_A_COLLECTION'),
+];
 ?>
-
-<script language="javascript" type="text/javascript">
-	<!--
-	window.addEvent("domready",function(){
-		document.id('toolbar-arrow-left-2').getFirst('button').addClass('disabled');
-		document.id('toolbar-arrow-left-2').getFirst('button').removeProperty('onclick');
-		ajaxRequest();
-	});
-	
-	function ajaxRequest( new_col = 0 )
-	{
-		var collection_id = <?php echo $this->collection ?>;
-		
-		if (collection_id == '') {
-			var state = '<?php echo Text::_('COM_COLLECTOR_COLLECTION_COPY_SELECT_A_COLLECTION'); ?>';
-			document.id('state').set('html',state);
-			return;
-		}
-		var copy_method = '<?php echo $this->copy_mode ?>';
-		var assetgroup_id = '<?php echo $this->assetgroup_id ?>';
-		var url="index.php?option=com_collector&format=raw&task=collection.copy";
-		jQuery.ajax({
-			url: url,
-			method:'post',
-			data: { id: collection_id, mode: copy_method, assetgroup_id: assetgroup_id, new_col: new_col }
-			success: function( result, status, xhr ) {
-				var resp = JSON.decode( result );
-				new_col = parseInt(resp['new_col']);
-				var updated_fields = parseInt($("updated_fields").value) + parseInt(resp['updated_fields']);
-				document.id('updated_fields').value = updated_fields;
-				var total_fields = parseInt($("updated_fields").value) + parseInt(resp['remaining_fields']);
-				var text_fields = updated_fields + '<?php echo Text::_('COM_COLLECTOR_COLLECTION_COPY_FIELDS_COPIED_OUT_OF'); ?>' + total_fields;
-				document.id('update_fields').set('html',text_fields);
-				var updated_items = parseInt($("updated_items").value) + parseInt(resp['updated_items']);
-				document.id('updated_items').value = updated_items;
-				var total_items = parseInt($("updated_items").value) + parseInt(resp['remaining_items']);
-				var text_items = updated_items + '<?php echo Text::_('COM_COLLECTOR_COLLECTION_COPY_ITEMS_COPIED_OUT_OF'); ?>' + total_items;
-				document.id('update_items').set('html',text_items);
-				if ( parseInt(resp['remaining_fields']) != 0 ){
-					ajaxRequest(new_col);
-				}
-				else
-				{
-					if ( parseInt(resp['remaining_items']) != 0 ){
-						ajaxRequest(new_col);
-					}
-					else
-					{
-						var state = '<?php echo Text::_('COM_COLLECTOR_COLLECTION_COPY_END'); ?>';
-						document.id('state').set('html',state);
-						document.id('toolbar-arrow-left-2').getFirst('button').removeClass('disabled');
-						document.id('toolbar-arrow-left-2').getFirst('button').setProperty('onclick','Joomla.submitbutton(\'collections.back\')');
-					}
-				}
-			},
-			error: function() { console.log('ajax call failed'); },
-		});
-		// var myRequest = new Request({
-			// url: url,
-			// method:'post',
-			// onComplete: function( result, status, xhr ) {
-				// var resp = JSON.decode( result );
-				// new_col = parseInt(resp['new_col']);
-				// var updated_fields = parseInt($("updated_fields").value) + parseInt(resp['updated_fields']);
-				// document.id('updated_fields').value = updated_fields;
-				// var total_fields = parseInt($("updated_fields").value) + parseInt(resp['remaining_fields']);
-				// var text_fields = updated_fields + '<?php echo Text::_('COM_COLLECTOR_COLLECTION_COPY_FIELDS_COPIED_OUT_OF'); ?>' + total_fields;
-				// document.id('update_fields').set('html',text_fields);
-				// var updated_items = parseInt($("updated_items").value) + parseInt(resp['updated_items']);
-				// document.id('updated_items').value = updated_items;
-				// var total_items = parseInt($("updated_items").value) + parseInt(resp['remaining_items']);
-				// var text_items = updated_items + '<?php echo Text::_('COM_COLLECTOR_COLLECTION_COPY_ITEMS_COPIED_OUT_OF'); ?>' + total_items;
-				// document.id('update_items').set('html',text_items);
-				// if ( parseInt(resp['remaining_fields']) != 0 ){
-					// ajaxRequest(new_col);
-				// }
-				// else
-				// {
-					// if ( parseInt(resp['remaining_items']) != 0 ){
-						// ajaxRequest(new_col);
-					// }
-					// else
-					// {
-						// var state = '<?php echo Text::_('COM_COLLECTOR_COLLECTION_COPY_END'); ?>';
-						// document.id('state').set('html',state);
-						// document.id('toolbar-arrow-left-2').getFirst('button').removeClass('disabled');
-						// document.id('toolbar-arrow-left-2').getFirst('button').setProperty('onclick','Joomla.submitbutton(\'collections.back\')');
-					// }
-				// }
-			// }
-		// });
-		// myRequest.send('id='+collection_id+'&mode='+copy_method+'&assetgroup_id='+assetgroup_id+'&new_col='+new_col);
-	}
-	//-->
-</script>
-
-<?php if (!empty( $this->sidebar)) : ?>
-	<div id="j-sidebar-container" class="span2">
-		<?php echo $this->sidebar; ?>
+<div id="j-main-container" class="p-3">
+	<div class="card" style="max-width:520px; margin:auto;">
+		<div class="card-body text-center">
+			<p id="update_fields" class="mb-2"></p>
+			<p id="update_items" class="mb-3"></p>
+			<h2 id="state" class="h4">
+				<img src="<?php echo Uri::root(true); ?>/administrator/components/com_collector/assets/images/loading.gif" alt="" /><br />
+				<?php echo Text::_('COM_COLLECTOR_COLLECTION_COPY_IN_PROGRESS'); ?>
+			</h2>
+		</div>
 	</div>
-	<div id="j-main-container" class="span10">
-<?php else : ?>
-	<div id="j-main-container">
-<?php endif;?>
-
-
-	<table style="width:500px; margin:auto;" >
-		<tr height="40px"><td align="right" >
-			<div id="update_fields" name="update_fields" ></div>
-		</td></tr>
-		<tr height="40px"><td align="right" >
-			<div id="update_items" name="update_items" ></div>
-		</td></tr>
-		<tr height="40px" ><td align="center" >
-			<h2><div id="state" ><img src="./components/com_collector/assets/images/loading.gif" /></br><?php echo Text::_('COM_COLLECTOR_COLLECTION_COPY_IN_PROGRESS'); ?></div></h2>
-		</td></tr>
-	</table>
 </div>
 
-<form action="index.php?option=com_collector" method="post" name="adminForm" id="adminForm" >
-<input type="hidden" id="updated_fields" name="updated_fields" value="0" />
-<input type="hidden" id="updated_items" name="updated_items" value="0" />
-<input type="hidden" name="task" value="" />
-<?php echo HTMLHelper::_( 'form.token' ); ?>
+<form action="<?php echo Route::_('index.php?option=com_collector'); ?>" method="post" name="adminForm" id="adminForm">
+	<input type="hidden" name="task" value="" />
+	<?php echo HTMLHelper::_('form.token'); ?>
 </form>
+
+<script>
+(function () {
+	'use strict';
+
+	const cfg = <?php echo json_encode($copyConfig, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE); ?>;
+	const stateEl  = document.getElementById('state');
+	const fieldsEl = document.getElementById('update_fields');
+	const itemsEl  = document.getElementById('update_items');
+	let updatedFields = 0;
+	let updatedItems  = 0;
+
+	// Bouton « Retour » désactivé pendant la copie
+	function backButton() {
+		return document.querySelector('#toolbar-arrow-left-2 button');
+	}
+	function setBackEnabled(enabled) {
+		const btn = backButton();
+		if (btn) { btn.disabled = !enabled; }
+	}
+
+	function setState(text, isError) {
+		stateEl.textContent = text;
+		stateEl.classList.toggle('text-danger', !!isError);
+	}
+
+	async function step(newCol) {
+		const fd = new FormData();
+		fd.append('id', cfg.collection);
+		fd.append('mode', cfg.mode);
+		fd.append('assetgroup_id', cfg.access);
+		fd.append('new_col', newCol);
+		fd.append(cfg.token, '1');
+
+		let json;
+		try {
+			const resp = await fetch(cfg.url, { method: 'POST', body: fd, credentials: 'same-origin' });
+			json = await resp.json();
+		} catch (e) {
+			setState('Erreur : ' + e.message, true);
+			setBackEnabled(true);
+			return;
+		}
+
+		if (!json.success || !json.data) {
+			setState(json.message || 'Erreur', true);
+			setBackEnabled(true);
+			return;
+		}
+
+		const d = json.data;
+		updatedFields += parseInt(d.updated_fields, 10);
+		updatedItems  += parseInt(d.updated_items, 10);
+		fieldsEl.textContent = updatedFields + cfg.txtFields + (updatedFields + parseInt(d.remaining_fields, 10));
+		if (cfg.mode !== 1) {
+			itemsEl.textContent = updatedItems + cfg.txtItems + (updatedItems + parseInt(d.remaining_items, 10));
+		}
+
+		if (parseInt(d.remaining_fields, 10) !== 0 || parseInt(d.remaining_items, 10) !== 0) {
+			return step(parseInt(d.new_col, 10));
+		}
+
+		setState(cfg.txtEnd, false);
+		setBackEnabled(true);
+	}
+
+	document.addEventListener('DOMContentLoaded', function () {
+		if (!cfg.collection || !cfg.mode) {
+			setState(cfg.txtSelect, true);
+			return;
+		}
+		setBackEnabled(false);
+		step(0);
+	});
+})();
+</script>

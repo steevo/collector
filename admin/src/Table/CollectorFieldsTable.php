@@ -21,6 +21,7 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\Filter\InputFilter;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\String\PunycodeHelper;
+use Joomla\CMS\Table\Asset;
 use Joomla\CMS\Table\Table;
 use Joomla\CMS\Tag\TaggableTableInterface;
 use Joomla\CMS\Tag\TaggableTableTrait;
@@ -378,7 +379,7 @@ class CollectorFieldsTable extends Table
 		$this->load($pk);
 		
 		$name = $this->_getAssetName();
-		$asset = self::getInstance('Asset', 'Table', array('dbo' => $this->getDbo()));
+		$asset = new Asset($this->getDbo());
 		$asset->loadByName($name);
 		
 		$rules = new Rules($asset->rules);
@@ -427,7 +428,7 @@ class CollectorFieldsTable extends Table
 	 */
 	protected function _getAssetParentId(?Table $table = null, $id = null)
 	{
-		$asset = self::getInstance('Asset');
+		$asset = new Asset($this->getDbo());
 		$asset->loadByName('com_collector.collection.'.(int) $this->collection);
 		return $asset->id;
 	}

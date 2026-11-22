@@ -520,6 +520,13 @@ class CollectorTable extends Table
 				$db->setQuery( $query );
 				$db->execute();
 			}
+
+			// Tous les champs sont copiés : faire pointer les références de champs
+			// (titre personnalisé, tri suivant) vers les champs de la copie,
+			// avant la copie des objets qui recalcule fulltitle et alias.
+			if ($remaining_fields - $updated_fields == 0) {
+				$this->remapFieldReferences((int) $pk);
+			}
 		}
 		$remaining_fields = $remaining_fields - $updated_fields;
 		$remaining_items = $remaining_items - $updated_items;
@@ -537,6 +544,75 @@ class CollectorTable extends Table
 		return $response;
     }
 	
+	/**
+	 * Après copie des champs : remplace, dans la copie, les identifiants de champs
+	 * de la collection source par ceux des champs copiés (rapprochés par tablecolumn).
+	 * Concerne #__collector.custom et #__collector_fields.next_sorted_field (format « id/id/... »).
+	 *
+	 * @param   int  $sourcePk  Identifiant de la collection source
+	 *
+	 * @return  void
+	 */
+	protected function remapFieldReferences(int $sourcePk): void
+	{
+		$db    = $this->getDbo();
+		$newPk = (int) $this->id;
+
+		$query = $db->getQuery(true)
+			->select([$db->quoteName('id'), $db->quoteName('tablecolumn')])
+			->from($db->quoteName('#__collector_fields'))
+			->where($db->quoteName('collection') . ' = ' . $sourcePk);
+		$sourceColumns = $db->setQuery($query)->loadAssocList('id', 'tablecolumn');
+
+		$query = $db->getQuery(true)
+			->select([$db->quoteName('id'), $db->quoteName('tablecolumn'), $db->quoteName('next_sorted_field')])
+			->from($db->quoteName('#__collector_fields'))
+			->where($db->quoteName('collection') . ' = ' . $newPk);
+		$copies = $db->setQuery($query)->loadObjectList();
+
+		$newIds = [];
+		foreach ($copies as $copy) {
+			$newIds[$copy->tablecolumn] = (int) $copy->id;
+		}
+
+		$remap = static function (string $value) use ($sourceColumns, $newIds): string {
+			if ($value === '' || $value === '0') {
+				return $value;
+			}
+			$ids = [];
+			foreach (explode('/', $value) as $oldId) {
+				$column = $sourceColumns[(int) $oldId] ?? null;
+				if ($column !== null && isset($newIds[$column])) {
+					$ids[] = $newIds[$column];
+				}
+			}
+			return $ids ? implode('/', $ids) : '0';
+		};
+
+		// Titre personnalisé de la collection
+		$custom = $remap((string) $this->custom);
+		if ($custom !== (string) $this->custom) {
+			$query = $db->getQuery(true)
+				->update($db->quoteName('#__collector'))
+				->set($db->quoteName('custom') . ' = ' . $db->quote($custom))
+				->where($db->quoteName('id') . ' = ' . $newPk);
+			$db->setQuery($query)->execute();
+			$this->custom = $custom;
+		}
+
+		// Tri suivant des champs copiés
+		foreach ($copies as $copy) {
+			$next = $remap((string) $copy->next_sorted_field);
+			if ($next !== (string) $copy->next_sorted_field) {
+				$query = $db->getQuery(true)
+					->update($db->quoteName('#__collector_fields'))
+					->set($db->quoteName('next_sorted_field') . ' = ' . $db->quote($next))
+					->where($db->quoteName('id') . ' = ' . (int) $copy->id);
+				$db->setQuery($query)->execute();
+			}
+		}
+	}
+
 	/**
 	 * Method to compute the default name of the asset.
 	 * The default name is in the form `table_name.id`

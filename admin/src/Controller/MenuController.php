@@ -319,7 +319,7 @@ class MenuController extends FormController
 					$select[$key+1]=$value;
 				}
 				
-				$code = HTMLHelper::_('select.genericlist', $select, 'jform[request][userslist]', ' class=”inputbox” size="1" ', 'value', 'text', $default, 'jform_request_userslist');
+				$code = HTMLHelper::_('select.genericlist', $select, 'jform[request][userslist]', ' class="inputbox" size="1" ', 'value', 'text', $default, 'jform_request_userslist');
 			}
 		}
 		
@@ -400,7 +400,7 @@ class MenuController extends FormController
 				$custom = explode( '/', $row[0]->custom );
 			}
 
-			$query = 'SELECT f.*, u.name AS author, u.usertype, t.type AS type';
+			$query = 'SELECT f.*, u.name AS author, t.type AS type';
 			$query .= ' FROM `#__collector_fields` AS f';
 			$query .= ' LEFT JOIN #__collector_fields_type AS t ON t.id = f.type';
 			$query .= ' LEFT JOIN #__users AS u ON u.id = f.created_by';
@@ -449,7 +449,7 @@ class MenuController extends FormController
 
 			foreach ( $results as $row )
 			{
-				$item = new stdClass;
+				$item = new \stdClass;
 				$item->value = $row->id;
 
 				$item->text = '';
@@ -471,7 +471,7 @@ class MenuController extends FormController
 				$select[$key+1]=$value;
 			}
 			
-			$code = HTMLHelper::_('select.genericlist', $select, 'jform[request][id]', ' class=”inputbox” size="1" ', 'value', 'text', $default, 'jform_request_id');
+			$code = HTMLHelper::_('select.genericlist', $select, 'jform[request][id]', ' class="inputbox" size="1" ', 'value', 'text', $default, 'jform_request_id');
 		}
 		
 		echo $code;

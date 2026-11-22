@@ -22,7 +22,6 @@ use Joomla\CMS\MVC\View\GenericDataException;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Toolbar\Toolbar;
 use Joomla\CMS\Toolbar\ToolbarHelper;
-use Steevo\Component\Collector\Administrator\Helper\CollectorHelper;
 
 /**
  * HTML Update View class for the Collector component
@@ -31,6 +30,15 @@ use Steevo\Component\Collector\Administrator\Helper\CollectorHelper;
  */
 class HtmlView extends BaseHtmlView
 {
+	/** @var int Collection source */
+	public $collection = 0;
+
+	/** @var int Mode de copie (1 = champs, 2 = champs et objets sans historique, 3 = avec historique) */
+	public $copy_mode = 0;
+
+	/** @var int Niveau d'accès de la copie (0 = inchangé) */
+	public $assetgroup_id = 0;
+
 	/**
 	 * Display function
 	 */
@@ -39,13 +47,11 @@ class HtmlView extends BaseHtmlView
 		// Initialise variables.
 		$app = Factory::getApplication();
 
-		$cid = $app->input->get('cid');
-		$this->collection = $cid[0];
+		$input = $app->getInput();
 
-		$this->copy_mode = $app->input->get('copy_mode');
-		$this->assetgroup_id = $app->input->get('assetgroup_id');
-
-		CollectorHelper::addSubmenu('collections');
+		$this->collection    = $input->getInt('id', 0);
+		$this->copy_mode     = $input->getInt('copy_mode', 0);
+		$this->assetgroup_id = $input->getInt('assetgroup_id', 0);
 
 		// Set the toolbar
 		$this->addToolBar();
@@ -59,11 +65,11 @@ class HtmlView extends BaseHtmlView
 	 */
 	protected function addToolBar() 
 	{
-		Factory::getApplication()->input->set('hidemainmenu', true);
-		
+		Factory::getApplication()->getInput()->set('hidemainmenu', true);
+
 		ToolBarHelper::title(Text::_('COM_COLLECTOR_BATCH_COLLECTION'));
 
-		ToolBarHelper::custom('collections.back','arrow-left-2','','ToolBar_BACK',false);
+		ToolBarHelper::custom('collections.back', 'arrow-left-2', '', 'JTOOLBAR_BACK', false);
 	}
 }
 ?>

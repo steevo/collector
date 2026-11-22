@@ -55,17 +55,21 @@ class CollectorUserslistsTable extends Table
         $date = Factory::getDate();
         $user = Factory::getApplication()->getIdentity();
 
+        // Le schéma actuel de #__collector_userslists n'a plus les colonnes
+        // created / modified / publish_up : ne les renseigner que si elles existent.
         if ($this->id) {
-            $this->modified    = $date->toSql();
-            $this->modified_by = $user->get('id');
+            if (property_exists($this, 'modified')) {
+                $this->modified    = $date->toSql();
+                $this->modified_by = $user->get('id');
+            }
         } else {
-            if (!intval($this->created)) {
+            if (property_exists($this, 'created') && !intval($this->created)) {
                 $this->created = $date->toSql();
             }
-            if (!intval($this->publish_up)) {
-                $this->publish_up = $this->created;
+            if (property_exists($this, 'publish_up') && !intval($this->publish_up)) {
+                $this->publish_up = $this->created ?? $date->toSql();
             }
-            if (empty($this->created_by)) {
+            if (property_exists($this, 'created_by') && empty($this->created_by)) {
                 $this->created_by = $user->get('id');
             }
         }

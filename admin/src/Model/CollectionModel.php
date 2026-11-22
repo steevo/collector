@@ -250,23 +250,16 @@ class CollectionModel extends AdminModel
 		// Initialize re-usable member properties
         $this->initBatch();
 		
-		if (!empty($commands['copy_mode']))
+		// La duplication (copy_mode > 0) est prise en charge par CollectionController::batch()
+		if (!empty($commands['assetgroup_id']))
 		{
-			if ( $commands['copy_mode'] == 0 )
+			if (!$this->batchAccess($commands['assetgroup_id'], $pks, $contexts))
 			{
-				if (!empty($commands['assetgroup_id']))
-		        {
-		            if (!$this->batchAccess($commands['assetgroup_id'], $pks, $contexts))
-		            {
-		                return false;
-		            }
-		 
-		            $done = true;
-		        }
-		    } else {
-		    	return "copy";
-		    }
-	    }
+				return false;
+			}
+
+			$done = true;
+		}
 
 		if (!$done)
 		{
