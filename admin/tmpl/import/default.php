@@ -939,6 +939,10 @@ const T = {
 	autoSkip        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_AUTO_SKIP')); ?>,
 	autoMerge       : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_AUTO_MERGE')); ?>,
 	autoImport      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_AUTO_IMPORT')); ?>,
+	pauseBtn        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_PAUSE_BTN')); ?>,
+	continueBtn     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_CONTINUE_BTN')); ?>,
+	waiting         : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_WAITING')); ?>,
+	running         : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_STEP5_TITLE')); ?>,
 };
 
 let state = {
@@ -947,16 +951,29 @@ let state = {
     skipped    : <?php echo $skipped; ?>,
     merged     : <?php echo $merged; ?>,
     conflict   : null,
+    // Simulation : rapport déjà constitué (reprise ou simulation terminée)
+    isDryRun     : <?php echo !empty($session['dry_run']) ? 'true' : 'false'; ?>,
+    dryRunReport : <?php echo json_encode(array_values((array) ($session['dry_run_report'] ?? [])), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
 };
+
+// L'import ne démarre que lancé explicitement (étape 4, simulation, « Lancer l'import réel ») ;
+// arrivé autrement (tableau de bord, « Reprendre »…), il attend « Continuer ».
+const AUTO_START = <?php echo (int) \Joomla\CMS\Factory::getApplication()->input->getInt('start'); ?>;
 
 let isPaused  = false;
 let isRunning = false;
 
-// Démarrage automatique
 window.addEventListener('DOMContentLoaded', function () {
     if (TOTAL_ROWS > 0 && state.currentRow <= TOTAL_ROWS) {
         isRunning = true;
-        runImport();
+        if (AUTO_START) {
+            runImport();
+        } else {
+            setPaused(true);
+            document.getElementById('import-title').textContent = T.waiting;
+            applyCounters({});
+            updateBar();
+        }
     } else {
         finishImport(false);
     }
@@ -997,7 +1014,6 @@ async function runImport() {
     state.currentRow = json.next || (state.currentRow + 10);
     updateBar();
 
-	state.dryRunReport = state.dryRunReport || [];
 	state.isDryRun     = json.dry_run || false;
 	if (json.dry_run_entries) {
 		state.dryRunReport.push(...json.dry_run_entries);
@@ -1218,12 +1234,27 @@ async function resolveConflict(decision) {
 }
 window.resolveConflict = resolveConflict;
 
-/* ── Pause ───────────────────────────────────────────────────────────────── */
+/* ── Pause / Continuer ───────────────────────────────────────────────────── */
+function setPaused(paused) {
+    isPaused = paused;
+    const btn = document.getElementById('btn-pause');
+    btn.innerHTML = paused
+        ? '<span class="icon-play me-1"></span>' + esc(T.continueBtn)
+        : '<span class="icon-pause me-1"></span>' + esc(T.pauseBtn);
+    btn.classList.toggle('btn-warning', !paused);
+    btn.classList.toggle('btn-success', paused);
+}
+
 document.getElementById('btn-pause').addEventListener('click', function () {
-    if (!isRunning) return;
-    isPaused = true;
-    this.disabled = true;
-    appendLog(T.paused, 'text-warning');
+    if (!isRunning || state.conflict) return;
+    if (isPaused) {
+        setPaused(false);
+        document.getElementById('import-title').textContent = T.running;
+        runImport();
+    } else {
+        setPaused(true);
+        appendLog(T.paused, 'text-warning');
+    }
 });
 
 /* ── Fin d'import ────────────────────────────────────────────────────────── */

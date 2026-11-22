@@ -31,6 +31,7 @@ $collection = $this->collectionId;
             <th class="text-center"><?php echo Text::_('COM_COLLECTOR_IMPORT_CNT_SKIPPED'); ?></th>
             <th class="text-center"><?php echo Text::_('COM_COLLECTOR_IMPORT_CNT_ERRORS'); ?></th>
             <th><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_USER'); ?></th>
+            <th><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ROLLBACK_COL'); ?></th>
             <th></th>
           </tr>
         </thead>
@@ -75,6 +76,26 @@ $collection = $this->collectionId;
             </td>
             <td class="small text-muted">
               <?php echo htmlspecialchars($import->created_by_name ?? '', ENT_QUOTES); ?>
+            </td>
+            <td class="small">
+              <?php
+                $rolledBack = (int) ($import->items_rolled_back ?? 0);
+                $itemsTotal = (int) ($import->items_total ?? 0);
+                $rbDate     = $rolledBack ? HTMLHelper::_('date', $import->last_rollback, Text::_('DATE_FORMAT_LC4')) : '';
+              ?>
+              <?php if ($rolledBack && $rolledBack >= $itemsTotal): ?>
+              <span class="badge bg-dark">
+                <span class="icon-undo me-1" aria-hidden="true"></span>
+                <?php echo Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_ROLLBACK_FULL', $rbDate); ?>
+              </span>
+              <?php elseif ($rolledBack): ?>
+              <span class="badge bg-secondary">
+                <span class="icon-undo me-1" aria-hidden="true"></span>
+                <?php echo Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_ROLLBACK_PARTIAL', $rolledBack, $itemsTotal, $rbDate); ?>
+              </span>
+              <?php else: ?>
+              <span class="text-muted">—</span>
+              <?php endif; ?>
             </td>
             <td class="text-end text-nowrap">
               <?php if (!$import->dry_run): ?>

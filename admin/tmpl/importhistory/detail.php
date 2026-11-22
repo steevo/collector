@@ -126,7 +126,7 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
           data-action="<?php echo $item->action; ?>"
           data-modified="<?php echo $isModified ? '1' : '0'; ?>">
         <td>
-          <?php if (!$notExists): ?>
+          <?php if ($item->can_rollback): ?>
           <input type="checkbox"
                  name="item_ids[]"
                  value="<?php echo (int) $item->item_id; ?>"
@@ -143,6 +143,11 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
           <span class="badge bg-secondary ms-1 small"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ITEM_DELETED'); ?></span>
           <?php elseif ($isModified): ?>
           <span class="badge bg-warning text-dark ms-1 small"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_MODIFIED'); ?></span>
+          <?php endif; ?>
+          <?php if ($item->before_missing && !$item->rolled_back): ?>
+          <span class="badge bg-danger ms-1 small" title="<?php echo htmlspecialchars(Text::_('COM_COLLECTOR_IMPORTHISTORY_ROLLBACK_IMPOSSIBLE_DESC'), ENT_QUOTES); ?>">
+            <?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ROLLBACK_IMPOSSIBLE'); ?>
+          </span>
           <?php endif; ?>
         </td>
         <td>

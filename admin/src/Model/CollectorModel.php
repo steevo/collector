@@ -104,7 +104,7 @@ class CollectorModel extends BaseDatabaseModel
 		$db = $this->getDatabase();
 
 		$sessions = $db->setQuery(
-			'SELECT s.collection, c.name AS collection_name, s.file, s.first_line, s.current_row, s.total_rows,'
+			'SELECT s.collection, s.created_by, c.name AS collection_name, s.file, s.first_line, s.current_row, s.total_rows,'
 			. ' s.imported, s.merged, s.skipped, s.mapping, u.name AS author, s.updated'
 			. ' FROM #__collector_import_sessions s'
 			. ' LEFT JOIN #__collector c ON c.id = s.collection'

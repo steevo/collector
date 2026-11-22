@@ -66,6 +66,12 @@ class ImportController extends AdminController
     /** Reset complet : vide la session et revient à l'étape 1 */
     public function reset(): void
     {
+        if (!Session::checkToken('get')) {
+            $this->setMessage(Text::_('JINVALID_TOKEN'), 'error');
+            $this->setRedirect($this->getStep1Url());
+            return;
+        }
+
         $app        = Factory::getApplication();
         $userId     = $app->getIdentity()->get('id');
         $collection = $this->input->getInt('collection');
@@ -73,6 +79,37 @@ class ImportController extends AdminController
         $this->setRedirect(Route::_(
             'index.php?option=com_collector&view=import&collection=' . $collection, false
         ));
+    }
+
+    /**
+     * Abandon d'un import depuis le tableau de bord : supprime sa session
+     * (la configuration et l'historique sont conservés ; les objets déjà
+     * importés ou fusionnés restent, annulables depuis l'historique).
+     */
+    public function abandon(): void
+    {
+        $dashboard = Route::_('index.php?option=com_collector', false);
+
+        if (!Session::checkToken('get')) {
+            $this->setMessage(Text::_('JINVALID_TOKEN'), 'error');
+            $this->setRedirect($dashboard);
+            return;
+        }
+
+        $app        = Factory::getApplication();
+        $collection = $this->input->getInt('collection');
+        // Session d'un autre administrateur possible : le tableau de bord les liste toutes
+        $userId     = $this->input->getInt('user') ?: (int) $app->getIdentity()->get('id');
+
+        if (!$app->getIdentity()->authorise('core.manage', 'com_collector')) {
+            $this->setMessage(Text::_('JERROR_ALERTNOAUTHOR'), 'error');
+            $this->setRedirect($dashboard);
+            return;
+        }
+
+        $this->getModel()->deleteSession($collection, $userId);
+        $this->setMessage(Text::_('COM_COLLECTOR_IMPORT_ABANDONED'));
+        $this->setRedirect($dashboard);
     }
 
     // ── Étape 1 : Upload / Sélection du fichier ──────────────────────────────
@@ -391,7 +428,7 @@ class ImportController extends AdminController
 		$model->saveSession($collection, $userId, $session);
 
 		$this->setRedirect(Route::_(
-			'index.php?option=com_collector&view=import&collection=' . $collection . '&step=5', false
+			'index.php?option=com_collector&view=import&collection=' . $collection . '&step=5&start=1', false
 		));
 	}
 
@@ -975,7 +1012,7 @@ class ImportController extends AdminController
 		$model->saveSession($collection, $userId, $session);
 
 		$this->setRedirect(Route::_(
-			'index.php?option=com_collector&view=import&collection=' . $collection . '&step=5', false
+			'index.php?option=com_collector&view=import&collection=' . $collection . '&step=5&start=1', false
 		));
 	}
 	
@@ -1026,7 +1063,7 @@ class ImportController extends AdminController
 		$model->saveSession($collection, $userId, $session);
 
 		$this->setRedirect(Route::_(
-			'index.php?option=com_collector&view=import&collection=' . $collection . '&step=5', false
+			'index.php?option=com_collector&view=import&collection=' . $collection . '&step=5&start=1', false
 		));
 	}
 

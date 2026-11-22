@@ -15,6 +15,7 @@ defined('_JEXEC') or die('Restricted access');
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
+use Joomla\CMS\Session\Session;
 
 $canCreate = $this->canDo->get('core.create');
 $version   = $this->versionStatus();
@@ -98,6 +99,11 @@ $listTypes = [
 			</div>
 			<a class="btn btn-sm btn-primary" href="<?php echo Route::_('index.php?option=com_collector&view=import&collection=' . (int) $import->collection . '&step=' . (int) $import->step); ?>">
 				<?php echo Text::_('COM_COLLECTOR_DASHBOARD_IMPORT_RESUME'); ?>
+			</a>
+			<a class="btn btn-sm btn-outline-danger"
+			   href="<?php echo Route::_('index.php?option=com_collector&task=import.abandon&collection=' . (int) $import->collection . '&user=' . (int) $import->created_by . '&' . Session::getFormToken() . '=1'); ?>"
+			   onclick="return confirm(<?php echo $this->escape(json_encode(Text::_('COM_COLLECTOR_DASHBOARD_IMPORT_ABANDON_CONFIRM'))); ?>);">
+				<?php echo Text::_('COM_COLLECTOR_DASHBOARD_IMPORT_ABANDON'); ?>
 			</a>
 		</div>
 	<?php endforeach; ?>

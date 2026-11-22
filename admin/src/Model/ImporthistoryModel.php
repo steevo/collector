@@ -18,7 +18,14 @@ class ImporthistoryModel extends ListModel
         $db = $this->getDbo();
         $db->setQuery(
             $db->getQuery(true)
-               ->select(['h.*', 'u.name AS created_by_name'])
+               ->select(['h.*', 'u.name AS created_by_name',
+                         // Annulations (rollback) : objets concernés, objets annulés, date de la dernière
+                         '(SELECT COUNT(*) FROM ' . $db->quoteName('#__collector_import_history_items') . ' hi'
+                         . ' WHERE hi.import_id = h.id) AS items_total',
+                         '(SELECT COUNT(*) FROM ' . $db->quoteName('#__collector_import_history_items') . ' hi'
+                         . ' WHERE hi.import_id = h.id AND hi.rolled_back_at IS NOT NULL) AS items_rolled_back',
+                         '(SELECT MAX(hi.rolled_back_at) FROM ' . $db->quoteName('#__collector_import_history_items') . ' hi'
+                         . ' WHERE hi.import_id = h.id) AS last_rollback'])
                ->from($db->quoteName('#__collector_import_history', 'h'))
                ->leftJoin($db->quoteName('#__users', 'u') . ' ON u.id = h.created_by')
                ->where($db->quoteName('h.collection') . ' = ' . $collection)
@@ -92,6 +99,18 @@ class ImporthistoryModel extends ListModel
             $aliases[(int) $row->id] = $row->alias;
         }
 
+        // Versions d'avant fusion encore présentes : sans suivi des versions, les versions
+        // archivées peuvent avoir été supprimées (outil de nettoyage, restauration d'une version)
+        $beforeIds = array_filter(array_map(fn($r) => (int) $r->version_before, $rows));
+        $existingBefore = [];
+        if ($beforeIds) {
+            $db->setQuery(
+                'SELECT id FROM ' . $db->quoteName('#__collector_items_history_' . $collection)
+                . ' WHERE id IN (' . implode(',', array_unique($beforeIds)) . ')'
+            );
+            $existingBefore = array_flip(array_map('intval', $db->loadColumn() ?: []));
+        }
+
         foreach ($rows as $item) {
             $itemId               = (int) $item->item_id;
             $currentVersion       = $currentVersions[$itemId] ?? null;
@@ -99,6 +118,11 @@ class ImporthistoryModel extends ListModel
             $item->modified_since = $item->item_exists
                 && ($currentVersion !== (int) $item->version_after);
             $item->item_alias     = $aliases[$itemId] ?? '#' . $itemId;
+            $item->rolled_back    = !empty($item->rolled_back_at);
+            // Fusion : l'annulation réactive la version d'avant l'import, qui doit encore exister
+            $item->before_missing = $item->action === 'merged'
+                && !isset($existingBefore[(int) $item->version_before]);
+            $item->can_rollback   = $item->item_exists && !$item->rolled_back && !$item->before_missing;
         }
 
         return $rows;
@@ -123,7 +147,8 @@ class ImporthistoryModel extends ListModel
         foreach ($items as $item) {
             $itemId = (int) $item->item_id;
 
-            if (!$item->item_exists) {
+            if (!$item->can_rollback) {
+                // Objet supprimé, déjà annulé, ou version d'avant l'import disparue
                 $result['skipped']++;
                 continue;
             }
@@ -187,6 +212,17 @@ class ImporthistoryModel extends ListModel
         }
 
         $db    = $this->getDbo();
+
+        // Ne jamais désactiver la version courante sans pouvoir en réactiver une autre
+        $exists = (int) $db->setQuery(
+            'SELECT COUNT(*) FROM ' . $db->quoteName('#__collector_items_history_' . $collection)
+            . ' WHERE id = ' . $versionBefore . ' AND item = ' . $itemId
+        )->loadResult();
+
+        if (!$exists) {
+            throw new \RuntimeException('Version #' . $versionBefore . ' supprimée pour item #' . $itemId);
+        }
+
         $table = new CollectorItemsTable($db);
         $table->initVersion($collection);
         $table->load($itemId);
