@@ -71,22 +71,32 @@ $listTypes = [
 
 	<?php // Imports en cours (session non terminée) ?>
 	<?php foreach ($this->imports as $import) :
-		$percent = $import->total_rows > 0 ? min(100, (int) round($import->current_row * 100 / $import->total_rows)) : 0; ?>
+		$percent = $import->total > 0 ? min(100, (int) round($import->done * 100 / $import->total)) : 0; ?>
 		<div class="alert alert-info d-flex flex-wrap align-items-center gap-3" role="status">
 			<span class="icon-upload fs-4" aria-hidden="true"></span>
 			<div class="flex-grow-1" style="min-width:14rem">
 				<strong><?php echo Text::sprintf('COM_COLLECTOR_DASHBOARD_IMPORT_RUNNING', $this->escape($import->collection_name ?? '#' . $import->collection)); ?></strong>
 				<div class="small">
 					<?php echo $this->escape(basename((string) $import->file)); ?>
-					— <?php echo Text::sprintf('COM_COLLECTOR_DASHBOARD_IMPORT_PROGRESS', (int) $import->current_row, (int) $import->total_rows, (int) $import->imported, (int) $import->merged, (int) $import->skipped); ?>
+					— <?php if ($import->step < 5) :
+						echo Text::sprintf('COM_COLLECTOR_DASHBOARD_IMPORT_CONFIG', (int) $import->step);
+					elseif ($import->dry_run && $import->finished) :
+						echo Text::_('COM_COLLECTOR_DASHBOARD_IMPORT_DRYRUN_DONE');
+					elseif ($import->dry_run) :
+						echo Text::sprintf('COM_COLLECTOR_DASHBOARD_IMPORT_DRYRUN_PROGRESS', (int) $import->done, (int) $import->total);
+					else :
+						echo Text::sprintf('COM_COLLECTOR_DASHBOARD_IMPORT_PROGRESS', (int) $import->done, (int) $import->total, (int) $import->imported, (int) $import->merged, (int) $import->skipped);
+					endif; ?>
 					<?php if ($import->author) : ?> — <?php echo $this->escape($import->author); ?><?php endif; ?>
 					<?php if ($import->updated && $import->updated !== '0000-00-00 00:00:00') : ?> — <?php echo $this->relativeDate($import->updated); ?><?php endif; ?>
 				</div>
+				<?php if ($import->step >= 5) : ?>
 				<div class="progress cd-progress mt-1" role="progressbar" aria-valuenow="<?php echo $percent; ?>" aria-valuemin="0" aria-valuemax="100">
 					<div class="progress-bar" style="width:<?php echo $percent; ?>%"></div>
 				</div>
+				<?php endif; ?>
 			</div>
-			<a class="btn btn-sm btn-primary" href="<?php echo Route::_('index.php?option=com_collector&view=import&collection=' . (int) $import->collection . '&step=5'); ?>">
+			<a class="btn btn-sm btn-primary" href="<?php echo Route::_('index.php?option=com_collector&view=import&collection=' . (int) $import->collection . '&step=' . (int) $import->step); ?>">
 				<?php echo Text::_('COM_COLLECTOR_DASHBOARD_IMPORT_RESUME'); ?>
 			</a>
 		</div>

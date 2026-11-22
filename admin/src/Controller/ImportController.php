@@ -440,6 +440,9 @@ class ImportController extends AdminController
 			}
 
             if ($rowStart > $totalRows) {
+                if (!$isDryRun) {
+                    $model->deleteSession($collection, $userId);
+                }
                 return ['success' => true, 'state' => 'end',
                         'imported' => $imported, 'skipped' => $skipped, 'merged' => $merged];
             }
@@ -703,7 +706,14 @@ class ImportController extends AdminController
 			}
 
 			$this->persistSession($model, $collection, $userId, $session, $colMap, $valueMap);
-			
+
+			// Import réel terminé : la session n'a plus lieu d'être (la configuration
+			// et l'historique sont conservés). Une simulation garde sa session pour
+			// son rapport et pour « Lancer l'import réel ».
+			if ($isEnd && !$isDryRun) {
+				$model->deleteSession($collection, $userId);
+			}
+
             return [
                 'success'  => true,
                 'state'    => $isEnd ? 'end' : 'next',
@@ -899,7 +909,12 @@ class ImportController extends AdminController
 				$model->updateImportHistory($importHistoryId, $imported, $merged, $skipped, $errors);
 			}
 
-            $model->saveSession($collection, $userId, $session);
+            if ($isEnd) {
+                // Dernière ligne décidée : import réel terminé
+                $model->deleteSession($collection, $userId);
+            } else {
+                $model->saveSession($collection, $userId, $session);
+            }
 
             return [
                 'success'  => true,

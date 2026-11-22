@@ -14,6 +14,7 @@ defined('_JEXEC') or die;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Model\BaseDatabaseModel;
+use Steevo\Component\Collector\Administrator\Classes\ImportReader;
 
 /**
  * Tableau de bord de Collector : chiffres clés, collections, objets à valider, import en cours,
@@ -92,20 +93,57 @@ class CollectorModel extends BaseDatabaseModel
 	/**
 	 * Imports non terminés (repris là où ils se sont arrêtés)
 	 *
-	 * @return  object[]  collection, collection_name, file, current_row, total_rows, imported, merged, skipped, author, updated
+	 * Un import réel terminé n'est pas listé (auparavant, sa session
+	 * n'était pas supprimée en fin d'import).
+	 *
+	 * @return  object[]  collection, collection_name, file, current_row, total_rows, imported, merged, skipped,
+	 *                    author, updated, step (1 à 5), dry_run, finished, done (objets traités), total (objets du fichier)
 	 */
 	public function getImportSessions(): array
 	{
 		$db = $this->getDatabase();
 
-		return $db->setQuery(
-			'SELECT s.collection, c.name AS collection_name, s.file, s.current_row, s.total_rows, s.imported, s.merged, s.skipped,'
-			. ' u.name AS author, s.updated'
+		$sessions = $db->setQuery(
+			'SELECT s.collection, c.name AS collection_name, s.file, s.first_line, s.current_row, s.total_rows,'
+			. ' s.imported, s.merged, s.skipped, s.mapping, u.name AS author, s.updated'
 			. ' FROM #__collector_import_sessions s'
 			. ' LEFT JOIN #__collector c ON c.id = s.collection'
 			. ' LEFT JOIN #__users u ON u.id = s.created_by'
 			. ' ORDER BY s.updated DESC'
 		)->loadObjectList() ?: [];
+
+		$result = [];
+
+		foreach ($sessions as $import) {
+			$payload = json_decode((string) $import->mapping, true);
+			unset($import->mapping);
+
+			$import->step     = max(1, min(5, (int) ($payload['step'] ?? 2)));
+			$import->dry_run  = !empty($payload['dry_run']);
+			$import->finished = $import->step >= 5 && (int) $import->current_row > (int) $import->total_rows;
+
+			if ($import->finished && !$import->dry_run) {
+				continue;
+			}
+
+			// Objets traités / objets du fichier (lignes vides exclues), comme sur la page d'import
+			$firstLine = max(1, (int) $import->first_line);
+			$nextRow   = $import->step >= 5 ? max((int) $import->current_row, $firstLine) : $firstLine;
+			$rows      = ImportReader::rows(ImportReader::dir() . basename((string) $import->file));
+
+			if ($rows) {
+				$dataRows      = array_filter(array_keys($rows), fn ($n) => $n >= $firstLine);
+				$import->total = count($dataRows);
+				$import->done  = count(array_filter($dataRows, fn ($n) => $n < $nextRow));
+			} else {
+				$import->total = max(0, (int) $import->total_rows - $firstLine + 1);
+				$import->done  = min($import->total, max(0, $nextRow - $firstLine));
+			}
+
+			$result[] = $import;
+		}
+
+		return $result;
 	}
 
 	/**
