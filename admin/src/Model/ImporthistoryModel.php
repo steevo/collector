@@ -90,13 +90,15 @@ class ImporthistoryModel extends ListModel
         // Alias des items pour affichage
         $db->setQuery(
             $db->getQuery(true)
-               ->select(['id', 'alias'])
+               ->select(['id', 'alias', 'modified'])
                ->from($db->quoteName('#__collector_items'))
                ->where('id IN (' . $placeholders . ')')
         );
-        $aliases = [];
+        $aliases   = [];
+        $modifieds = [];
         foreach ($db->loadObjectList() as $row) {
-            $aliases[(int) $row->id] = $row->alias;
+            $aliases[(int) $row->id]   = $row->alias;
+            $modifieds[(int) $row->id] = (string) $row->modified;
         }
 
         // Versions d'avant fusion encore présentes : sans suivi des versions, les versions
@@ -115,8 +117,15 @@ class ImporthistoryModel extends ListModel
             $itemId               = (int) $item->item_id;
             $currentVersion       = $currentVersions[$itemId] ?? null;
             $item->item_exists    = ($currentVersion !== null);
+            // Modifié depuis l'import : nouvelle version active (suivi des versions activé)
+            // ou date de modification postérieure à l'action (sans suivi des versions,
+            // l'enregistrement écrase la version active sans changer son numéro)
+            $doneAt   = (string) ($item->done_at ?? '');
+            $modified = $modifieds[$itemId] ?? '';
             $item->modified_since = $item->item_exists
-                && ($currentVersion !== (int) $item->version_after);
+                && ($currentVersion !== (int) $item->version_after
+                    || ($doneAt !== '' && $modified !== '' && !str_starts_with($modified, '0000')
+                        && strtotime($modified) > strtotime($doneAt)));
             $item->item_alias     = $aliases[$itemId] ?? '#' . $itemId;
             $item->rolled_back    = !empty($item->rolled_back_at);
             // Fusion : l'annulation réactive la version d'avant l'import, qui doit encore exister

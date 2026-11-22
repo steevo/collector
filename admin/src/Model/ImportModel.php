@@ -347,6 +347,13 @@ class ImportModel extends ListModel
 		$table->version_before = $versionBefore;
 		$table->version_after  = $versionAfter;
 
+		// Date de l'action : sans suivi des versions, une modification ultérieure écrase
+		// la version active au lieu d'en créer une ; seule la date permet de la repérer.
+		// (Colonne ajoutée en 0.9.7 : ignorée tant que la base n'est pas à jour.)
+		if ($table->hasField('done_at')) {
+			$table->done_at = Factory::getDate()->toSql();
+		}
+
 		return $table->check() && $table->store();
 	}
 

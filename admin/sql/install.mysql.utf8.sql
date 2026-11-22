@@ -332,6 +332,7 @@ CREATE TABLE IF NOT EXISTS `#__collector_import_history_items` (
     `action`         varchar(10) NOT NULL DEFAULT '',  -- 'imported' | 'merged',
     `version_before` int(11)     DEFAULT NULL,         -- historyId avant merge,
     `version_after`  int(11)     DEFAULT NULL,         -- historyId après action,
+    `done_at`        datetime    DEFAULT NULL,         -- date de l'action (repère les modifications ultérieures),
 	`rolled_back_at` datetime    DEFAULT NULL,
     PRIMARY KEY (`id`),
     KEY `idx_import_id` (`import_id`),
