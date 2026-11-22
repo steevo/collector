@@ -201,7 +201,16 @@ class ItemsController extends AdminController
 		$app = Factory::getApplication();
 		
 		parent::delete();
-		
+
+		// Valeurs de listes créées par un import annulé : supprimées dès que les objets
+		// qui les utilisaient (mis à la corbeille par l'annulation) ont disparu
+		$removed = $this->getModel('Importhistory', 'Administrator', ['ignore_request' => true])
+						->removeUnusedCreatedValues(0);
+		if ($removed) {
+			$app->enqueueMessage(Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_VALUES_REMOVED_AFTER_DELETE',
+				count($removed), implode(', ', $removed)));
+		}
+
 		// Get some variables from the request
 		$collection = $app->input->get( 'collection' );
 		

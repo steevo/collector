@@ -12,6 +12,7 @@ defined('_JEXEC') or die;
 use Joomla\CMS\Component\ComponentHelper;
 use Steevo\Component\Collector\Administrator\Classes\ImportReader;
 use Steevo\Component\Collector\Administrator\Classes\ImportSimilarity;
+use Steevo\Component\Collector\Administrator\Classes\Field\Define\CollectorFieldDefine;
 use Steevo\Component\Collector\Administrator\Table\CollectorItemsTable;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
@@ -516,6 +517,10 @@ class ImportController extends AdminController
 			$conflictResult = null;
 			$autoLog        = []; // décisions appliquées automatiquement dans ce lot
 
+			// Une simulation ne crée aucune valeur de liste ; un import réel note celles qu'il crée
+			CollectorFieldDefine::$deferCreation = $isDryRun;
+			CollectorFieldDefine::$createdValues = [];
+
 			$importedItems = [];
 			$mergedItems = [];
 			
@@ -534,6 +539,13 @@ class ImportController extends AdminController
 					}
 
 					$data     = $this->buildData($rawRow, $fields, $colMap, $valueMap, $collection);
+
+					if (CollectorFieldDefine::$createdValues) {
+						if (!$isDryRun && $importHistoryId) {
+							$model->addImportHistoryValues($importHistoryId, CollectorFieldDefine::$createdValues);
+						}
+						CollectorFieldDefine::$createdValues = [];
+					}
 					
 					$updated = $this->refreshCreatedMappings($valueMap, $fields);
 					if ($updated !== $valueMap) {

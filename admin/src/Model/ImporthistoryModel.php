@@ -6,6 +6,7 @@ defined('_JEXEC') or die;
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\ListModel;
 use Steevo\Component\Collector\Administrator\Table\CollectorItemsTable;
+use Steevo\Component\Collector\Administrator\Table\CollectorDefinedContentTable;
 use Steevo\Component\Collector\Administrator\Table\CollectorImportHistoryTable;
 use Steevo\Component\Collector\Administrator\Table\CollectorImportHistoryItemsTable;
 
@@ -186,7 +187,129 @@ class ImporthistoryModel extends ListModel
             }
         }
 
+        // Valeurs de listes créées par cet import et que plus rien n'utilise
+        $result['values_removed'] = $result['rolled_back'] > 0 ? $this->removeUnusedCreatedValues($importId) : [];
+
         return $result;
+    }
+
+    /**
+     * Supprime les valeurs de listes créées par un import quand plus aucune version
+     * d'aucun objet ne les utilise (toutes collections) et qu'elles n'ont pas de
+     * sous-valeur ; retire aussi les correspondances d'import qui pointaient dessus.
+     *
+     * Une annulation met en général les objets à la corbeille : la valeur leur sert
+     * encore (une restauration les retrouverait intacts). Elle n'est alors supprimée
+     * qu'une fois ces objets supprimés définitivement (corbeille vidée).
+     *
+     * @param  int  $importId  Import concerné, ou 0 pour tous les imports annulés
+     * @return string[]  Libellés des valeurs supprimées
+     */
+    public function removeUnusedCreatedValues(int $importId): array
+    {
+        $db = $this->getDbo();
+
+        try {
+            $query = $db->getQuery(true)
+                ->select(['h.id', 'h.defined', 'h.value_id', 'h.content'])
+                ->from($db->quoteName('#__collector_import_history_values', 'h'))
+                ->where('h.removed_at IS NULL');
+
+            if ($importId > 0) {
+                $query->where('h.import_id = ' . $importId);
+            } else {
+                // Seulement les imports dont au moins un objet a été annulé
+                $query->where('h.import_id IN (SELECT hi.import_id FROM ' . $db->quoteName('#__collector_import_history_items')
+                    . ' hi WHERE hi.rolled_back_at IS NOT NULL)');
+            }
+
+            $created = $db->setQuery($query)->loadObjectList() ?: [];
+        } catch (\Throwable $e) {
+            return []; // table absente : base pas encore à jour
+        }
+
+        if (!$created) {
+            return [];
+        }
+
+        $merge   = Factory::getApplication()->bootComponent('com_collector')->getMVCFactory()
+                          ->createModel('Listmerge', 'Administrator', ['ignore_request' => true]);
+        $removed = [];
+        $now     = Factory::getDate()->toSql();
+
+        foreach ($created as $c) {
+            $id      = (int) $c->value_id;
+            $exists  = (int) $db->setQuery('SELECT COUNT(*) FROM ' . $db->quoteName('#__collector_defined_content') . ' WHERE id = ' . $id)->loadResult();
+            $usage   = $exists ? $merge->getUsage((int) $c->defined, [$id]) : [];
+            $versions = (int) ($usage[$id]['versions'] ?? 0);
+            $children = $exists ? (int) $db->setQuery('SELECT COUNT(*) FROM ' . $db->quoteName('#__collector_defined_content') . ' WHERE parent_id = ' . $id)->loadResult() : 0;
+
+            if ($exists && ($versions > 0 || $children > 0)) {
+                continue; // encore utilisée (ou mère d'autres valeurs) : on la garde
+            }
+
+            if ($exists) {
+                $table = new CollectorDefinedContentTable($db);
+                if (!$table->delete($id)) {
+                    continue;
+                }
+                $removed[] = (string) $c->content;
+                $this->forgetValueInImportConfig($id);
+            }
+
+            $db->setQuery(
+                'UPDATE ' . $db->quoteName('#__collector_import_history_values')
+                . ' SET removed_at = ' . $db->quote($now) . ' WHERE id = ' . (int) $c->id
+            )->execute();
+        }
+
+        return $removed;
+    }
+
+    /**
+     * Correspondances d'import qui désignaient une valeur supprimée : la valeur
+     * sera de nouveau proposée à la création au prochain import.
+     */
+    private function forgetValueInImportConfig(int $valueId): void
+    {
+        $db   = $this->getDbo();
+        $rows = $db->setQuery('SELECT id, value_mapping FROM ' . $db->quoteName('#__collector_import_config'))->loadObjectList() ?: [];
+
+        foreach ($rows as $row) {
+            $map     = json_decode((string) $row->value_mapping, true);
+            $changed = false;
+
+            if (!is_array($map)) {
+                continue;
+            }
+
+            foreach ($map as &$col) {
+                if (!is_array($col)) continue;
+                if ((string) ($col['empty'] ?? '') === (string) $valueId) {
+                    $col['empty'] = '';
+                    $changed      = true;
+                }
+                if (!isset($col['values']) || !is_array($col['values'])) continue;
+                // Par référence sur le tableau lui-même (pas sur une copie)
+                foreach ($col['values'] as &$pair) {
+                    if ((string) ($pair['db'] ?? '') === (string) $valueId) {
+                        $pair['db']           = '';
+                        $pair['create']       = '1';
+                        $pair['create_label'] = ($pair['create_label'] ?? '') !== '' ? $pair['create_label'] : ($pair['file'] ?? '');
+                        $changed              = true;
+                    }
+                }
+                unset($pair);
+            }
+            unset($col);
+
+            if ($changed) {
+                $db->setQuery(
+                    'UPDATE ' . $db->quoteName('#__collector_import_config')
+                    . ' SET value_mapping = ' . $db->quote(json_encode($map)) . ' WHERE id = ' . (int) $row->id
+                )->execute();
+            }
+        }
     }
 
     private function rollbackImported(int $itemId, int $collection, string $deleteMode): void

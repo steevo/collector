@@ -338,3 +338,16 @@ CREATE TABLE IF NOT EXISTS `#__collector_import_history_items` (
     KEY `idx_import_id` (`import_id`),
     KEY `idx_item_id`   (`item_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+
+-- Valeurs de listes créées par un import (supprimées s'il est annulé et qu'elles ne servent plus)
+CREATE TABLE IF NOT EXISTS `#__collector_import_history_values` (
+    `id`         int(11)      NOT NULL AUTO_INCREMENT,
+    `import_id`  int(11)      NOT NULL,
+    `defined`    int(11)      NOT NULL,
+    `value_id`   int(11)      NOT NULL,
+    `content`    varchar(255) NOT NULL DEFAULT '',
+    `created`    datetime     DEFAULT NULL,
+    `removed_at` datetime     DEFAULT NULL,
+    PRIMARY KEY (`id`),
+    KEY `idx_import_id` (`import_id`)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;

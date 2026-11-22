@@ -486,6 +486,15 @@ class CollectorFieldDefine extends CollectorField
 	 * @param  array   $mapping  Mapping optionnel fourni par l'UI d'import
 	 * @return string  ID de la valeur dans #__collector_defined_content, ou ''
 	 */
+	/** Préfixe d'une valeur « à créer » renvoyée pendant une simulation */
+	public const NEW_PREFIX = 'new:';
+
+	/** Simulation en cours : ne rien créer, renvoyer « new:<libellé> » à la place */
+	public static bool $deferCreation = false;
+
+	/** @var array<int, array{defined:int, id:int, content:string}> Valeurs créées depuis le dernier relevé */
+	public static array $createdValues = [];
+
 	public function getImportedValue($value, array $mapping = [])
 	{
 		$valueTrimmed = trim((string) $value);
@@ -554,31 +563,7 @@ class CollectorFieldDefine extends CollectorField
 		}
 
 		// ── 4. Aucune correspondance → création automatique de la valeur ──────
-		try {
-			$listitem = new CollectorDefinedContentTable($db);
-			$listitem->setLocation(1, 'last-child');
-			$listitem->bind([
-				'parent_id' => 1,
-				'content'   => $valueTrimmed,
-				'defined'   => $this->_field->attribs['list'],
-				'image'     => '',
-			]);
-			$listitem->check();
-			$listitem->store();
-			$listitem->rebuildPath($listitem->id);
-
-			return $listitem->id ? (string) $listitem->id : '';
-		} catch (\Throwable $e) {		
-			// En cas d'échec (doublon de race condition, erreur BDD…)
-			// on retente une lecture avant de renvoyer vide
-			$db->setQuery($db->getQuery(true)
-				->select('id')
-				->from('#__collector_defined_content')
-				->where('defined = ' . $db->quote($this->_field->attribs['list']))
-				->where('LOWER(content) = LOWER(' . $db->quote($valueTrimmed) . ')'));
-			$retry = $db->loadResult();
-			return $retry ? (string) $retry : '';
-		}
+		return $this->createDefinedValue($valueTrimmed);
 	}
 	
 	private function createDefinedValue(string $label): string
@@ -596,6 +581,11 @@ class CollectorFieldDefine extends CollectorField
 		$existing = $db->loadResult();
 		if ($existing) return (string) $existing;
 
+		// Simulation : rien n'est créé, la valeur est seulement annoncée
+		if (self::$deferCreation) {
+			return self::NEW_PREFIX . $label;
+		}
+
 		try {
 			$item = new CollectorDefinedContentTable($db);
 			$item->setLocation(1, 'last-child');
@@ -607,6 +597,10 @@ class CollectorFieldDefine extends CollectorField
 			]);
 			if (!$item->check() || !$item->store()) return '';
 			$item->rebuildPath($item->id);
+			if ($item->id) {
+				// Relevé pour l'historique de l'import (annulation)
+				self::$createdValues[] = ['defined' => (int) $defined, 'id' => (int) $item->id, 'content' => $label];
+			}
 			return $item->id ? (string) $item->id : '';
 		} catch (\Throwable $e) {
 			error_log('createDefinedValue FAILED: ' . $e->getMessage());

@@ -77,6 +77,13 @@ class ImporthistoryController extends AdminController
 
         if ($result['success']) {
             $msg = Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_ROLLBACK_SUCCESS', $result['rolled_back']);
+            if (!empty($result['values_removed'])) {
+                $msg .= ' ' . Text::sprintf(
+                    'COM_COLLECTOR_IMPORTHISTORY_ROLLBACK_VALUES_REMOVED',
+                    count($result['values_removed']),
+                    implode(', ', $result['values_removed'])
+                );
+            }
             if ($result['skipped'] > 0) {
                 $msg .= ' ' . Text::sprintf(
                     'COM_COLLECTOR_IMPORTHISTORY_ROLLBACK_SKIPPED',

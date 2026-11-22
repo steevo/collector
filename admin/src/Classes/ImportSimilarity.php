@@ -171,6 +171,10 @@ final class ImportSimilarity
      */
     public static function label(string $id): string
     {
+        if (str_starts_with($id, 'new:')) {
+            return substr($id, 4); // valeur à créer (simulation)
+        }
+
         self::loadLabels();
 
         return self::$labels[(int) $id] ?? $id;

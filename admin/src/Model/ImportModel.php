@@ -358,6 +358,34 @@ class ImportModel extends ListModel
 	}
 
 	/**
+	 * Note les valeurs de listes créées par un import, pour pouvoir les supprimer
+	 * si l'import est annulé et que plus rien ne les utilise.
+	 * (Table ajoutée en 0.9.7 : ignorée tant que la base n'est pas à jour.)
+	 *
+	 * @param  array  $values  [['defined' => int, 'id' => int, 'content' => string], …]
+	 */
+	public function addImportHistoryValues(int $importId, array $values): void
+	{
+		$db  = $this->getDbo();
+		$now = Factory::getDate()->toSql();
+
+		try {
+			foreach ($values as $v) {
+				$row = (object) [
+					'import_id' => $importId,
+					'defined'   => (int) $v['defined'],
+					'value_id'  => (int) $v['id'],
+					'content'   => mb_substr((string) $v['content'], 0, 255),
+					'created'   => $now,
+				];
+				$db->insertObject('#__collector_import_history_values', $row);
+			}
+		} catch (\Throwable $e) {
+			error_log('Collector import : valeurs créées non enregistrées (' . $e->getMessage() . ')');
+		}
+	}
+
+	/**
 	 * Met à jour les compteurs finaux de l'import.
 	 */
 	public function updateImportHistory(
@@ -390,6 +418,13 @@ class ImportModel extends ListModel
 		foreach ($fields as $field) {
 			$col       = $field->_field->tablecolumn;
 			$value     = $rawData[$col] ?? '';
+
+			// Valeur de liste qui serait créée par l'import (simulation)
+			if (is_string($value) && str_starts_with($value, 'new:')) {
+				$display[$col] = substr($value, 4) . ' ' . Text::_('COM_COLLECTOR_IMPORT_NEW_VALUE');
+				continue;
+			}
+
 			$displayed = $field->display($value, false, $params);
 			$display[$col] = self::compactDisplay(($displayed === false || $displayed === '') ? (string) $value : (string) $displayed);
 		}
