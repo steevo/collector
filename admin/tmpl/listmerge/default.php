@@ -71,7 +71,7 @@ $usageText = function (array $usage) {
 };
 ?>
 <form action="<?php echo Route::_('index.php?option=com_collector&view=listmerge&defined=' . (int) $this->defined); ?>" method="post" name="adminForm" id="adminForm"
-	data-url="<?php echo $this->escape(Route::_('index.php?option=com_collector&view=listmerge&defined=' . (int) $this->defined, false)); ?>">
+	data-url="<?php echo $this->escape(Route::_('index.php?option=com_collector&view=listmerge&defined=' . (int) $this->defined . ($this->return ? '&return=' . $this->return : ''), false)); ?>">
 	<p class="lead"><?php echo Text::_('COM_COLLECTOR_LISTMERGE_INTRO'); ?></p>
 
 	<div class="row align-items-end">
@@ -184,6 +184,7 @@ $usageText = function (array $usage) {
 	<?php endif; ?>
 
 	<input type="hidden" name="defined" value="<?php echo (int) $this->defined; ?>">
+	<input type="hidden" name="return" value="<?php echo $this->escape($this->return); ?>">
 	<input type="hidden" name="task" value="">
 	<?php echo HTMLHelper::_('form.token'); ?>
 </form>

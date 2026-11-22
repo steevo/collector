@@ -11,6 +11,7 @@ namespace Steevo\Component\Collector\Administrator\Model;
 
 defined('_JEXEC') or die;
 
+use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Model\BaseDatabaseModel;
 use Steevo\Component\Collector\Administrator\Table\CollectorDefinedContentTable;
@@ -398,6 +399,150 @@ class ListmergeModel extends BaseDatabaseModel
 		$this->cleanCache('com_collector');
 
 		return $stats;
+	}
+
+	/**
+	 * Supprime une valeur que plus rien n'utilise (outil de nettoyage).
+	 *
+	 * Refusée si une version d'un objet (même ancienne) utilise la valeur ou si
+	 * elle a des sous-valeurs. Les correspondances de l'import qui la désignaient
+	 * redeviennent « à créer » (même traitement que l'annulation d'un import),
+	 * les filtres de menu qui la désignaient sont vidés.
+	 *
+	 * @return string  Libellé de la valeur supprimée
+	 *
+	 * @throws \RuntimeException
+	 */
+	public function deleteUnused(int $id): string
+	{
+		$db    = $this->getDatabase();
+		$value = $id ? $this->loadValue($id) : null;
+
+		if (!$value || (int) $value->defined === 0) {
+			throw new \RuntimeException(Text::_('COM_COLLECTOR_LISTMERGE_ERROR_NOT_FOUND'));
+		}
+
+		if ($this->loadChildren($id)) {
+			throw new \RuntimeException(Text::sprintf('COM_COLLECTOR_LISTMERGE_ERROR_HAS_CHILDREN', $value->content));
+		}
+
+		$defined  = (int) $value->defined;
+		$versions = (int) ($this->getUsage($defined, [$id])[$id]['versions'] ?? 0);
+
+		if ($versions > 0) {
+			throw new \RuntimeException(Text::plural('COM_COLLECTOR_LISTMERGE_ERROR_IN_USE', $versions, $value->content));
+		}
+
+		$db->transactionStart();
+
+		try {
+			$table = new CollectorDefinedContentTable($db);
+
+			if (!$table->delete($id)) {
+				throw new \RuntimeException((string) $table->getError());
+			}
+
+			$this->forgetValue($defined, $id);
+
+			// Valeur créée par un import : notée comme supprimée dans son historique
+			if ($this->tableExists('#__collector_import_history_values')) {
+				$db->setQuery(
+					$db->getQuery(true)
+						->update($db->quoteName('#__collector_import_history_values'))
+						->set($db->quoteName('removed_at') . ' = ' . $db->quote(Factory::getDate()->toSql()))
+						->where($db->quoteName('value_id') . ' = ' . $id)
+						->where($db->quoteName('removed_at') . ' IS NULL')
+				)->execute();
+			}
+
+			$db->transactionCommit();
+		} catch (\Throwable $e) {
+			$db->transactionRollback();
+
+			throw new \RuntimeException($e->getMessage(), 0, $e);
+		}
+
+		$this->cleanCache('com_collector');
+
+		return (string) $value->content;
+	}
+
+	/**
+	 * Oublie une valeur supprimée dans les correspondances de l'import
+	 * (configuration et imports en cours : la valeur redevient « à créer ») et
+	 * dans les filtres imposés par les éléments de menu (vidés).
+	 */
+	private function forgetValue(int $defined, int $id): void
+	{
+		$db     = $this->getDatabase();
+		$forget = function (array &$valueMapping) use ($id): bool {
+			$changed = false;
+
+			foreach ($valueMapping as &$col) {
+				if (!is_array($col)) {
+					continue;
+				}
+
+				if ((string) ($col['empty'] ?? '') === (string) $id) {
+					$col['empty'] = '';
+					$changed      = true;
+				}
+
+				foreach (is_array($col['values'] ?? null) ? array_keys($col['values']) : [] as $k) {
+					$pair = &$col['values'][$k];
+
+					if (is_array($pair) && (string) ($pair['db'] ?? '') === (string) $id) {
+						$pair['db']           = '';
+						$pair['create']       = '1';
+						$pair['create_label'] = ($pair['create_label'] ?? '') !== '' ? $pair['create_label'] : ($pair['file'] ?? '');
+						$changed              = true;
+					}
+
+					unset($pair);
+				}
+			}
+
+			unset($col);
+
+			return $changed;
+		};
+
+		foreach (['#__collector_import_config' => 'value_mapping', '#__collector_import_sessions' => 'mapping'] as $table => $column) {
+			if (!$this->tableExists($table)) {
+				continue;
+			}
+
+			$rows = $db->setQuery(
+				$db->getQuery(true)
+					->select(['id', $db->quoteName($column, 'json')])
+					->from($db->quoteName($table))
+			)->loadObjectList() ?: [];
+
+			foreach ($rows as $row) {
+				$data = json_decode((string) $row->json, true);
+
+				if (!is_array($data)) {
+					continue;
+				}
+
+				// Session d'import : les correspondances sont sous la clé value_mapping
+				$changed = $column === 'mapping'
+					? (is_array($data['value_mapping'] ?? null) && $forget($data['value_mapping']))
+					: $forget($data);
+
+				if ($changed) {
+					$db->setQuery(
+						$db->getQuery(true)
+							->update($db->quoteName($table))
+							->set($db->quoteName($column) . ' = ' . $db->quote(json_encode($data)))
+							->where($db->quoteName('id') . ' = ' . (int) $row->id)
+					)->execute();
+				}
+			}
+		}
+
+		// Filtres de menu : la valeur n'existe plus, le filtre est vidé
+		$this->updateMenus($defined, [$id => ''], true);
 	}
 
 	/**

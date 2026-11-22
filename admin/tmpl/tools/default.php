@@ -13,6 +13,9 @@ HTMLHelper::_('bootstrap.modal');
 $params              = ComponentHelper::getParams('com_collector');
 $saveHistoryDisabled = !$params->get('save_history', 1);
 $token               = Session::getFormToken();
+$currentUser         = Factory::getApplication()->getIdentity();
+$canDeleteValues     = $currentUser->authorise('core.delete', 'com_collector');
+$canMergeValues      = $canDeleteValues && $currentUser->authorise('core.edit', 'com_collector');
 ?>
 
 <?php /* Outil de migration ponctuelle */ ?>
@@ -276,6 +279,7 @@ echo HTMLHelper::_('uitab.startTabSet', 'toolsTab', ['active' => $activeTab]);
                         <th><?php echo Text::_('JGRID_HEADING_ID'); ?></th>
                         <th><?php echo Text::_('COM_COLLECTOR_TOOLS_ORPHAN_DEFINED_GROUP'); ?></th>
                         <th><?php echo Text::_('COM_COLLECTOR_TOOLS_ORPHAN_DEFINED_VALUE'); ?></th>
+                        <th class="text-end"><?php echo Text::_('COM_COLLECTOR_LISTMERGE_ACTIONS'); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -284,6 +288,22 @@ echo HTMLHelper::_('uitab.startTabSet', 'toolsTab', ['active' => $activeTab]);
                         <td><?php echo (int) $row->id; ?></td>
                         <td><?php echo $this->escape($row->group_name); ?></td>
                         <td><?php echo $this->escape($row->content); ?></td>
+                        <td class="text-end text-nowrap">
+                            <?php if ($canMergeValues): ?>
+                            <a href="<?php echo Route::_('index.php?option=com_collector&view=listmerge&return=tools&defined=' . (int) $row->defined . '&source=' . (int) $row->id); ?>"
+                               class="btn btn-outline-secondary btn-sm">
+                                <span class="icon-shuffle me-1" aria-hidden="true"></span><?php echo Text::_('COM_COLLECTOR_LISTMERGE_BUTTON'); ?>
+                            </a>
+                            <?php endif; ?>
+                            <?php if ($canDeleteValues): ?>
+                            <a href="<?php echo Route::_('index.php?option=com_collector&task=listitems.deleteunused&id=' . (int) $row->id . '&' . $token . '=1'); ?>"
+                               class="btn btn-outline-danger btn-sm"
+                               data-confirm="<?php echo $this->escape(Text::sprintf('COM_COLLECTOR_LISTMERGE_DELETE_CONFIRM', $row->content, $row->group_name)); ?>"
+                               onclick="return confirm(this.dataset.confirm)">
+                                <span class="icon-trash me-1" aria-hidden="true"></span><?php echo Text::_('JACTION_DELETE'); ?>
+                            </a>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>

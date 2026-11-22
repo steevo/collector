@@ -142,7 +142,8 @@ class ListitemsController extends AdminController
 		$source  = $this->input->getInt('source', 0);
 		$target  = $this->input->getInt('target', 0);
 		$user    = $this->app->getIdentity();
-		$back    = 'index.php?option=com_collector&view=listmerge&defined=' . $defined . '&source=' . $source . '&target=' . $target;
+		$back    = 'index.php?option=com_collector&view=listmerge&defined=' . $defined . '&source=' . $source . '&target=' . $target
+			. ($this->input->getCmd('return', '') === 'tools' ? '&return=tools' : '');
 
 		if (!$user->authorise('core.edit', 'com_collector') || !$user->authorise('core.delete', 'com_collector')) {
 			$this->setRedirect(Route::_($back, false), Text::_('JLIB_APPLICATION_ERROR_EDIT_NOT_PERMITTED'), 'error');
@@ -166,7 +167,52 @@ class ListitemsController extends AdminController
 			$message .= ' ' . Text::sprintf('COM_COLLECTOR_LISTMERGE_DONE_OTHER', $stats['import'], $stats['sessions'], $stats['menus']);
 		}
 
-		$this->setRedirect(Route::_('index.php?option=com_collector&view=listitems&defined=' . $defined, false), $message);
+		$this->setRedirect(Route::_(self::returnUrl($this->input->getCmd('return', ''), $defined), false), $message);
+	}
+
+	/**
+	 * Supprime une valeur que plus rien n'utilise (Outils > Nettoyage).
+	 *
+	 * @return  void
+	 */
+	public function deleteunused()
+	{
+		$this->checkToken('request');
+
+		$id     = $this->input->getInt('id', 0);
+		$return = self::returnUrl('tools', 0);
+
+		if (!$this->app->getIdentity()->authorise('core.delete', 'com_collector')) {
+			$this->setRedirect(Route::_($return, false), Text::_('JLIB_APPLICATION_ERROR_DELETE_NOT_PERMITTED'), 'error');
+			return;
+		}
+
+		try {
+			$label = $this->getModel('Listmerge', 'Administrator')->deleteUnused($id);
+		} catch (\RuntimeException $e) {
+			$this->setRedirect(Route::_($return, false), Text::sprintf('COM_COLLECTOR_LISTMERGE_DELETE_ERROR', $e->getMessage()), 'error');
+			return;
+		}
+
+		$this->setRedirect(Route::_($return, false), Text::sprintf('COM_COLLECTOR_LISTMERGE_DELETE_DONE', $label));
+	}
+
+	/**
+	 * Écran où revenir après une fusion ou une suppression.
+	 *
+	 * @param   string  $return   'tools' (Outils > Nettoyage) ou vide (valeurs de la liste)
+	 * @param   int     $defined  Liste
+	 */
+	public static function returnUrl(string $return, int $defined): string
+	{
+		if ($return === 'tools') {
+			$collection = (int) Factory::getApplication()->getUserState('com_collector.current_collection', 0);
+
+			return 'index.php?option=com_collector&view=tools' . ($collection ? '&collection=' . $collection : '')
+				. '&active_tab=' . rawurlencode('#tab-cleanup');
+		}
+
+		return 'index.php?option=com_collector&view=listitems&defined=' . $defined;
 	}
 
 	/**

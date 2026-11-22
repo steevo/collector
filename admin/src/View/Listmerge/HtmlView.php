@@ -16,6 +16,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Toolbar\ToolbarHelper;
+use Steevo\Component\Collector\Administrator\Controller\ListitemsController;
 
 /**
  * Écran de fusion de deux valeurs d'une liste prédéfinie.
@@ -45,6 +46,9 @@ class HtmlView extends BaseHtmlView
 	/** @var bool */
 	protected $canMerge;
 
+	/** @var string  Écran où revenir : 'tools' ou vide (valeurs de la liste) */
+	protected $return = '';
+
 	public function display($tpl = null)
 	{
 		$app   = Factory::getApplication();
@@ -54,6 +58,7 @@ class HtmlView extends BaseHtmlView
 		$this->defined = $input->getInt('defined', 0);
 		$this->source  = $input->getInt('source', 0);
 		$this->target  = $input->getInt('target', 0);
+		$this->return  = $input->getCmd('return', '') === 'tools' ? 'tools' : '';
 
 		if (!$user->authorise('core.edit', 'com_collector') || !$user->authorise('core.delete', 'com_collector')) {
 			$app->enqueueMessage(Text::_('JERROR_ALERTNOAUTHOR'), 'error');
@@ -82,7 +87,7 @@ class HtmlView extends BaseHtmlView
 	{
 		ToolbarHelper::title(Text::sprintf('COM_COLLECTOR_LISTMERGE_TITLE', $this->summary->list->name), 'shuffle');
 		ToolbarHelper::link(
-			Route::_('index.php?option=com_collector&view=listitems&defined=' . $this->defined),
+			Route::_(ListitemsController::returnUrl($this->return, $this->defined)),
 			'JTOOLBAR_CLOSE',
 			'times'
 		);

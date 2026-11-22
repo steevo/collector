@@ -484,7 +484,7 @@ class ToolsModel extends BaseDatabaseModel
 			$usedIds = array_unique(array_filter($usedIds, fn($v) => $v !== '' && $v !== null));
 
 			$query = $db->getQuery(true)
-				->select(['dc.id', 'dc.content', 'd.name AS group_name'])
+				->select(['dc.id', 'dc.defined', 'dc.content', 'd.name AS group_name'])
 				->from($db->quoteName('#__collector_defined_content', 'dc'))
 				->join('INNER', '#__collector_defined AS d ON d.id = dc.defined')
 				->where('dc.defined = ' . $groupId)
