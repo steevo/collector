@@ -953,6 +953,8 @@ const T = {
 	missingTitle    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_TITLE')); ?>,
 	missingHelp     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_HELP')); ?>,
 	missingMore     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_MORE')); ?>,
+	diffFields      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_FIELDS')); ?>,
+	diffNone        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_NONE')); ?>,
 };
 
 let state = {
@@ -1053,9 +1055,10 @@ function showConflict(json) {
 		
     const titleTpl = json.similar ? T.lookalike : (json.isIdentical ? T.identical : T.similar);
 	document.getElementById('conflict-title').textContent = titleTpl.replace('%s', json.conflictRow);
-    document.getElementById('conflict-subtitle').textContent = json.similar
+    document.getElementById('conflict-subtitle').textContent = (json.similar
         ? T.lookalikeSub.replace('%d', Math.round((json.score || 0) * 100))
-        : T.conflictSub.replace('%s', json.conflictRow);
+        : T.conflictSub.replace('%s', json.conflictRow))
+        + (Array.isArray(json.diff) ? ' — ' + diffText(json.diff) : '');
 
     const tbody = document.getElementById('conflict-tbody');
     tbody.innerHTML = '';
@@ -1506,6 +1509,9 @@ function buildConflictTable(entries, displayCols, isMulti) {
 				html += '<td class="small align-middle">';
 				html += '<a href="index.php?option=com_collector&task=item.edit&collection=' + COLLECTION + '&id=' + match.id + '" target="_blank" class="badge bg-secondary text-decoration-none">';
 				html += '#' + match.id + ' <span class="icon-out-2"></span></a>';
+				if (Array.isArray(match.diff)) {
+					html += '<div class="small text-muted mt-1">' + esc(diffText(match.diff)) + '</div>';
+				}
 				html += '</td>';
                 html += '</tr>';
             });
@@ -1540,6 +1546,9 @@ function buildConflictTable(entries, displayCols, isMulti) {
 					 + '" target="_blank" class="badge bg-secondary text-decoration-none">'
 					 + '#' + e.existingId
 					 + ' <span class="icon-out-2"></span></a>';
+				if (Array.isArray(e.diff)) {
+					html += '<div class="small text-muted mt-1">' + esc(diffText(e.diff)) + '</div>';
+				}
 			}
 			html += '</td>';
 			html += '</tr>';
@@ -1621,6 +1630,11 @@ function decisionSelect(row, targets) {
     html += '<option value="import">' + esc(T.decisionImport) + '</option>';
     html += '</select>';
     return html;
+}
+
+/** « Diffère sur : Ouvrants, Annotations » (ou « Identique sur tous les champs »). */
+function diffText(fields) {
+    return fields.length ? T.diffFields.replace('%s', fields.join(', ')) : T.diffNone;
 }
 
 /** Note dans le journal les conflits tranchés sans demander. */

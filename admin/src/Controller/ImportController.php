@@ -689,6 +689,7 @@ class ImportController extends AdminController
 									$matchList[] = [
 										'id'      => (int) $ex->id,
 										'display' => $model->getItemDisplayData($collection, (int) $ex->id, $fields),
+										'diff'    => $model->getDiffFields($data, $ex, $fields),
 									];
 								}
 
@@ -717,6 +718,7 @@ class ImportController extends AdminController
 									'id'      => (int) $ex->id,
 									'display' => $model->getItemDisplayData($collection, (int) $ex->id, $fields),
 									'isIdentical' => $model->isIdentical($data, $ex, $fields),
+									'diff'        => $model->getDiffFields($data, $ex, $fields),
 								];
 							}
 							
@@ -765,6 +767,7 @@ class ImportController extends AdminController
 									'action'          => 'conflict',
 									'existingId'      => (int) $existing->id,
 									'existingDisplay' => $model->getItemDisplayData($collection, (int) $existing->id, $fields),
+									'diff'            => $model->getDiffFields($data, $existing, $fields),
 									'importDisplay'   => $model->getDisplayData($collection, $data, $fields),
 								];
 								continue;
@@ -790,6 +793,7 @@ class ImportController extends AdminController
 								'importDisplay'   => $model->getDisplayData($collection, $data, $fields),
 								'existingId'      => (int) $existing->id,
 								'existingDisplay' => $model->getItemDisplayData($collection, (int) $existing->id, $fields),
+								'diff'            => $model->getDiffFields($data, $existing, $fields),
 								'imported'        => $imported,
 								'skipped'         => $skipped,
 								'merged'          => $merged,

@@ -711,7 +711,17 @@ class CollectorField
 	public function getSearchCondition(string $tableAlias, string $value, object $db): string
 	{
 		$col = $db->quoteName($tableAlias . '.' . $this->_field->tablecolumn);
-		return $col . ' = ' . $db->quote($value);
+
+		// La base peut contenir le texte avec des codes HTML (« Maitre &amp; 1 », « &eacute; »)
+		$plain    = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+		$variants = array_unique([
+			$value,
+			$plain,
+			htmlspecialchars($plain, ENT_QUOTES, 'UTF-8'),
+			htmlentities($plain, ENT_QUOTES | ENT_HTML401, 'UTF-8'),
+		]);
+
+		return $col . ' IN (' . implode(', ', array_map([$db, 'quote'], $variants)) . ')';
 	}
 	
 	/**
@@ -721,7 +731,8 @@ class CollectorField
 	 */
 	public function normalizeForComparison(string $value): string
 	{
-		return $value;
+		// « &amp; » et « & », « &eacute; » et « é » : même texte
+		return trim(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 	}
 	
 	/**

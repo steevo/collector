@@ -783,6 +783,11 @@ class CollectorFieldDefine extends CollectorField
 					   name="valuemap[<?php echo $colEsc; ?>][empty]"
 					   value="<?php echo htmlspecialchars($savedEmpty, ENT_QUOTES); ?>">
 			  </div>
+			  <?php if ($savedEmpty !== ''): ?>
+			  <div class="small mt-1 text-muted">
+				<?php echo Text::plural('COM_COLLECTOR_IMPORT_DEFINE_USAGE', $usage[$savedEmpty] ?? 0); ?>
+			  </div>
+			  <?php endif; ?>
 			</td>
 		  </tr>
 		  <?php endif; ?>

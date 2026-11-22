@@ -438,7 +438,27 @@ class ImportModel extends ListModel
 	 */
 	private static function compactDisplay(string $html): string
 	{
-		return trim(preg_replace('/\s+/u', ' ', strip_tags($html)) ?? '');
+		$text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+		return trim(preg_replace('/\s+/u', ' ', str_replace("\xC2\xA0", ' ', $text)) ?? '');
+	}
+
+	/**
+	 * Libellés des champs qui diffèrent entre les données importées et un objet en base
+	 * (même règle que isIdentical) : explique pourquoi un conflit n'est pas « identique ».
+	 *
+	 * @return string[]
+	 */
+	public function getDiffFields(array $importData, object $existingItem, array $fields): array
+	{
+		$diff = [];
+		foreach ($fields as $field) {
+			$col = $field->_field->tablecolumn;
+			if ($field->normalizeForComparison((string) ($importData[$col] ?? ''))
+				!== $field->normalizeForComparison((string) ($existingItem->$col ?? ''))) {
+				$diff[] = (string) $field->_field->field;
+			}
+		}
+		return $diff;
 	}
 
 	/**

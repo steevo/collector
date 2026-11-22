@@ -110,8 +110,8 @@ class CollectorFieldText extends CollectorField
  
 		if ($otherValue !== null && (string)$value !== (string)$otherValue) {
 			// Diff sur le texte brut (sans balises) — lisible et sans artefacts
-			$plainA = htmlspecialchars(strip_tags((string)$value),      ENT_QUOTES);
-			$plainB = htmlspecialchars(strip_tags((string)$otherValue),  ENT_QUOTES);
+			$plainA = htmlspecialchars(html_entity_decode(strip_tags((string)$value),      ENT_QUOTES | ENT_HTML5, 'UTF-8'), ENT_QUOTES);
+			$plainB = htmlspecialchars(html_entity_decode(strip_tags((string)$otherValue), ENT_QUOTES | ENT_HTML5, 'UTF-8'), ENT_QUOTES);
 			return '<div class="diff-word">' . self::wordDiffHtml($plainA, $plainB, $side) . '</div>';
 		}
  
@@ -122,7 +122,9 @@ class CollectorFieldText extends CollectorField
 	
 	public function normalizeForComparison(string $value): string
 	{
-		return trim(strip_tags($value));
+		// L'éditeur enregistre « à » sous la forme « &agrave; » : même texte qu'un import
+		$text = html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+		return trim(preg_replace('/\s+/u', ' ', str_replace("\xC2\xA0", ' ', $text)) ?? '');
 	}
 }
 
