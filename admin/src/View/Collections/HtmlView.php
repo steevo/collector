@@ -151,11 +151,11 @@ class HtmlView extends BaseHtmlView
                 $childBar->trash('collections.trash')->listCheck(true);
             }
 
-            // Add a batch button
-            /*if (
-                $user->authorise('core.create', 'com_collector.collection')
-                && $user->authorise('core.edit', 'com_collector.collection')
-                && $user->authorise('core.edit.state', 'com_collector.collection')
+            // Add a batch button (mêmes droits que le dialogue dans tmpl/collections/default.php)
+            if (
+                $user->authorise('core.create', 'com_collector')
+                && $user->authorise('core.edit', 'com_collector')
+                && $user->authorise('core.edit.state', 'com_collector')
             ) {
                 $childBar->popupButton('batch', 'JTOOLBAR_BATCH')
                     ->popupType('inline')
@@ -164,7 +164,7 @@ class HtmlView extends BaseHtmlView
                     ->modalWidth('800px')
                     ->modalHeight('fit-content')
                     ->listCheck(true);
-            }*/
+            }
         }
 
 		// if ($canDo->get('core.edit.state')) {
