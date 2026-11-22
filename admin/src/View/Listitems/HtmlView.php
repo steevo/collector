@@ -66,6 +66,13 @@ class HtmlView extends BaseHtmlView
      */
     public $activeFilters;
 
+	/**
+	 * Nombre d'objets qui utilisent chaque valeur (voir ListmergeModel::getUsage)
+	 *
+	 * @var  array
+	 */
+	protected $usage = [];
+
     /**
 	 * Display function
 	 */
@@ -78,8 +85,17 @@ class HtmlView extends BaseHtmlView
 		$this->activeFilters = $this->get('ActiveFilters');
 		$this->defined		 = $this->state->get('filter.defined');
 		
+		// Nombre d'objets qui utilisent chaque valeur de la page
+		$this->usage = [];
+
+		if ($this->items) {
+			$this->usage = Factory::getApplication()->bootComponent('com_collector')->getMVCFactory()
+				->createModel('Listmerge', 'Administrator', ['ignore_request' => true])
+				->getUsage((int) $this->defined, array_column($this->items, 'id'));
+		}
+
 		$this->ordering = array();
-		
+
 		// Preprocess the list of items to find ordering divisions.
 		foreach ($this->items as $item)
 		{
@@ -137,6 +153,10 @@ class HtmlView extends BaseHtmlView
 		
 		if ($canDo->get('core.delete')) {
 			ToolBarHelper::deleteList('', 'listitems.delete');
+		}
+
+		if ($canDo->get('core.edit') && $canDo->get('core.delete')) {
+			ToolBarHelper::custom('listitems.merge', 'shuffle', '', 'COM_COLLECTOR_LISTMERGE_BUTTON', true);
 		}
 		
 		ToolBarHelper::divider();

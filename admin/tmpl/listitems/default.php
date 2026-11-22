@@ -91,6 +91,9 @@ $sortFields = $this->getSortFields();
 							<th scope="col" class="title">
 								<?php echo HTMLHelper::_('searchtools.sort',  'JGLOBAL_TITLE', 'c.content', $listDirn, $listOrder ); ?>
 							</th>
+							<th scope="col" class="w-10 text-center d-none d-md-table-cell">
+								<?php echo Text::_('COM_COLLECTOR_LISTMERGE_ITEMS_COLUMN'); ?>
+							</th>
 							<th scope="col" class="w-3 d-none d-lg-table-cell">
 								<?php echo HTMLHelper::_('searchtools.sort', 'JGRID_HEADING_ID', 'c.id', $listDirn, $listOrder); ?>
 							</th>
@@ -159,6 +162,17 @@ $sortFields = $this->getSortFields();
 									<?php echo $this->escape($item->content); ?>
 								<?php endif; ?>
 							</th>
+							<td class="text-center d-none d-md-table-cell">
+								<?php $usage = $this->usage[(int) $item->id] ?? ['items' => 0, 'active' => 0, 'versions' => 0]; ?>
+								<?php if ($usage['items']) : ?>
+									<span title="<?php echo $this->escape(Text::plural('COM_COLLECTOR_LISTMERGE_N_VERSIONS', $usage['versions'])); ?>"><?php echo (int) $usage['active']; ?></span>
+									<?php if ($usage['items'] > $usage['active']) : ?>
+										<span class="text-muted small" title="<?php echo $this->escape(Text::plural('COM_COLLECTOR_LISTMERGE_N_OLD_ITEMS', $usage['items'] - $usage['active'])); ?>">+<?php echo (int) ($usage['items'] - $usage['active']); ?></span>
+									<?php endif; ?>
+								<?php else : ?>
+									<span class="text-muted">0</span>
+								<?php endif; ?>
+							</td>
 							<td class="d-none d-md-table-cell">
 								<span title="<?php echo sprintf('%d-%d', $item->lft, $item->rgt);?>">
 									<?php echo (int) $item->id; ?></span>

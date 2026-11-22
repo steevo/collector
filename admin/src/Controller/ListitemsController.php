@@ -95,6 +95,81 @@ class ListitemsController extends AdminController
 	}*/
 
 	/**
+	 * Ouvre l'écran de fusion avec la ou les deux valeurs cochées.
+	 * Avec deux valeurs, la plus utilisée est gardée (cible).
+	 *
+	 * @return  void
+	 */
+	public function merge()
+	{
+		$this->checkToken();
+
+		$defined = $this->input->getInt('defined', 0);
+		$cid     = array_values(array_filter(array_map('intval', (array) $this->input->get('cid', [], 'array'))));
+		$url     = 'index.php?option=com_collector&view=listmerge&defined=' . $defined;
+
+		if (count($cid) > 2) {
+			$this->setRedirect(Route::_('index.php?option=com_collector&view=listitems&defined=' . $defined, false), Text::_('COM_COLLECTOR_LISTMERGE_SELECT_ONE_OR_TWO'), 'warning');
+			return;
+		}
+
+		if (count($cid) === 2) {
+			$usage = $this->getModel('Listmerge', 'Administrator')->getUsage($defined, $cid);
+			[$source, $target] = $cid;
+
+			if (($usage[$source]['items'] ?? 0) > ($usage[$target]['items'] ?? 0)) {
+				[$source, $target] = [$target, $source];
+			}
+
+			$url .= '&source=' . $source . '&target=' . $target;
+		} elseif ($cid) {
+			$url .= '&source=' . $cid[0];
+		}
+
+		$this->setRedirect(Route::_($url, false));
+	}
+
+	/**
+	 * Fusionne la valeur source dans la valeur cible.
+	 *
+	 * @return  void
+	 */
+	public function domerge()
+	{
+		$this->checkToken();
+
+		$defined = $this->input->getInt('defined', 0);
+		$source  = $this->input->getInt('source', 0);
+		$target  = $this->input->getInt('target', 0);
+		$user    = $this->app->getIdentity();
+		$back    = 'index.php?option=com_collector&view=listmerge&defined=' . $defined . '&source=' . $source . '&target=' . $target;
+
+		if (!$user->authorise('core.edit', 'com_collector') || !$user->authorise('core.delete', 'com_collector')) {
+			$this->setRedirect(Route::_($back, false), Text::_('JLIB_APPLICATION_ERROR_EDIT_NOT_PERMITTED'), 'error');
+			return;
+		}
+
+		try {
+			$stats = $this->getModel('Listmerge', 'Administrator')->merge($defined, $source, $target);
+		} catch (\RuntimeException $e) {
+			$this->setRedirect(Route::_($back, false), Text::sprintf('COM_COLLECTOR_LISTMERGE_ERROR', $e->getMessage()), 'error');
+			return;
+		}
+
+		$message = Text::sprintf('COM_COLLECTOR_LISTMERGE_DONE', $stats['items'], $stats['versions'], $stats['titles']);
+
+		if ($stats['values'] > 1 || $stats['children']) {
+			$message .= ' ' . Text::sprintf('COM_COLLECTOR_LISTMERGE_DONE_TREE', $stats['values'] - 1, $stats['children']);
+		}
+
+		if ($stats['import'] || $stats['sessions'] || $stats['menus']) {
+			$message .= ' ' . Text::sprintf('COM_COLLECTOR_LISTMERGE_DONE_OTHER', $stats['import'], $stats['sessions'], $stats['menus']);
+		}
+
+		$this->setRedirect(Route::_('index.php?option=com_collector&view=listitems&defined=' . $defined, false), $message);
+	}
+
+	/**
 	 * Method to return to lists view.
 	 *
 	 * @return  void
