@@ -16,6 +16,7 @@ namespace Steevo\Component\Collector\Administrator\Classes\Field\Define;
 use Steevo\Component\Collector\Administrator\Classes\CollectorField;
 use Steevo\Component\Collector\Administrator\Table\CollectorDefinedContentTable;
 use Joomla\CMS\Factory;
+use Steevo\Component\Collector\Administrator\Classes\ImportSimilarity;
 use Joomla\Filesystem\File;
 use Joomla\CMS\HTML\HTMLHelper;
 use Joomla\CMS\Language\Text;
@@ -694,6 +695,41 @@ class CollectorFieldDefine extends CollectorField
 			$dbNameToId[mb_strtolower(trim($o->content))] = (string)$o->id;
 		}
 
+		// Nombre d'objets de la collection qui utilisent chaque valeur de la liste :
+		// aide à choisir entre deux entrées en double (Star-Model : 0, Star-Models : 16)
+		$usage = [];
+		try {
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
+			$db->setQuery(
+				'SELECT h.' . $db->quoteName($col) . ' AS v, COUNT(*) AS n'
+				. ' FROM ' . $db->quoteName('#__collector_items_history_' . (int) $this->_collection) . ' h'
+				. ' INNER JOIN ' . $db->quoteName('#__collector_items') . ' i ON i.id = h.item'
+				. ' WHERE h.state = 1 AND i.state >= 0'
+				. ' GROUP BY h.' . $db->quoteName($col)
+			);
+			foreach ($db->loadObjectList() ?: [] as $u) {
+				$usage[(string) $u->v] = (int) $u->n;
+			}
+		} catch (\Throwable $e) {
+			$usage = [];
+		}
+
+		// Entrées de la liste qui ressemblent à une valeur du fichier (hors celle choisie)
+		$suggest = function (string $fileVal, string $chosenId) use ($mapCfg, $usage): array {
+			$found = [];
+			foreach ($mapCfg['options'] as $o) {
+				if ((string) $o->id === $chosenId) continue;
+				$label = ltrim(str_replace('— ', '', $o->content));
+				$score = ImportSimilarity::labelScore($fileVal, $label);
+				if ($score >= 0.75) {
+					$found[] = ['id' => (string) $o->id, 'label' => $o->content, 'score' => $score,
+								'n' => $usage[(string) $o->id] ?? 0];
+				}
+			}
+			usort($found, fn($a, $b) => [$b['n'] > 0, $b['score'], $b['n']] <=> [$a['n'] > 0, $a['score'], $a['n']]);
+			return array_slice($found, 0, 3);
+		};
+
 		$hasEmptyInFile = in_array('', $fileValues, true);
 		$nonEmptyVals   = array_values(array_filter($fileValues, fn($v) => $v !== ''));
 		$savedEmpty     = (string)($savedCol['empty'] ?? '');
@@ -709,6 +745,14 @@ class CollectorFieldDefine extends CollectorField
 		</datalist>
 
 		<script>
+		// Clic sur une valeur suggérée : la reporter dans le champ (et l'id caché)
+		window.collectorPickSuggestion = window.collectorPickSuggestion || function (btn) {
+			var input = document.querySelector('[data-target="' + btn.dataset.target + '"]');
+			if (!input) return;
+			input.value = btn.dataset.label;
+			if (typeof resolveDbId === 'function') resolveDbId(input);
+			input.dispatchEvent(new Event('input', {bubbles: true}));
+		};
 		window._dbOptions = window._dbOptions || {};
 		window._dbOptions[<?php echo json_encode($col); ?>] = <?php echo json_encode(
 			array_map(fn($o) => ['id' => (int)$o->id, 'content' => $o->content], $mapCfg['options']),
@@ -788,6 +832,37 @@ class CollectorFieldDefine extends CollectorField
 					   name="valuemap[<?php echo $colEsc; ?>][values][<?php echo $rowIdx; ?>][db]"
 					   value="<?php echo htmlspecialchars($savedDbId, ENT_QUOTES); ?>">
 			  </div>
+			  <?php
+				$chosenCount = $savedDbId !== '' ? ($usage[$savedDbId] ?? 0) : null;
+				// Suggestions utiles seulement si elles servent à plus d'objets que la valeur choisie
+				$suggestions = array_values(array_filter(
+					$suggest($fileVal, $savedDbId),
+					fn($s) => $chosenCount === null || $s['n'] > $chosenCount
+				));
+				// Alerte : la valeur choisie (ou à créer) ne sert à aucun objet, une valeur ressemblante si
+				$warn = ($chosenCount === null || $chosenCount === 0)
+					&& array_filter($suggestions, fn($s) => $s['n'] > 0);
+			  ?>
+			  <?php if ($chosenCount !== null || $suggestions): ?>
+			  <div class="small mt-1 <?php echo $warn ? 'text-warning-emphasis' : 'text-muted'; ?>">
+				<?php if ($chosenCount !== null): ?>
+				  <?php echo Text::plural('COM_COLLECTOR_IMPORT_DEFINE_USAGE', $chosenCount); ?>
+				<?php endif; ?>
+				<?php if ($suggestions): ?>
+				  <?php if ($warn): ?><span class="icon-warning me-1" aria-hidden="true"></span><?php endif; ?>
+				  <?php echo Text::_('COM_COLLECTOR_IMPORT_DEFINE_SUGGEST'); ?>
+				  <?php foreach ($suggestions as $s): ?>
+				  <button type="button" class="btn btn-link btn-sm p-0 me-2 align-baseline"
+						  data-target="db-id-<?php echo $rowId; ?>"
+						  data-label="<?php echo htmlspecialchars($s['label'], ENT_QUOTES); ?>"
+						  onclick="collectorPickSuggestion(this)">
+					<?php echo htmlspecialchars(trim(str_replace('— ', '', $s['label'])), ENT_QUOTES); ?>
+					(<?php echo Text::plural('COM_COLLECTOR_IMPORT_DEFINE_USAGE_SHORT', $s['n']); ?>)
+				  </button>
+				  <?php endforeach; ?>
+				<?php endif; ?>
+			  </div>
+			  <?php endif; ?>
 			</td>
 			<?php
 			$shouldCreate  = (bool) ($savedPair['create']       ?? ($savedDbId === ''));

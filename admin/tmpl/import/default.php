@@ -943,6 +943,16 @@ const T = {
 	continueBtn     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_CONTINUE_BTN')); ?>,
 	waiting         : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_WAITING')); ?>,
 	running         : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_STEP5_TITLE')); ?>,
+	lookalike       : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_LOOKALIKE_CONFLICT')); ?>,
+	lookalikeSub    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_LOOKALIKE_SUB')); ?>,
+	lookalikeTitle  : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_LOOKALIKE_TITLE')); ?>,
+	lookalikeCount  : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_WOULD_LOOKALIKE')); ?>,
+	lookalikeRule   : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_LOOKALIKE_RULE')); ?>,
+	lookalikeMergeBest : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_LOOKALIKE_MERGE_BEST')); ?>,
+	score           : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_LOOKALIKE_SCORE')); ?>,
+	missingTitle    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_TITLE')); ?>,
+	missingHelp     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_HELP')); ?>,
+	missingMore     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_MORE')); ?>,
 };
 
 let state = {
@@ -954,6 +964,7 @@ let state = {
     // Simulation : rapport déjà constitué (reprise ou simulation terminée)
     isDryRun     : <?php echo !empty($session['dry_run']) ? 'true' : 'false'; ?>,
     dryRunReport : <?php echo json_encode(array_values((array) ($session['dry_run_report'] ?? [])), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+    dryRunMissing: <?php echo json_encode((object) ($session['dry_run_missing'] ?? []), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
 };
 
 // L'import ne démarre que lancé explicitement (étape 4, simulation, « Lancer l'import réel ») ;
@@ -1015,6 +1026,9 @@ async function runImport() {
     updateBar();
 
 	state.isDryRun     = json.dry_run || false;
+	if (json.dry_run_missing) {
+		state.dryRunMissing = json.dry_run_missing;
+	}
 	if (json.dry_run_entries) {
 		state.dryRunReport.push(...json.dry_run_entries);
 	}
@@ -1037,9 +1051,11 @@ function showConflict(json) {
         + '</th>'
         + '<th><span class="icon-upload me-1"></span>' + T.conflictImported + '</th>';
 		
-    const titleTpl = json.isIdentical ? T.identical : T.similar;
+    const titleTpl = json.similar ? T.lookalike : (json.isIdentical ? T.identical : T.similar);
 	document.getElementById('conflict-title').textContent = titleTpl.replace('%s', json.conflictRow);
-    document.getElementById('conflict-subtitle').textContent = T.conflictSub.replace('%s', json.conflictRow);
+    document.getElementById('conflict-subtitle').textContent = json.similar
+        ? T.lookalikeSub.replace('%d', Math.round((json.score || 0) * 100))
+        : T.conflictSub.replace('%s', json.conflictRow);
 
     const tbody = document.getElementById('conflict-tbody');
     tbody.innerHTML = '';
@@ -1200,6 +1216,9 @@ async function resolveConflict(decision) {
     if (document.getElementById('apply-to-next').checked) {
         fd.append('apply_to_next', '1');
     }
+    if (json.similar) {
+        fd.append('kind', 'similar');
+    }
 
     if (decision === 'merge') {
 		document.querySelectorAll('#conflict-tbody tr[data-col]').forEach(tr => {
@@ -1278,6 +1297,8 @@ function finishImport(hasError) {
 		const mc = parseInt(document.getElementById('cnt-dry-multiconflicts')?.textContent) || 0;
 		if (c  > 0) summary += ' — ' + c  + ' ' + T.dryRunWouldConflict;
 		if (mc > 0) summary += ' — ' + mc + ' ' + T.dryRunWouldMultiConflict;
+		const lk = (state.dryRunReport || []).filter(e => e.action === 'similar').length;
+		if (lk > 0) summary += ' — ' + lk + ' ' + T.lookalikeCount;
 	}
 
 	const errCount = parseInt(document.getElementById('cnt-errors')?.textContent) || 0;
@@ -1300,6 +1321,8 @@ function renderDryRunReport() {
     const multiconflicts = report.filter(e => e.action === 'multiconflict');
     const imports        = report.filter(e => e.action === 'import');
     const skipped        = report.filter(e => e.action === 'skip_identical');
+    const lookalikes     = report.filter(e => e.action === 'similar');
+    const missing        = state.dryRunMissing || {};
 
     // Champs à afficher : union composite + fulltitle
     const displayCols = [...new Set([...COMPOSITE_COLS, ...FULLTITLE_COLS])]
@@ -1319,6 +1342,8 @@ function renderDryRunReport() {
         html += '<li class="text-warning">⚠ ' + conflicts.length + ' ' + T.dryRunWouldConflict + '</li>';
     if (multiconflicts.length > 0)
         html += '<li class="text-danger">⚠ ' + multiconflicts.length + ' ' + T.dryRunWouldMultiConflict + '</li>';
+    if (lookalikes.length > 0)
+        html += '<li class="text-info">≈ ' + lookalikes.length + ' ' + esc(T.lookalikeCount) + '</li>';
     html += '</ul>';
 
     // Règle générale pour les conflits laissés sur « Règle générale »
@@ -1331,6 +1356,19 @@ function renderDryRunReport() {
              + '<option value="skip">' + esc(T.decisionSkip) + '</option>'
              + '<option value="merge">' + esc(T.decisionMerge) + '</option>'
              + '<option value="import">' + esc(T.decisionImport) + '</option>'
+             + '</select>';
+        html += '</div>';
+    }
+
+    // Règle pour les objets ressemblants (moins sûrs : à part)
+    if (lookalikes.length > 0) {
+        html += '<div class="mb-3">';
+        html += '<label class="form-label small fw-semibold mb-1" for="similar-decision">' + esc(T.lookalikeRule) + '</label>';
+        html += '<select class="form-select form-select-sm w-auto" name="similar_decision" id="similar-decision">'
+             + '<option value="ask">' + esc(T.decisionAsk) + '</option>'
+             + '<option value="import">' + esc(T.decisionImport) + '</option>'
+             + '<option value="merge">' + esc(T.lookalikeMergeBest) + '</option>'
+             + '<option value="skip">' + esc(T.decisionSkip) + '</option>'
              + '</select>';
         html += '</div>';
     }
@@ -1357,6 +1395,24 @@ function renderDryRunReport() {
 			+ buildConflictTable(multiconflicts, displayCols, true));
 	}
 	
+    // Accordéon objets ressemblants (à vérifier)
+    if (lookalikes.length > 0) {
+        html += buildAccordion('dry-lookalikes',
+            esc(T.lookalikeTitle) + ' <span class="badge bg-info text-dark ms-1">' + lookalikes.length + '</span>',
+            '<div class="px-3 pt-2 pb-1 small text-muted">'
+            + '<span class="me-3" style="background:rgba(25,135,84,.15);padding:1px 6px">■</span> Identique &nbsp;'
+            + '<span style="background:rgba(220,53,69,.15);padding:1px 6px">■</span> Différent'
+            + '</div>'
+            + buildLookalikeTable(lookalikes, displayCols));
+    }
+
+    // Accordéon objets en base non retrouvés dans le fichier
+    if ((missing.total || 0) > 0) {
+        html += buildAccordion('dry-missing',
+            esc(T.missingTitle) + ' <span class="badge bg-secondary ms-1">' + missing.total + '</span>',
+            buildMissingTable(missing, displayCols), true);
+    }
+
 	// Note d'avertissement
 	html += '<div class="alert alert-info small mt-3 mb-0 d-flex align-items-start gap-2">';
 	html += '<span class="icon-info-circle" style="font-size:18px;flex-shrink:0;margin-top:1px" aria-hidden="true"></span>';
@@ -1376,7 +1432,24 @@ function renderDryRunReport() {
 	if (footer) footer.insertAdjacentHTML('beforebegin', html);
 }
 
-function buildAccordion(id, titleHtml, content) {
+function buildAccordion(id, titleHtml, content, collapsed) {
+    if (collapsed) {
+        return `
+    <div class="accordion mb-3" id="acc-${id}">
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed py-2 small fw-semibold"
+                  type="button" data-bs-toggle="collapse"
+                  data-bs-target="#acc-body-${id}">
+            ${titleHtml}
+          </button>
+        </h2>
+        <div id="acc-body-${id}" class="accordion-collapse collapse">
+          <div class="accordion-body p-0">${content}</div>
+        </div>
+      </div>
+    </div>`;
+    }
     return `
     <div class="accordion mb-3" id="acc-${id}">
       <div class="accordion-item">
@@ -1474,6 +1547,61 @@ function buildConflictTable(entries, displayCols, isMulti) {
     });
 
     html += '</tbody></table>';
+    return html;
+}
+
+/** Tableau des objets ressemblants : ligne du fichier puis objets proposés, avec leur note. */
+function buildLookalikeTable(entries, displayCols) {
+    let html = '<table class="table table-sm table-bordered mb-0">';
+    html += '<thead class="table-light"><tr><th class="small">' + T.dryRunRow + '</th>';
+    displayCols.forEach(f => { html += '<th class="small">' + esc(f.label) + '</th>'; });
+    html += '<th class="small">' + T.dryRunExistingId + '</th><th class="small">' + esc(T.decision) + '</th></tr></thead><tbody>';
+
+    entries.forEach(e => {
+        const cands = e.candidates || [];
+        html += '<tr class="table-light">';
+        html += '<td class="small fw-semibold align-middle" rowspan="' + (cands.length + 1) + '">' + e.row + '</td>';
+        displayCols.forEach(f => { html += '<td class="small fw-semibold">' + esc((e.importDisplay || {})[f.col] ?? '—') + '</td>'; });
+        html += '<td></td>';
+        html += '<td class="align-middle" rowspan="' + (cands.length + 1) + '">' + decisionSelect(e.row, cands.map(c => c.id)) + '</td>';
+        html += '</tr>';
+        cands.forEach(c => {
+            html += '<tr>';
+            displayCols.forEach(f => {
+                const imp = String((e.importDisplay || {})[f.col] ?? '');
+                const ex  = String((c.display || {})[f.col] ?? '');
+                const bg  = imp !== ex ? 'rgba(220,53,69,.10)' : 'rgba(25,135,84,.10)';
+                html += '<td class="small" style="background:' + bg + '">' + esc(ex || '—') + '</td>';
+            });
+            html += '<td class="small align-middle text-nowrap">'
+                 + '<a href="index.php?option=com_collector&task=item.edit&collection=' + COLLECTION + '&id=' + c.id
+                 + '" target="_blank" class="badge bg-secondary text-decoration-none">#' + c.id + ' <span class="icon-out-2"></span></a> '
+                 + '<span class="badge bg-info text-dark">' + esc(T.score.replace('%d', Math.round(c.score * 100))) + '</span>'
+                 + '</td></tr>';
+        });
+    });
+
+    return html + '</tbody></table>';
+}
+
+/** Objets en base de même nature que le fichier, qu'aucune ligne n'a retrouvés. */
+function buildMissingTable(missing, displayCols) {
+    let html = '<div class="px-3 pt-2 pb-1 small text-muted">'
+             + esc(T.missingHelp.replace('%s', (missing.scope || []).join(', '))) + '</div>';
+    html += '<table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr>'
+         + '<th class="small">' + T.dryRunExistingId + '</th>';
+    displayCols.forEach(f => { html += '<th class="small">' + esc(f.label) + '</th>'; });
+    html += '</tr></thead><tbody>';
+    (missing.items || []).forEach(m => {
+        html += '<tr><td class="small"><a href="index.php?option=com_collector&task=item.edit&collection=' + COLLECTION + '&id=' + m.id
+             + '" target="_blank" class="badge bg-secondary text-decoration-none">#' + m.id + ' <span class="icon-out-2"></span></a></td>';
+        displayCols.forEach(f => { html += '<td class="small">' + esc((m.display || {})[f.col] || '—') + '</td>'; });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    if ((missing.total || 0) > (missing.items || []).length) {
+        html += '<div class="px-3 py-2 small text-muted">' + esc(T.missingMore.replace('%d', missing.total - missing.items.length)) + '</div>';
+    }
     return html;
 }
 

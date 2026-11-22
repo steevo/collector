@@ -446,6 +446,64 @@ class ImportModel extends ListModel
 
 		return $display;
 	}
+	/**
+	 * Objets en base de même nature que le fichier (mêmes valeurs pour les champs de
+	 * comparaison qui ne varient pas d'une ligne à l'autre, par ex. Type = 405)
+	 * qu'aucune ligne n'a retrouvés, ni à l'identique ni par ressemblance.
+	 *
+	 * @param  array  $scope    [colonne => valeur commune | null si elle varie]
+	 * @param  int[]  $matched  Objets retrouvés par le fichier
+	 * @return array{scope: array, total: int, items: array}  items limités à 300
+	 */
+	public function getMissingItems(int $collection, array $scope, array $matched, array $fields): array
+	{
+		$labels = [];
+		foreach ($fields as $field) {
+			$labels[$field->_field->tablecolumn] = $field;
+		}
+
+		$conditions = [];
+		$scopeText  = [];
+		$db         = $this->getDbo();
+
+		foreach ($scope as $col => $value) {
+			if ($value === null || $value === '' || $value === '0' || !isset($labels[$col])) {
+				continue;
+			}
+			$conditions[] = $db->quoteName('h.' . $col) . ' = ' . $db->quote($value);
+			$display      = $this->getDisplayData($collection, [$col => $value], [$labels[$col]]);
+			$scopeText[]  = $labels[$col]->_field->field . ' = ' . ($display[$col] ?? $value);
+		}
+
+		// Sans valeur commune, la comparaison porterait sur toute la collection : pas de liste
+		if (!$conditions) {
+			return ['scope' => [], 'total' => 0, 'items' => []];
+		}
+
+		$query = $db->getQuery(true)
+			->select('h.item')
+			->from($db->quoteName('#__collector_items_history_' . $collection, 'h'))
+			->join('INNER', $db->quoteName('#__collector_items', 'i') . ' ON i.id = h.item')
+			->where('h.state = 1')
+			->where('i.state >= 0')
+			->order('h.item');
+
+		foreach ($conditions as $condition) {
+			$query->where($condition);
+		}
+		if ($matched) {
+			$query->where('h.item NOT IN (' . implode(',', array_map('intval', $matched)) . ')');
+		}
+
+		$ids   = array_map('intval', $db->setQuery($query)->loadColumn() ?: []);
+		$items = [];
+		foreach (array_slice($ids, 0, 300) as $id) {
+			$items[] = ['id' => $id, 'display' => $this->getItemDisplayData($collection, $id, $fields)];
+		}
+
+		return ['scope' => $scopeText, 'total' => count($ids), 'items' => $items];
+	}
+
 	// ── Persistance de session d'import (côté serveur) ──────────────────────────
 
 	/**
@@ -478,6 +536,11 @@ class ImportModel extends ListModel
 			'import_history_id'      => (int) ($sessionData['import_history_id'] ?? 0),
 			'decisions'              => is_array($sessionData['decisions'] ?? null) ? $sessionData['decisions'] : [],
 			'default_decision'       => (string) ($sessionData['default_decision'] ?? 'ask'),
+			'similar_decision'       => (string) ($sessionData['similar_decision'] ?? 'ask'),
+			'dry_run_similar'        => (int) ($sessionData['dry_run_similar'] ?? 0),
+			'dry_run_matched'        => array_values(array_map('intval', (array) ($sessionData['dry_run_matched'] ?? []))),
+			'dry_run_scope'          => (array) ($sessionData['dry_run_scope'] ?? []),
+			'dry_run_missing'        => (array) ($sessionData['dry_run_missing'] ?? []),
 		];
 		$mapping = json_encode($mappingPayload);
 
@@ -589,6 +652,11 @@ class ImportModel extends ListModel
 			'import_history_id'      => (int) ($payload['import_history_id'] ?? 0),
 			'decisions'              => is_array($payload['decisions'] ?? null) ? $payload['decisions'] : [],
 			'default_decision'       => (string) ($payload['default_decision'] ?? 'ask'),
+			'similar_decision'       => (string) ($payload['similar_decision'] ?? 'ask'),
+			'dry_run_similar'        => (int) ($payload['dry_run_similar'] ?? 0),
+			'dry_run_matched'        => (array) ($payload['dry_run_matched'] ?? []),
+			'dry_run_scope'          => (array) ($payload['dry_run_scope'] ?? []),
+			'dry_run_missing'        => (array) ($payload['dry_run_missing'] ?? []),
 		];
 	}
 

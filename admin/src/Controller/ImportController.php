@@ -11,6 +11,7 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Component\ComponentHelper;
 use Steevo\Component\Collector\Administrator\Classes\ImportReader;
+use Steevo\Component\Collector\Administrator\Classes\ImportSimilarity;
 use Steevo\Component\Collector\Administrator\Table\CollectorItemsTable;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
@@ -424,6 +425,7 @@ class ImportController extends AdminController
 		$session['current_row']            = $session['first_line'];
 		$session['decisions']              = [];
 		$session['default_decision']       = 'ask';
+		$session['similar_decision']       = 'ask';
 
 		$model->saveSession($collection, $userId, $session);
 
@@ -470,6 +472,11 @@ class ImportController extends AdminController
 			$dryConflicts      = $session['dry_run_conflicts']      ?? 0;
 			$dryMulticonflicts = $session['dry_run_multiconflicts'] ?? 0;
 			$dryVirtual        = (array) ($session['dry_run_virtual']  ?? []);
+			$drySimilar        = (int) ($session['dry_run_similar'] ?? 0);
+			// Objets en base retrouvés par le fichier, et valeurs communes à toutes les lignes
+			// (pour lister à la fin les objets de même nature qu'aucune ligne n'a retrouvés)
+			$dryMatched        = array_map('intval', (array) ($session['dry_run_matched'] ?? []));
+			$dryScope          = (array) ($session['dry_run_scope'] ?? []);
             $colMap    = (array) $session['mapping'];
             $valueMap  = (array) ($session['value_mapping'] ?? []);
 			$publishing = array_merge(
@@ -566,6 +573,79 @@ class ImportController extends AdminController
 					}
 
 					$existing = $model->checkDuplicate($collection, $data, $fields, $strategy, $compositeCols);
+
+					if ($isDryRun) {
+						foreach (is_array($existing) ? $existing : ($existing ? [$existing] : []) as $ex) {
+							$dryMatched[] = (int) $ex->id;
+						}
+						foreach ($this->comparisonCols($fields, $strategy, $compositeCols) as $col) {
+							$value = (string) ($data[$col] ?? '');
+							if (!array_key_exists($col, $dryScope)) {
+								$dryScope[$col] = $value;
+							} elseif ($dryScope[$col] !== $value) {
+								$dryScope[$col] = null; // varie d'une ligne à l'autre
+							}
+						}
+					}
+
+					// Aucun doublon strict : objets qui ressemblent (fabricant écrit autrement,
+					// référence avec ou sans espace, année absente en base…) → à vérifier
+					if ($existing === null) {
+						$similar = ImportSimilarity::find($collection, $data, $fields,
+							$this->comparisonCols($fields, $strategy, $compositeCols));
+
+						if ($similar) {
+							$candidates = array_map(fn($c) => $c + [
+								'display' => $model->getItemDisplayData($collection, $c['id'], $fields),
+							], $similar);
+
+							if ($isDryRun) {
+								$drySimilar++;
+								foreach ($similar as $c) {
+									$dryMatched[] = $c['id'];
+								}
+								$dryRunEntries[] = [
+									'row'           => $row,
+									'action'        => 'similar',
+									'candidates'    => $candidates,
+									'importDisplay' => $model->getDisplayData($collection, $data, $fields),
+								];
+								continue;
+							}
+
+							$auto = $this->autoDecisionSimilar($session, $row, array_column($similar, 'id'));
+							if ($auto !== null) {
+								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
+									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
+								$autoLog[] = ['row' => $row] + $auto;
+								continue;
+							}
+
+							$session['current_row'] = $row;
+							$session['imported']    = $imported;
+							$session['skipped']     = $skipped;
+							$session['merged']      = $merged;
+							$session['errors']      = $errors;
+							$conflictResult = [
+								'success'         => true,
+								'state'           => 'conflict',
+								'similar'         => true,
+								'score'           => $similar[0]['score'],
+								'conflictRow'     => $row,
+								'multipleMatches' => false,
+								'isIdentical'     => false,
+								'importData'      => $data,
+								'importDisplay'   => $model->getDisplayData($collection, $data, $fields),
+								'existingId'      => $similar[0]['id'],
+								'existingDisplay' => $candidates[0]['display'],
+								'imported'        => $imported,
+								'skipped'         => $skipped,
+								'merged'          => $merged,
+								'errors'          => $errors,
+							];
+							break;
+						}
+					}
 					
 					if ($existing !== null) {
 						if (is_array($existing)) {
@@ -768,6 +848,17 @@ class ImportController extends AdminController
 			$session['dry_run_conflicts']      = $dryConflicts;
 			$session['dry_run_multiconflicts'] = $dryMulticonflicts;
 			$session['dry_run_virtual'] = $dryVirtual;
+			$session['dry_run_similar'] = $drySimilar;
+			$session['dry_run_matched'] = array_values(array_unique($dryMatched));
+			$session['dry_run_scope']   = $dryScope;
+
+			// Fin de simulation : objets de même nature que le fichier qu'aucune ligne n'a retrouvés
+			$dryMissing = null;
+			if ($isDryRun && $isEnd) {
+				$dryMissing = $model->getMissingItems($collection, $dryScope, $session['dry_run_matched'], $fields);
+				$session['dry_run_missing'] = $dryMissing;
+			}
+
 			if ($isDryRun && !empty($dryRunEntries)) {
 				$existing = (array) ($session['dry_run_report'] ?? []);  // ← cast en array
 				$session['dry_run_report'] = array_merge($existing, $dryRunEntries);
@@ -807,7 +898,8 @@ class ImportController extends AdminController
 				'dry_run_entries' => $dryRunEntries,
 				'dry_run_conflicts'      => $dryConflicts,
 				'dry_run_multiconflicts' => $dryMulticonflicts,
-				'dry_run_virtual'        => $dryVirtual,
+				'dry_run_similar'        => $drySimilar,
+				'dry_run_missing'        => $dryMissing,
             ];
         });
     }
@@ -939,7 +1031,11 @@ class ImportController extends AdminController
 
             // « Faire de même pour les conflits suivants » : devient la règle générale
             if ($this->input->getInt('apply_to_next')) {
-                $session['default_decision'] = $decision;
+                if ($this->input->getCmd('kind') === 'similar') {
+                    $session['similar_decision'] = $decision;
+                } else {
+                    $session['default_decision'] = $decision;
+                }
             }
 
             $nextRow = $session['current_row'] + 1;
@@ -994,6 +1090,11 @@ class ImportController extends AdminController
 		// Réinitialiser les compteurs et activer le mode simulation
 		$session['decisions']              = [];
 		$session['default_decision']       = 'ask';
+		$session['similar_decision']       = 'ask';
+		$session['dry_run_similar']        = 0;
+		$session['dry_run_matched']        = [];
+		$session['dry_run_scope']          = [];
+		$session['dry_run_missing']        = [];
 		$session['dry_run']                = true;
 		$session['step']                   = 5;
 		$session['imported']               = 0;
@@ -1053,6 +1154,8 @@ class ImportController extends AdminController
 		$default = $this->input->post->getCmd('default_decision', 'ask');
 		$session['decisions']        = $decisions;
 		$session['default_decision'] = in_array($default, self::DECISIONS, true) ? $default : 'ask';
+		$similarRule = $this->input->post->getCmd('similar_decision', 'ask');
+		$session['similar_decision'] = in_array($similarRule, self::DECISIONS, true) ? $similarRule : 'ask';
 
 		// Désactiver le mode simulation et réinitialiser les compteurs
 		$session['dry_run']              = false;
@@ -1113,6 +1216,55 @@ class ImportController extends AdminController
         }
 
         return null;
+    }
+
+    /**
+     * Décision pour un objet ressemblant (pas de doublon strict), ou null s'il faut demander.
+     * Décision de la ligne (rapport de simulation), sinon règle des objets ressemblants.
+     *
+     * @param  int[]  $candidateIds  Objets ressemblants, du plus au moins ressemblant
+     */
+    private function autoDecisionSimilar(array $session, int $row, array $candidateIds): ?array
+    {
+        $decision = $session['decisions'][$row] ?? null;
+
+        if (is_array($decision) && in_array($decision['action'] ?? '', self::DECISIONS, true)) {
+            $action = $decision['action'];
+            $target = (int) ($decision['target'] ?? 0);
+
+            if ($action !== 'merge') {
+                return ['action' => $action, 'target' => 0];
+            }
+
+            return in_array($target, $candidateIds, true) ? ['action' => 'merge', 'target' => $target] : null;
+        }
+
+        $rule = (string) ($session['similar_decision'] ?? 'ask');
+
+        if ($rule === 'skip' || $rule === 'import') {
+            return ['action' => $rule, 'target' => 0];
+        }
+        if ($rule === 'merge' && $candidateIds) {
+            return ['action' => 'merge', 'target' => $candidateIds[0]];
+        }
+
+        return null;
+    }
+
+    /**
+     * Colonnes de comparaison des doublons : champs choisis (stratégie « composite »)
+     * ou champs marqués uniques.
+     */
+    private function comparisonCols(array $fields, string $strategy, array $compositeCols): array
+    {
+        if ($strategy === 'composite') {
+            return array_values($compositeCols);
+        }
+
+        return array_values(array_filter(array_map(
+            fn($f) => $f->_field->unik ? $f->_field->tablecolumn : null,
+            $fields
+        )));
     }
 
     /**

@@ -889,12 +889,18 @@ class ItemModel extends AdminModel
 		$query->join('LEFT', '#__users AS ua ON ua.id = i.created_by');
 		$query->join('LEFT', '#__users AS uam ON uam.id = i.modified_by');
 		
-		// Filter by item state.
-		if ($this->getState('filter.published') == 1)
+		// Filter by item state : publiés seulement pour les visiteurs, publiés et dépubliés
+		// pour ceux qui peuvent modifier ; jamais les objets à la corbeille ni archivés
+		if (!$user->authorise('core.edit.state', 'com_collector.collection.' . (int) $collection->id)
+			&& !$user->authorise('core.edit', 'com_collector.collection.' . (int) $collection->id))
 		{
 			$query->where('i.state = 1');
 		}
-		
+		else
+		{
+			$query->where('i.state IN (0, 1)');
+		}
+
 		// Filter by history state.
 		$query->where('h.state = 1');
 		

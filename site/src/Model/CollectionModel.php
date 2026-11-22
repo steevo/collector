@@ -514,10 +514,15 @@ class CollectionModel extends ListModel
 		$query->join('LEFT', '#__users AS ua ON ua.id = i.created_by');
 		$query->join('LEFT', '#__users AS uam ON uam.id = i.modified_by');
 		
-		// Filter by item state.
+		// Filter by item state : publiés seulement pour les visiteurs ; pour ceux qui
+		// peuvent modifier, publiés et dépubliés, jamais les objets à la corbeille ni archivés
 		if ($this->getState('filter.published') == 1)
 		{
 			$query->where('i.state = 1');
+		}
+		else
+		{
+			$query->where('i.state IN (0, 1)');
 		}
 		
 		// Filter by history state.
