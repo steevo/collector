@@ -975,6 +975,8 @@ const T = {
 	missingTitle    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_TITLE')); ?>,
 	missingHelp     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_HELP')); ?>,
 	missingMore     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_MORE')); ?>,
+	missingTrashHint: <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_TRASH_HINT')); ?>,
+	missingTrashLink: <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_TRASH_LINK')); ?>,
 	diffFields      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_FIELDS')); ?>,
 	diffNone        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_NONE')); ?>,
 	reassigned      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_REASSIGNED')); ?>,
@@ -1081,8 +1083,16 @@ async function runImport() {
 		state.dryRunReport = json.dry_run_report_full;
 	}
 
-    if (json.state === 'end') { finishImport(false); return; }
+    if (json.state === 'end') { keepRealMissing(json); finishImport(false); return; }
     setTimeout(runImport, 0);
+}
+
+/** Fin d'import réel : objets de la base qu'aucune ligne n'a retrouvés. */
+function keepRealMissing(json) {
+    if (json && !json.dry_run && json.missing) {
+        state.realMissing = json.missing;
+        state.historyId   = json.history_id || 0;
+    }
 }
 
 /* ── Tableau de comparaison : la ligne du fichier, puis un objet par colonne ── */
@@ -1238,7 +1248,7 @@ async function resolveConflict(decision, objIdx) {
     state.currentRow = resp.next || (state.currentRow + 1);
     updateBar();
 
-    if (resp.state === 'end') { finishImport(false); return; }
+    if (resp.state === 'end') { keepRealMissing(resp); finishImport(false); return; }
     setTimeout(runImport, 0);
 }
 window.resolveConflict = resolveConflict;
@@ -1302,7 +1312,36 @@ function finishImport(hasError) {
 		const log = document.getElementById('progress-log');
         if (log) log.classList.add('d-none');
         renderDryRunReport();
+    } else if (!hasError) {
+        renderRealMissing();
     }
+}
+
+/** Fin d'import réel : objets absents du fichier, à mettre à la corbeille depuis l'historique. */
+function renderRealMissing() {
+    const missing = state.realMissing || {};
+    if (!((missing.total || 0) > 0)) return;
+
+    const displayCols = [...new Set([...COMPOSITE_COLS, ...FULLTITLE_COLS])]
+        .map(col => FIELDS.find(f => f.col === col))
+        .filter(Boolean);
+
+    let html = '<div class="px-3 py-3 border-top">';
+    html += '<div class="card border-warning"><div class="card-header fw-semibold small">'
+         + '<span class="icon-search me-1"></span>' + esc(T.missingTitle)
+         + ' <span class="badge bg-secondary ms-1">' + missing.total + '</span></div>';
+    html += '<div class="card-body p-0">' + buildMissingTable(missing, displayCols) + '</div>';
+    if (state.historyId) {
+        html += '<div class="card-footer d-flex align-items-center gap-2">'
+             + '<span class="small text-muted">' + esc(T.missingTrashHint) + '</span>'
+             + '<a class="btn btn-sm btn-outline-danger ms-auto" href="index.php?option=com_collector&view=importhistory&layout=detail&collection='
+             + COLLECTION + '&import_id=' + state.historyId + '#missing-items">'
+             + '<span class="icon-trash me-1"></span>' + esc(T.missingTrashLink) + '</a></div>';
+    }
+    html += '</div></div>';
+
+    const footer = document.getElementById('summary-footer');
+    if (footer) footer.insertAdjacentHTML('beforebegin', html);
 }
 
 function renderDryRunReport() {

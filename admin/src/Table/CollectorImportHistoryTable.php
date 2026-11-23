@@ -39,6 +39,9 @@ class CollectorImportHistoryTable extends Table
 	/** @var int */
 	public $multiconflicts = 0;
 
+	/** @var string|null  JSON {scope, ids} : objets absents du fichier à la fin de l'import */
+	public $missing_items = null;
+
     /** @var int */
     public $dry_run = 0;
 

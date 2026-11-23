@@ -187,6 +187,108 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
   </table>
 </form>
 
+<?php /* ── Objets de la base absents du fichier ──────────────────────────── */ ?>
+<?php $missing = $this->missing ?? ['items' => []]; ?>
+<?php if (!empty($missing['items'])):
+	$present = count(array_filter($missing['items'], fn($m) => $m['exists'] && $m['state'] !== -2));
+?>
+<div class="card mt-4" id="missing-items">
+  <div class="card-header fw-semibold">
+    <span class="icon-search me-1"></span>
+    <?php echo Text::_('COM_COLLECTOR_IMPORT_MISSING_TITLE'); ?>
+    <span class="badge bg-secondary ms-1"><?php echo count($missing['items']); ?></span>
+  </div>
+  <div class="card-body">
+    <p class="small text-muted"><?php echo Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_MISSING_HELP',
+        htmlspecialchars(implode(', ', $missing['scope']), ENT_QUOTES)); ?></p>
+
+    <form action="<?php echo Route::_('index.php?option=com_collector&task=importhistory.trashmissing', false); ?>"
+          method="post" id="missingForm">
+      <input type="hidden" name="import_id"  value="<?php echo $importId; ?>">
+      <input type="hidden" name="collection" value="<?php echo $collection; ?>">
+      <input type="hidden" name="<?php echo $token; ?>" value="1">
+
+      <?php if ($present): ?>
+      <div class="d-flex align-items-center gap-2 mb-2">
+        <div class="form-check">
+          <input type="checkbox" id="checkAllMissing" class="form-check-input"
+                 onclick="document.querySelectorAll('.missing-chk').forEach(c => c.checked = this.checked)">
+          <label for="checkAllMissing" class="form-check-label small fw-semibold"><?php echo Text::_('JGLOBAL_CHECK_ALL'); ?></label>
+        </div>
+        <div class="ms-auto">
+          <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmTrashMissing()">
+            <span class="icon-trash me-1"></span><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_MISSING_TRASH_BTN'); ?>
+          </button>
+        </div>
+      </div>
+      <?php endif; ?>
+
+      <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th style="width:30px"></th>
+            <th class="small"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ITEM'); ?></th>
+            <?php foreach ($missing['cols'] as $label): ?>
+            <th class="small"><?php echo htmlspecialchars($label, ENT_QUOTES); ?></th>
+            <?php endforeach; ?>
+            <th class="small"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_STATUS'); ?></th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach ($missing['items'] as $m):
+            $trashed = $m['exists'] && $m['state'] === -2;
+          ?>
+          <tr class="<?php echo !$m['exists'] || $trashed ? 'table-secondary' : ''; ?>">
+            <td>
+              <?php if ($m['exists'] && !$trashed): ?>
+              <input type="checkbox" name="missing_ids[]" value="<?php echo (int) $m['id']; ?>" class="form-check-input missing-chk">
+              <?php endif; ?>
+            </td>
+            <td class="small">
+              <?php if ($m['exists']): ?>
+              <a href="<?php echo Route::_('index.php?option=com_collector&task=item.edit&collection=' . $collection . '&id=' . (int) $m['id'], false); ?>"
+                 target="_blank" class="badge bg-secondary text-decoration-none">#<?php echo (int) $m['id']; ?> <span class="icon-out-2"></span></a>
+              <?php else: ?>
+              <span class="badge bg-light text-dark">#<?php echo (int) $m['id']; ?></span>
+              <?php endif; ?>
+            </td>
+            <?php foreach (array_keys($missing['cols']) as $col): ?>
+            <td class="small"><?php echo htmlspecialchars((string) ($m['display'][$col] ?? '') ?: '—', ENT_QUOTES); ?></td>
+            <?php endforeach; ?>
+            <td class="small">
+              <?php if (!$m['exists']): ?>
+              <span class="text-muted"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ITEM_GONE'); ?></span>
+              <?php elseif ($trashed): ?>
+              <span class="text-muted"><span class="icon-trash me-1"></span><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_MISSING_IN_TRASH'); ?></span>
+              <?php elseif ($m['state'] === 1): ?>
+              <span class="text-success"><?php echo Text::_('JPUBLISHED'); ?></span>
+              <?php else: ?>
+              <span class="text-muted"><?php echo Text::_('JUNPUBLISHED'); ?></span>
+              <?php endif; ?>
+            </td>
+          </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function confirmTrashMissing() {
+    const n = document.querySelectorAll('.missing-chk:checked').length;
+    if (!n) {
+        alert(<?php echo json_encode(Text::_('COM_COLLECTOR_IMPORTHISTORY_MISSING_SELECT_FIRST')); ?>);
+        return;
+    }
+    if (confirm(<?php echo json_encode(Text::_('COM_COLLECTOR_IMPORTHISTORY_MISSING_TRASH_CONFIRM')); ?>.replace('%d', n))) {
+        document.getElementById('missingForm').submit();
+    }
+}
+</script>
+<?php endif; ?>
+
 <?php /* ── Modale de confirmation rollback ──────────────────────────────── */ ?>
 <div class="modal fade" id="modal-rollback" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">

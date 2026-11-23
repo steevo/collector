@@ -374,6 +374,83 @@ class ImporthistoryModel extends ListModel
         ));
     }
 
+    /**
+     * Objets de la base qu'aucune ligne du fichier n'a retrouvés à la fin de l'import,
+     * avec leur état actuel (encore là, à la corbeille, supprimé).
+     *
+     * @return array{scope: string[], items: array, cols: array}
+     */
+    public function getMissingItems(object $import, int $collection): array
+    {
+        $data = json_decode((string) ($import->missing_items ?? ''), true);
+        $ids  = array_values(array_filter(array_map('intval', (array) ($data['ids'] ?? []))));
+        if (!$ids) {
+            return ['scope' => [], 'items' => [], 'cols' => []];
+        }
+
+        $db     = $this->getDbo();
+        $states = $db->setQuery(
+            $db->getQuery(true)
+               ->select(['id', 'state'])
+               ->from($db->quoteName('#__collector_items'))
+               ->whereIn($db->quoteName('id'), $ids)
+        )->loadAssocList('id', 'state');
+
+        /** @var ImportModel $importModel */
+        $importModel = Factory::getApplication()->bootComponent('com_collector')->getMVCFactory()
+                              ->createModel('Import', 'Administrator', ['ignore_request' => true]);
+        $fields = $importModel->getFields();
+        $config = $importModel->getConfig($collection) ?? [];
+
+        // Colonnes affichées : champs de comparaison et champs du titre
+        $wanted = array_unique(array_merge((array) ($config['composite_fields'] ?? []),
+                                           $importModel->getFulttitleCols($collection)));
+        $cols   = [];
+        foreach ($fields as $field) {
+            if (in_array($field->_field->tablecolumn, $wanted, true)) {
+                $cols[$field->_field->tablecolumn] = $field->_field->field;
+            }
+        }
+
+        $items = [];
+        foreach ($ids as $id) {
+            $exists  = array_key_exists($id, $states);
+            $items[] = [
+                'id'      => $id,
+                'exists'  => $exists,
+                'state'   => $exists ? (int) $states[$id] : null,
+                'display' => $exists ? $importModel->getItemDisplayData($collection, $id, $fields) : [],
+            ];
+        }
+
+        return ['scope' => (array) ($data['scope'] ?? []), 'items' => $items, 'cols' => $cols];
+    }
+
+    /**
+     * Met à la corbeille des objets absents du fichier ; seuls ceux notés pour cet import
+     * sont acceptés. Retourne le nombre d'objets mis à la corbeille.
+     */
+    public function trashMissing(object $import, int $collection, array $itemIds): int
+    {
+        $data    = json_decode((string) ($import->missing_items ?? ''), true);
+        $allowed = array_map('intval', (array) ($data['ids'] ?? []));
+        $count   = 0;
+
+        foreach (array_intersect(array_map('intval', $itemIds), $allowed) as $itemId) {
+            $table = new CollectorItemsTable($this->getDbo());
+            $table->initVersion($collection);
+            if (!$table->load($itemId) || (int) $table->state === -2) {
+                continue;
+            }
+            $table->state = -2;
+            if ($table->store()) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
     public function deleteImportHistory(int $importId): bool
     {
         $db = $this->getDbo();

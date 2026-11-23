@@ -105,6 +105,33 @@ class ImporthistoryController extends AdminController
         ));
     }
 
+    // ── Objets absents du fichier : mise à la corbeille ───────────────────────
+
+    public function trashmissing(): void
+    {
+        $this->checkToken();
+
+        $importId   = $this->input->getInt('import_id');
+        $collection = $this->input->getInt('collection');
+        $itemIds    = (array) $this->input->get('missing_ids', [], 'ARRAY');
+        $model      = $this->getModel();
+        $import     = $model->getImport($importId);
+
+        if (!Factory::getApplication()->getIdentity()->authorise('core.edit.state', 'com_collector')) {
+            $this->setMessage(Text::_('JLIB_APPLICATION_ERROR_EDITSTATE_NOT_PERMITTED'), 'error');
+        } elseif (!$import || (int) $import->collection !== $collection || !$itemIds) {
+            $this->setMessage(Text::_('COM_COLLECTOR_IMPORTHISTORY_MISSING_SELECT_FIRST'), 'warning');
+        } else {
+            $count = $model->trashMissing($import, $collection, $itemIds);
+            $this->setMessage(Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_MISSING_TRASHED', $count));
+        }
+
+        $this->setRedirect(Route::_(
+            'index.php?option=com_collector&view=importhistory&layout=detail'
+            . '&import_id=' . $importId . '&collection=' . $collection, false
+        ) . '#missing-items');
+    }
+
     // ── Suppression de l'entrée historique ────────────────────────────────────
 
     public function delete(): void

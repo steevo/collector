@@ -590,7 +590,26 @@ class ImportModel extends ListModel
 			$items[] = ['id' => $id, 'display' => $this->getItemDisplayData($collection, $id, $fields)];
 		}
 
-		return ['scope' => $scopeText, 'total' => count($ids), 'items' => $items];
+		return ['scope' => $scopeText, 'total' => count($ids), 'items' => $items, 'ids' => $ids];
+	}
+
+	/**
+	 * Note dans l'historique les objets de la base absents du fichier (fin d'import réel).
+	 *
+	 * @param  array  $missing  Résultat de getMissingItems()
+	 */
+	public function saveImportHistoryMissing(int $importId, array $missing): void
+	{
+		$db = $this->getDbo();
+		$db->setQuery(
+			$db->getQuery(true)
+				->update($db->quoteName('#__collector_import_history'))
+				->set($db->quoteName('missing_items') . ' = ' . $db->quote(json_encode([
+					'scope' => array_values((array) ($missing['scope'] ?? [])),
+					'ids'   => array_values(array_map('intval', (array) ($missing['ids'] ?? []))),
+				])))
+				->where($db->quoteName('id') . ' = ' . $importId)
+		)->execute();
 	}
 
 	// ── Persistance de session d'import (côté serveur) ──────────────────────────

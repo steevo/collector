@@ -49,6 +49,8 @@ class HtmlView extends BaseHtmlView
 			$this->importId = $app->input->getInt('import_id', 0);
 			$this->import   = $model->getImport($this->importId);
 			$this->items    = $model->getImportItems($this->importId, $this->collectionId);
+			$this->missing  = $this->import ? $model->getMissingItems($this->import, $this->collectionId)
+			                                : ['scope' => [], 'items' => [], 'cols' => []];
 
 			if (!$this->import) {
 				$app->enqueueMessage(Text::_('COM_COLLECTOR_IMPORTHISTORY_NOT_FOUND'), 'error');

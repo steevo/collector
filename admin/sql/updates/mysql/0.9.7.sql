@@ -18,3 +18,5 @@ CREATE TABLE IF NOT EXISTS `#__collector_import_history_values` (
 -- Rapprochement par ressemblance réglable par collection : champs suffisants et seuil
 ALTER TABLE `#__collector_import_config` ADD COLUMN `similar_keys` text DEFAULT NULL AFTER `composite_fields`;
 ALTER TABLE `#__collector_import_config` ADD COLUMN `similar_threshold` int(11) NOT NULL DEFAULT 80 AFTER `similar_keys`;
+-- Objets de la base qu'aucune ligne du fichier n'a retrouvés à la fin d'un import réel
+ALTER TABLE `#__collector_import_history` ADD COLUMN `missing_items` mediumtext DEFAULT NULL AFTER `multiconflicts`;

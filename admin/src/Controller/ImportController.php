@@ -441,6 +441,8 @@ class ImportController extends AdminController
 		$session['intra_decision']         = 'ask';
 		$session['own_rows']               = [];
 		$session['claimed']                = [];
+		$session['dry_run_matched']        = [];
+		$session['dry_run_scope']          = [];
 
 		$model->saveSession($collection, $userId, $session);
 
@@ -589,10 +591,9 @@ class ImportController extends AdminController
 					$allTaken = false;
 					if ($existing !== null) {
 						$found = is_array($existing) ? $existing : [$existing];
-						if ($isDryRun) {
-							foreach ($found as $ex) {
-								$dryMatched[] = (int) $ex->id;
-							}
+						// Objets retrouvés (simulation et import réel) : pour lister à la fin les absents
+						foreach ($found as $ex) {
+							$dryMatched[] = (int) $ex->id;
 						}
 						$inBase   = array_values(array_filter($found,
 							fn($ex) => !isset($ownRows[(int) $ex->id]) && empty($claimed[(int) $ex->id])));
@@ -607,14 +608,13 @@ class ImportController extends AdminController
 						}
 					}
 
-					if ($isDryRun) {
-						foreach ($this->comparisonCols($fields, $strategy, $compositeCols) as $col) {
-							$value = (string) ($data[$col] ?? '');
-							if (!array_key_exists($col, $dryScope)) {
-								$dryScope[$col] = $value;
-							} elseif ($dryScope[$col] !== $value) {
-								$dryScope[$col] = null; // varie d'une ligne à l'autre
-							}
+					// Nature commune des lignes (simulation et import réel), ex. Type = 405
+					foreach ($this->comparisonCols($fields, $strategy, $compositeCols) as $col) {
+						$value = (string) ($data[$col] ?? '');
+						if (!array_key_exists($col, $dryScope)) {
+							$dryScope[$col] = $value;
+						} elseif ($dryScope[$col] !== $value) {
+							$dryScope[$col] = null; // varie d'une ligne à l'autre
 						}
 					}
 
@@ -665,11 +665,12 @@ class ImportController extends AdminController
 								'display' => $model->getItemDisplayData($collection, $c['id'], $fields),
 							], $similar);
 
+							foreach ($similar as $c) {
+								$dryMatched[] = $c['id'];
+							}
+
 							if ($isDryRun) {
 								$drySimilar++;
-								foreach ($similar as $c) {
-									$dryMatched[] = $c['id'];
-								}
 								$dryRunEntries[] = [
 									'row'           => $row,
 									'action'        => 'similar',
@@ -955,6 +956,11 @@ class ImportController extends AdminController
 			}
 
 			if ($conflictResult !== null) {
+				// Ce qui a été décidé dans le lot avant ce conflit reste acquis
+				$session['own_rows']        = $ownRows;
+				$session['claimed']         = $claimed;
+				$session['dry_run_matched'] = array_values(array_unique($dryMatched));
+				$session['dry_run_scope']   = $dryScope;
 				if ($importHistoryId) {
 					$model->updateImportHistory($importHistoryId, $imported, $merged, $skipped, $errors);
 				}
@@ -1024,13 +1030,17 @@ class ImportController extends AdminController
 			// Import réel terminé : la session n'a plus lieu d'être (la configuration
 			// et l'historique sont conservés). Une simulation garde sa session pour
 			// son rapport et pour « Lancer l'import réel ».
+			$missing = null;
 			if ($isEnd && !$isDryRun) {
+				$missing = $this->realImportMissing($model, $collection, $session, $fields);
 				$model->deleteSession($collection, $userId);
 			}
 
             return [
                 'success'  => true,
                 'state'    => $isEnd ? 'end' : 'next',
+                'missing'    => $missing,
+                'history_id' => $importHistoryId,
                 'next'     => $nextRow,
                 'imported' => $imported,
                 'skipped'  => $skipped,
@@ -1212,8 +1222,10 @@ class ImportController extends AdminController
 				$model->updateImportHistory($importHistoryId, $imported, $merged, $skipped, $errors);
 			}
 
+            $missing = null;
             if ($isEnd) {
                 // Dernière ligne décidée : import réel terminé
+                $missing = $this->realImportMissing($model, $collection, $session, $fields);
                 $model->deleteSession($collection, $userId);
             } elseif (!$model->saveSession($collection, $userId, $session)) {
                 return ['success' => false,
@@ -1223,6 +1235,8 @@ class ImportController extends AdminController
             return [
                 'success'  => true,
                 'state'    => $isEnd ? 'end' : 'next',
+                'missing'    => $missing,
+                'history_id' => $importHistoryId,
                 'next'     => $nextRow,
                 'imported' => $imported,
                 'skipped'  => $skipped,
@@ -1338,6 +1352,8 @@ class ImportController extends AdminController
 		$session['intra_decision']   = in_array($intraRule, self::DECISIONS, true) ? $intraRule : 'ask';
 		$session['own_rows']         = [];
 		$session['claimed']          = [];
+		$session['dry_run_matched']  = [];
+		$session['dry_run_scope']    = [];
 
 		// Désactiver le mode simulation et réinitialiser les compteurs
 		$session['dry_run']              = false;
@@ -1602,6 +1618,31 @@ class ImportController extends AdminController
             error_log('ImportController ' . $decision . ' item=' . $existingId . ' : ' . $e->getMessage());
             $errors++;
         }
+    }
+
+    /**
+     * Fin d'import réel : objets de la base de même nature que le fichier qu'aucune ligne
+     * n'a retrouvés (ni à l'identique, ni par ressemblance, ni désignés « c'est cet objet »).
+     * Ils sont notés dans l'historique, où l'on peut les mettre à la corbeille.
+     */
+    private function realImportMissing(object $model, int $collection, array $session, array $fields): array
+    {
+        $kept = array_merge(
+            array_map('intval', (array) ($session['dry_run_matched'] ?? [])),
+            array_map('intval', array_keys(array_filter((array) ($session['claimed'] ?? [])))),
+            array_map('intval', array_keys((array) ($session['own_rows'] ?? [])))
+        );
+
+        $missing = $model->getMissingItems($collection, (array) ($session['dry_run_scope'] ?? []),
+            array_values(array_unique($kept)), $fields);
+
+        $historyId = (int) ($session['import_history_id'] ?? 0);
+        if ($historyId) {
+            $model->saveImportHistoryMissing($historyId, $missing);
+        }
+        unset($missing['ids']);
+
+        return $missing;
     }
 
     private function sendJson(callable $callback): void

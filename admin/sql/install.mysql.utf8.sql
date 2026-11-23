@@ -316,6 +316,7 @@ CREATE TABLE IF NOT EXISTS `#__collector_import_history` (
     `errors`          int(11)      NOT NULL DEFAULT 0,
     `conflicts`       int(11)      NOT NULL DEFAULT 0,
     `multiconflicts`  int(11)      NOT NULL DEFAULT 0,
+    `missing_items`   mediumtext   DEFAULT NULL,
     `dry_run`         tinyint(1)   NOT NULL DEFAULT 0,
     `created`         datetime     NOT NULL DEFAULT '0000-00-00 00:00:00',
     `created_by`      int(11)      NOT NULL DEFAULT 0,
