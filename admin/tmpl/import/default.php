@@ -111,6 +111,14 @@ $visibleSteps = array_values($stepLabels);
 .cell-diff   { background: rgba(220, 53, 69, .08); }
 .badge-identical { background: rgba(25,135,84,.15); color: #146c43; font-size:.7rem; }
 .badge-similar   { background: rgba(255,193,7,.15);  color: #997404; font-size:.7rem; }
+/* ── Tableau de comparaison ── */
+.cmp-matrix{max-height:65vh}
+.cmp-matrix table{width:auto;min-width:100%}
+.cmp-matrix .cmp-sticky{position:sticky;background:var(--bs-body-bg,#fff);z-index:1}
+.cmp-matrix thead .cmp-sticky{z-index:3}
+.cmp-matrix .cmp-c1{left:0;min-width:9rem;max-width:9rem}
+.cmp-matrix .cmp-c2{left:9rem;min-width:14rem;max-width:20rem;box-shadow:inset -2px 0 0 #adb5bd}
+.cmp-matrix .cmp-obj,.cmp-matrix td{min-width:12rem}
 </style>
 
 <!-- ══ STEPPER ════════════════════════════════════════════════════════════ -->
@@ -865,35 +873,7 @@ function resolveDbId(input) {
           <small class="text-muted" id="conflict-subtitle"></small>
         </div>
       </div>
-      <div class="table-responsive mb-3">
-        <table class="table table-sm table-bordered">
-          <thead class="table-light">
-			<tr>
-			  <th><?php echo Text::_('COM_COLLECTOR_FIELDS'); ?></th>
-			  <th>
-				<span class="icon-database me-1"></span>
-				<?php echo Text::_('COM_COLLECTOR_IMPORT_CONFLICT_EXISTING'); ?>
-			  </th>
-			  <th>
-				<span class="icon-upload me-1"></span>
-				<?php echo Text::_('COM_COLLECTOR_IMPORT_CONFLICT_IMPORTED'); ?>
-			  </th>
-			</tr>
-		  </thead>
-          <tbody id="conflict-tbody"></tbody>
-        </table>
-      </div>
-      <div class="d-flex gap-2 flex-wrap">
-        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="resolveConflict('skip')">
-          <span class="icon-minus me-1"></span><?php echo Text::_('COM_COLLECTOR_IMPORT_CONFLICT_SKIP'); ?>
-        </button>
-        <button type="button" class="btn btn-primary btn-sm" onclick="resolveConflict('merge')">
-          <span class="icon-git-merge me-1"></span><?php echo Text::_('COM_COLLECTOR_IMPORT_CONFLICT_MERGE'); ?>
-        </button>
-        <button type="button" class="btn btn-success btn-sm" onclick="resolveConflict('import')">
-          <span class="icon-plus me-1"></span><?php echo Text::_('COM_COLLECTOR_IMPORT_CONFLICT_IMPORT'); ?>
-        </button>
-      </div>
+      <div id="conflict-matrix" class="mb-2"></div>
       <div class="form-check mt-2 small">
         <input class="form-check-input" type="checkbox" id="apply-to-next">
         <label class="form-check-label" for="apply-to-next">
@@ -998,6 +978,12 @@ const T = {
 	diffFields      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_FIELDS')); ?>,
 	diffNone        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_NONE')); ?>,
 	reassigned      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_REASSIGNED')); ?>,
+	matrixHelp      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MATRIX_HELP')); ?>,
+	takeFile        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_TAKE_FILE')); ?>,
+	takeAll         : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_TAKE_ALL')); ?>,
+	takeNone        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_TAKE_NONE')); ?>,
+	skipThis        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_SKIP_THIS')); ?>,
+	objectsLabel    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_OBJECTS_LABEL')); ?>,
 	byKeys          : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_SIMILAR_BY_KEYS')); ?>,
 	intraTitle      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_TITLE')); ?>,
 	intraCount      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_COUNT')); ?>,
@@ -1098,185 +1084,123 @@ async function runImport() {
     setTimeout(runImport, 0);
 }
 
-/* ── Conflit ─────────────────────────────────────────────────────────────── */
-function showConflict(json) {
-    state.conflict = json;
-    document.getElementById('apply-to-next').checked = false;
-	
-	// Toujours rétablir les 3 colonnes standard, quelle que soit l'origine
-    const thead = document.querySelector('#conflict-panel table thead tr');
-    thead.innerHTML = '<th>' + esc(T.fields) + '</th>'
-        + '<th><span class="icon-database me-1"></span>'
-        + T.conflictExisting
-        + ' <span class="badge bg-secondary ms-1">#' + json.existingId + '</span>'
-        + '</th>'
-        + '<th><span class="icon-upload me-1"></span>' + T.conflictImported + '</th>';
-		
-    const titleTpl = json.similar ? T.lookalike : (json.isIdentical ? T.identical : T.similar);
-	document.getElementById('conflict-title').textContent = json.intraFile
-		? T.intraLive.replace('%1$s', json.conflictRow).replace('%2$s', json.existingRow)
-		: titleTpl.replace('%s', json.conflictRow);
-    document.getElementById('conflict-subtitle').textContent = (json.similar
-        ? T.lookalikeSub.replace('%d', Math.round((json.score || 0) * 100))
-        : T.conflictSub.replace('%s', json.conflictRow))
-        + (Array.isArray(json.diff) ? ' — ' + diffText(json.diff) : '');
+/* ── Tableau de comparaison : la ligne du fichier, puis un objet par colonne ── */
 
-    const tbody = document.getElementById('conflict-tbody');
-    tbody.innerHTML = '';
-
-    FIELDS.forEach(({col, label}) => {
-        const existing = String(json.existingDisplay[col] ?? '');
-        const imported = String(json.importDisplay[col]  ?? '');
-        const differs  = (existing !== imported);
-        const tr = document.createElement('tr');
-
-        if (!differs) {
-            tr.innerHTML = `<td class="small fw-semibold text-muted">${esc(label)}</td>
-                            <td colspan="2" class="text-muted small">${esc(existing)}</td>`;
-            tbody.appendChild(tr);
-            return;
-        }
-
-        // Sélection par défaut :
-        // - valeur fichier non vide → on préfère le fichier (import)
-        // - valeur fichier vide     → on conserve l'existant (existing)
-        const defaultChoice = imported !== '' ? 'import' : 'existing';
-
-        tr.classList.add('conflict-changed');
-        tr.dataset.col    = col;
-        tr.dataset.choice = defaultChoice;
-
-        const tdLabel    = document.createElement('td');
-        tdLabel.className = 'small fw-semibold text-muted';
-        tdLabel.textContent = label;
-
-        const tdExisting = document.createElement('td');
-        tdExisting.className = 'choice small' + (defaultChoice === 'existing' ? ' selected-existing' : '');
-        tdExisting.dataset.value = 'existing';
-        tdExisting.textContent   = existing || '—';
-
-        const tdImport = document.createElement('td');
-        tdImport.className = 'choice small' + (defaultChoice === 'import' ? ' selected-import' : '');
-        tdImport.dataset.value = 'import';
-        tdImport.textContent   = imported || '—';
-
-        // Clic sur une cellule → bascule la sélection
-        [tdExisting, tdImport].forEach(td => {
-            td.addEventListener('click', () => {
-                tr.dataset.choice = td.dataset.value;
-                tdExisting.classList.toggle('selected-existing', td.dataset.value === 'existing');
-                tdExisting.classList.remove('selected-import');
-                tdImport.classList.toggle('selected-import',   td.dataset.value === 'import');
-                tdImport.classList.remove('selected-existing');
-            });
-        });
-
-        tr.appendChild(tdLabel);
-        tr.appendChild(tdExisting);
-        tr.appendChild(tdImport);
-        tbody.appendChild(tr);
+/**
+ * objects : [{id, label, display, diff, badge}] ; la colonne du fichier reste fixe,
+ * les objets défilent à droite. Une case « prendre du fichier » par champ qui diffère
+ * choisit les valeurs reportées en cas de fusion (les autres valeurs de l'objet restent).
+ */
+function matrixHtml(rowNum, importDisplay, objects, checkedCols) {
+    importDisplay = importDisplay || {};
+    let h = '<p class="small text-muted mb-2">' + esc(T.matrixHelp) + '</p>';
+    h += '<div class="cmp-matrix table-responsive"><table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr>';
+    h += '<th class="cmp-sticky cmp-c1 small">' + esc(T.fields) + '</th>';
+    h += '<th class="cmp-sticky cmp-c2 small"><span class="icon-upload me-1"></span>' + esc(T.compareFile.replace('%s', rowNum))
+       + '<div class="mt-1"><button type="button" class="btn btn-success btn-sm py-0 px-2" data-act="import">'
+       + '<span class="icon-plus me-1"></span>' + esc(T.decisionImport) + '</button></div>'
+       + '<div class="small fw-normal mt-1">' + esc(T.takeFile) + ' : '
+       + '<a href="#" data-take="all">' + esc(T.takeAll) + '</a> · <a href="#" data-take="none">' + esc(T.takeNone) + '</a></div></th>';
+    objects.forEach((o, i) => {
+        h += '<th class="small cmp-obj"><span class="icon-database me-1"></span>'
+           + (o.id ? '<a href="index.php?option=com_collector&task=item.edit&collection=' + COLLECTION + '&id=' + o.id
+                     + '" target="_blank">#' + o.id + ' <span class="icon-out-2"></span></a>' : esc(o.label || ''))
+           + (o.badge ? ' <span class="badge bg-info text-dark">' + esc(o.badge) + '</span>' : '')
+           + (Array.isArray(o.diff) ? '<div class="small text-muted fw-normal">' + esc(diffText(o.diff)) + '</div>' : '')
+           + '<div class="mt-1 d-flex gap-1 flex-wrap">'
+           + '<button type="button" class="btn btn-primary btn-sm py-0 px-2" data-act="merge" data-obj="' + i + '">'
+           + '<span class="icon-git-merge me-1"></span>' + esc(T.decisionMerge) + '</button>'
+           + '<button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" data-act="skip" data-obj="' + i + '">'
+           + esc(T.skipThis) + '</button></div></th>';
     });
+    h += '</tr></thead><tbody>';
+    FIELDS.forEach(({col, label}) => {
+        const a = String(importDisplay[col] ?? '');
+        const differsAny = objects.some(o => String((o.display || {})[col] ?? '') !== a);
+        const checked = checkedCols ? checkedCols.includes(col) : (a !== '');
+        h += '<tr><th class="cmp-sticky cmp-c1 small text-muted fw-semibold">' + esc(label) + '</th>';
+        h += '<td class="cmp-sticky cmp-c2 small">'
+           + (differsAny && a !== ''
+              ? '<label class="d-flex gap-1 mb-0"><input type="checkbox" class="form-check-input take-file mt-1" data-col="' + col + '"'
+                + (checked ? ' checked' : '') + '><span>' + esc(a) + '</span></label>'
+              : esc(a || '—'))
+           + '</td>';
+        objects.forEach(o => {
+            const b = String((o.display || {})[col] ?? '');
+            h += '<td class="small"' + (b !== a ? ' style="background:rgba(220,53,69,.10)"' : '') + '>' + esc(b || '—') + '</td>';
+        });
+        h += '</tr>';
+    });
+    return h + '</tbody></table></div>';
+}
 
-    document.getElementById('conflict-panel').classList.remove('d-none');
-    document.getElementById('btn-pause').disabled = true;
+/** Raccourcis « tout / rien » et boutons d'action du tableau. */
+function wireMatrix(box, onAct) {
+    box.querySelectorAll('[data-take]').forEach(a => a.addEventListener('click', e => {
+        e.preventDefault();
+        box.querySelectorAll('input.take-file').forEach(c => { c.checked = a.dataset.take === 'all'; });
+    }));
+    box.querySelectorAll('button[data-act]').forEach(b => b.addEventListener('click', () =>
+        onAct(b.dataset.act, b.dataset.obj !== undefined ? parseInt(b.dataset.obj, 10) : null)));
+}
+
+/** Champs cochés « prendre du fichier » dans un tableau. */
+function takenCols(box) {
+    return Array.from(box.querySelectorAll('input.take-file:checked')).map(c => c.dataset.col);
+}
+
+/* ── Conflit (import réel) ───────────────────────────────────────────────── */
+function showConflict(json) {
+    const objects = [{
+        id     : json.intraFile ? null : json.existingId,
+        label  : json.intraFile ? T.compareFile.replace('%s', json.existingRow) : '',
+        display: json.existingDisplay,
+        diff   : json.diff,
+        badge  : json.similar ? T.score.replace('%d', Math.round((json.score || 0) * 100)) : null,
+        target : json.existingId,
+    }];
+    const titleTpl = json.similar ? T.lookalike : (json.isIdentical ? T.identical : T.similar);
+    const title = json.intraFile
+        ? T.intraLive.replace('%1$s', json.conflictRow).replace('%2$s', json.existingRow)
+        : titleTpl.replace('%s', json.conflictRow);
+    const sub = json.similar
+        ? T.lookalikeSub.replace('%d', Math.round((json.score || 0) * 100))
+        : T.conflictSub.replace('%s', json.conflictRow);
+    openConflictPanel(json, objects, title, sub);
 }
 
 function showMultiConflict(json) {
-    state.conflict = json;
-    document.getElementById('conflict-title').textContent =
-        T.multiConflict.replace('%s', json.conflictRow);
-    document.getElementById('conflict-subtitle').textContent =
-        T.multiConflictSub.replace('%d', json.matches.length);
-
-    const compositeColNames = json.compositeCols ?? [];
-
-	// Union des champs composite + fulltitle, dans l'ordre de FIELDS
-	const displayColNames = [...new Set([...compositeColNames, ...FULLTITLE_COLS])];
-
-	const DISPLAY_FIELDS = displayColNames.length > 0
-		? FIELDS.filter(({col}) => displayColNames.includes(col))
-		: FIELDS.slice(0, 6); // fallback
-
-    // Remplacer les en-têtes du tableau
-    const thead = document.querySelector('#conflict-panel table thead tr');
-    thead.innerHTML = '<th>#</th>'
-        + DISPLAY_FIELDS.map(({label}) => '<th class="small">' + esc(label) + '</th>').join('')
-        + '<th></th>';
-
-    const tbody = document.getElementById('conflict-tbody');
-    tbody.innerHTML = '';
-
-    json.matches.forEach((match, idx) => {
-		const isIdentical = match.isIdentical === true;
-
-		const tr = document.createElement('tr');
-		tr.style.cursor = 'pointer';
-
-		// Colonne #
-		const tdIdx = document.createElement('td');
-		tdIdx.className = 'small fw-semibold text-muted align-middle';
-		tdIdx.innerHTML = '#' + (idx + 1)
-			+ ' <span class="badge bg-secondary">#' + match.id + '</span>'
-			+ '<br>'
-			+ '<span class="badge ' + (isIdentical ? 'badge-identical' : 'badge-similar') + '">'
-			+ (isIdentical ? '✓ identique' : '≈ similaire')
-			+ '</span>';
-		tr.appendChild(tdIdx);
-
-		// Colonnes champs
-		DISPLAY_FIELDS.forEach(({col}) => {
-			const val      = match.display[col] ?? '';
-			const importVal = json.importDisplay[col] ?? '';
-			const differs  = String(val) !== String(importVal);
-			const td = document.createElement('td');
-			td.className = 'small align-middle';
-			td.style.background = differs
-				? 'rgba(220, 53, 69, .10)'
-				: 'rgba(25, 135, 84, .10)';
-			td.textContent = val || '—';
-			tr.appendChild(td);
-		});
-
-		// Bouton Choisir (masqué si identique)
-		const tdBtn = document.createElement('td');
-		tdBtn.className = 'align-middle';
-		if (!isIdentical) {
-			const btn = document.createElement('button');
-			btn.className = 'btn btn-sm btn-outline-primary px-3';
-			btn.textContent = T.selectItem;
-			tdBtn.appendChild(btn);
-		} else {
-			// Identique → proposer directement ignorer ou fusionner sans comparaison
-			tdBtn.innerHTML = '<span class="text-success small">'
-				+ '<span class="icon-check me-1"></span>Déjà en base</span>';
-		}
-		tr.appendChild(tdBtn);
-
-		tr.addEventListener('click', () => {
-			showConflict(Object.assign({}, json, {
-				state           : 'conflict',
-				multipleMatches : false,
-				isIdentical     : isIdentical,
-				existingId      : match.id,
-				existingDisplay : match.display,
-			}));
-		});
-
-		tbody.appendChild(tr);
-	});
-
-    document.getElementById('conflict-panel').classList.remove('d-none');
-    document.getElementById('btn-pause').disabled = true;
+    const objects = (json.matches || []).map(m => ({
+        id: m.id, display: m.display, diff: m.diff, target: m.id,
+        badge: m.isIdentical ? T.diffNone : null,
+    }));
+    openConflictPanel(json, objects,
+        T.multiConflict.replace('%s', json.conflictRow),
+        T.multiConflictSub.replace('%d', objects.length));
 }
 window.showMultiConflict = showMultiConflict;
 
-async function resolveConflict(decision) {
+function openConflictPanel(json, objects, title, sub) {
+    state.conflict        = json;
+    state.conflictObjects = objects;
+    document.getElementById('apply-to-next').checked = false;
+    document.getElementById('conflict-title').textContent    = title;
+    document.getElementById('conflict-subtitle').textContent = sub;
+    const box = document.getElementById('conflict-matrix');
+    box.innerHTML = matrixHtml(json.conflictRow, json.importDisplay, objects, null);
+    wireMatrix(box, (act, idx) => resolveConflict(act, idx));
+    document.getElementById('conflict-panel').classList.remove('d-none');
+    document.getElementById('btn-pause').disabled = true;
+}
+
+async function resolveConflict(decision, objIdx) {
     if (!state.conflict) return;
     const json = state.conflict;
+    const obj  = (objIdx !== null && objIdx !== undefined) ? (state.conflictObjects || [])[objIdx] : null;
 
     const fd = buildFd();
     fd.append('decision', decision);
-    fd.append('existingId', json.existingId);
+    fd.append('existingId', obj ? (obj.target || 0) : (json.existingId || 0));
     if (document.getElementById('apply-to-next').checked) {
         fd.append('apply_to_next', '1');
     }
@@ -1287,16 +1211,12 @@ async function resolveConflict(decision) {
     }
 
     if (decision === 'merge') {
-		document.querySelectorAll('#conflict-tbody tr[data-col]').forEach(tr => {
-			if (tr.dataset.choice === 'import') {
-				const col = tr.dataset.col;
-				fd.append('importData[' + col + ']', json.importData[col] ?? '');
-			}
-			// 'existing' → non envoyé → mergeItem conserve la valeur existante
-		});
-		fd.append('importData[collection]', COLLECTION);
-	} else {
-        // Skip ou import complet : envoyer toutes les données
+        // Seules les valeurs cochées « prendre du fichier » sont reportées ; les autres restent
+        takenCols(document.getElementById('conflict-matrix')).forEach(col => {
+            fd.append('importData[' + col + ']', json.importData[col] ?? '');
+        });
+        fd.append('importData[collection]', COLLECTION);
+    } else {
         Object.entries(json.importData).forEach(([k, v]) => fd.append('importData[' + k + ']', v));
     }
 
@@ -1602,7 +1522,7 @@ function buildConflictTable(entries, displayCols, isMulti) {
 				if (Array.isArray(match.diff)) {
 					html += '<div class="small text-muted mt-1">' + esc(diffText(match.diff)) + '</div>';
 				}
-				html += compareButton(e.row, e.importDisplay, match.display, '#' + match.id);
+				html += compareEntry(e);
 				html += '</td>';
                 html += '</tr>';
             });
@@ -1634,7 +1554,7 @@ function buildConflictTable(entries, displayCols, isMulti) {
 				if (Array.isArray(e.diff)) {
 					html += '<div class="small text-muted mt-1">' + esc(diffText(e.diff)) + '</div>';
 				}
-				html += compareButton(e.row, e.importDisplay, e.existingDisplay, T.compareFile.replace('%s', e.existingRow ?? '?'));
+				html += compareEntry(e);
 			} else if (e.existingId) {
 				html += '<a href="index.php?option=com_collector&task=item.edit&collection='
 					 + COLLECTION + '&id=' + e.existingId
@@ -1644,7 +1564,7 @@ function buildConflictTable(entries, displayCols, isMulti) {
 				if (Array.isArray(e.diff)) {
 					html += '<div class="small text-muted mt-1">' + esc(diffText(e.diff)) + '</div>';
 				}
-				html += compareButton(e.row, e.importDisplay, e.existingDisplay, '#' + e.existingId);
+				html += compareEntry(e);
 			}
 			html += '</td>';
 			html += '</tr>';
@@ -1683,7 +1603,7 @@ function buildLookalikeTable(entries, displayCols) {
                  + '" target="_blank" class="badge bg-secondary text-decoration-none">#' + c.id + ' <span class="icon-out-2"></span></a> '
                  + '<span class="badge bg-info text-dark">' + esc(T.score.replace('%d', Math.round(c.score * 100))) + '</span>'
                  + (c.keys ? ' <span class="badge bg-primary">' + esc(T.byKeys) + '</span>' : '')
-                 + compareButton(e.row, e.importDisplay, c.display, '#' + c.id)
+                 + compareEntry(e)
                  + '</td></tr>';
         });
     });
@@ -1727,6 +1647,7 @@ function decisionSelect(row, targets) {
     });
     html += '<option value="import">' + esc(T.decisionImport) + '</option>';
     html += '</select>';
+    html += '<input type="hidden" name="merge_fields[' + row + ']" value="">';
     return html;
 }
 
@@ -1737,18 +1658,31 @@ function intraSelect(row, otherRow) {
          + '<option value="import">' + esc(T.decisionImport) + '</option>'
          + '<option value="merge:">' + esc(T.intraMerge.replace('%d', otherRow ?? '?')) + '</option>'
          + '<option value="skip">' + esc(T.decisionSkip) + '</option>'
-         + '</select>';
+         + '</select>'
+         + '<input type="hidden" name="merge_fields[' + row + ']" value="">';
 }
 
-/** Bouton « Comparer » : ouvre la comparaison de tous les champs. */
+/** Bouton « Comparer » d'un conflit du rapport : tableau de comparaison complet. */
 const COMPARES = [];
-function compareButton(row, importDisplay, otherDisplay, otherLabel) {
-    COMPARES.push({row, importDisplay: importDisplay || {}, otherDisplay: otherDisplay || {}, otherLabel});
+function compareEntry(e) {
+    let objects = [];
+    if (e.action === 'conflict' && e.intraFile) {
+        objects = [{label: T.compareFile.replace('%s', e.existingRow ?? '?'), display: e.existingDisplay, diff: e.diff, value: 'merge:'}];
+    } else if (e.action === 'conflict') {
+        objects = [{id: e.existingId, display: e.existingDisplay, diff: e.diff, value: 'merge:' + e.existingId}];
+    } else if (e.action === 'multiconflict') {
+        objects = (e.matches || []).map(m => ({id: m.id, display: m.display, diff: m.diff, value: 'merge:' + m.id}));
+    } else if (e.action === 'similar') {
+        objects = (e.candidates || []).map(c => ({id: c.id, display: c.display, value: 'merge:' + c.id,
+            badge: T.score.replace('%d', Math.round(c.score * 100))}));
+    }
+    COMPARES.push({row: e.row, importDisplay: e.importDisplay || {}, objects});
     return '<div class="mt-1"><button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"'
          + ' onclick="collectorCompare(' + (COMPARES.length - 1) + ')">'
          + '<span class="icon-search me-1" aria-hidden="true"></span>' + esc(T.compareBtn) + '</button></div>';
 }
 
+/** Fenêtre de comparaison du rapport : choisir la décision et les valeurs à fusionner. */
 window.collectorCompare = function (idx) {
     const c = COMPARES[idx];
     if (!c) return;
@@ -1757,37 +1691,56 @@ window.collectorCompare = function (idx) {
         dlg = document.createElement('dialog');
         dlg.id = 'collector-compare';
         dlg.className = 'p-0 border-0 rounded shadow';
-        dlg.style.maxWidth = 'min(960px, 95vw)';
+        dlg.style.maxWidth = 'min(1200px, 96vw)';
         dlg.style.width = '100%';
         dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
         document.body.appendChild(dlg);
     }
-    let rows = '';
-    FIELDS.forEach(({col, label}) => {
-        const a = String(c.importDisplay[col] ?? '');
-        const b = String(c.otherDisplay[col] ?? '');
-        const differs = a !== b;
-        rows += '<tr class="' + (differs ? 'cmp-diff' : 'cmp-same') + '">'
-             + '<th class="small text-muted fw-semibold">' + esc(label) + '</th>'
-             + '<td class="small"' + (differs ? ' style="background:rgba(220,53,69,.10)"' : '') + '>' + esc(a || '—') + '</td>'
-             + '<td class="small"' + (differs ? ' style="background:rgba(220,53,69,.10)"' : '') + '>' + esc(b || '—') + '</td>'
-             + '</tr>';
-    });
+    const select = document.querySelector('select[name="decisions[' + c.row + ']"]');
+    const hidden = document.querySelector('input[name="merge_fields[' + c.row + ']"]');
+    const saved  = hidden && hidden.value !== '' ? hidden.value.split(',') : null;
+
     dlg.innerHTML = '<div class="p-3">'
         + '<div class="d-flex justify-content-between align-items-center mb-2 gap-3">'
-        + '<strong>' + esc(T.compareTitle.replace('%1$s', c.row).replace('%2$s', c.otherLabel)) + '</strong>'
+        + '<strong>' + esc(T.compareTitle.replace('%1$s', c.row).replace('%2$s', c.objects.length > 1 ? c.objects.length + ' ' + T.objectsLabel : (c.objects[0]?.id ? '#' + c.objects[0].id : (c.objects[0]?.label || '')))) + '</strong>'
         + '<label class="small text-nowrap"><input type="checkbox" class="form-check-input me-1" id="cmp-only-diff">' + esc(T.compareOnlyDiff) + '</label>'
         + '</div>'
-        + '<div class="table-responsive" style="max-height:70vh"><table class="table table-sm table-bordered mb-2">'
-        + '<thead class="table-light"><tr><th class="small">' + esc(T.fields) + '</th>'
-        + '<th class="small"><span class="icon-upload me-1"></span>' + T.conflictImported + '</th>'
-        + '<th class="small"><span class="icon-database me-1"></span>' + esc(c.otherLabel) + '</th></tr></thead>'
-        + '<tbody>' + rows + '</tbody></table></div>'
-        + '<div class="text-end"><button type="button" class="btn btn-secondary btn-sm" id="cmp-close">' + esc(T.close) + '</button></div>'
+        + '<div id="cmp-box">' + matrixHtml(c.row, c.importDisplay, c.objects, saved) + '</div>'
+        + '<div class="d-flex justify-content-between align-items-center mt-2 gap-2">'
+        + '<span class="small text-muted" id="cmp-current"></span>'
+        + '<button type="button" class="btn btn-secondary btn-sm" id="cmp-close">' + esc(T.close) + '</button></div>'
         + '</div>';
+
+    const box = dlg.querySelector('#cmp-box');
+    const showCurrent = () => {
+        const opt = select ? select.options[select.selectedIndex] : null;
+        dlg.querySelector('#cmp-current').textContent = opt ? T.decision + ' : ' + opt.text : '';
+    };
+    showCurrent();
+    wireMatrix(box, (act, i) => {
+        if (!select) return;
+        if (act === 'import') {
+            select.value = 'import';
+        } else if (act === 'skip') {
+            select.value = 'skip';
+        } else if (act === 'merge') {
+            const value = c.objects[i]?.value || 'merge:';
+            if (!Array.from(select.options).some(o => o.value === value)) {
+                select.insertAdjacentHTML('beforeend', '<option value="' + esc(value) + '">' + esc(T.decisionMerge) + '</option>');
+            }
+            select.value = value;
+            if (hidden) hidden.value = takenCols(box).join(',');
+        }
+        select.dispatchEvent(new Event('change', {bubbles: true}));
+        dlg.close();
+    });
     dlg.querySelector('#cmp-close').addEventListener('click', () => dlg.close());
     dlg.querySelector('#cmp-only-diff').addEventListener('change', function () {
-        dlg.querySelectorAll('tr.cmp-same').forEach(tr => tr.classList.toggle('d-none', this.checked));
+        box.querySelectorAll('tbody tr').forEach(tr => {
+            const cells = Array.from(tr.querySelectorAll('td'));
+            const same  = cells.slice(1).every(td => !td.getAttribute('style'));
+            tr.classList.toggle('d-none', this.checked && same);
+        });
     });
     dlg.showModal();
 };

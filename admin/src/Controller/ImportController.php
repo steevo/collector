@@ -682,7 +682,7 @@ class ImportController extends AdminController
 							$auto = $this->autoDecisionSimilar($session, $row, array_column($similar, 'id'));
 							if ($auto !== null) {
 								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
-									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
+									$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null);
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
 								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
@@ -767,7 +767,7 @@ class ImportController extends AdminController
 							$auto = $this->autoDecision($session, $row, array_map(fn($ex) => (int) $ex->id, $existing));
 							if ($auto !== null) {
 								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
-									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
+									$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null);
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
 								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
@@ -847,7 +847,7 @@ class ImportController extends AdminController
 								if ($auto !== null) {
 									$auto['target'] = (int) $existing->id;
 									$this->applyDecision($auto['action'], (int) $existing->id, $data, $collection, $publishing, $params,
-										$model, $importHistoryId, $imported, $merged, $skipped, $errors);
+										$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null);
 									if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 										$ownRows[$this->lastCreatedItemId] = $row;
 									}
@@ -880,7 +880,7 @@ class ImportController extends AdminController
 							$auto = $this->autoDecision($session, $row, [(int) $existing->id]);
 							if ($auto !== null) {
 								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
-									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
+									$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null);
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
 								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
@@ -1302,7 +1302,8 @@ class ImportController extends AdminController
 
 		// Décisions prises dans le rapport de simulation :
 		//   decisions[ligne] = 'skip' | 'import' | 'merge:ID' | 'merge:'  (absent = règle générale)
-		$decisions = [];
+		$decisions   = [];
+		$mergeFields = (array) $this->input->post->get('merge_fields', [], 'ARRAY');
 		foreach ((array) $this->input->post->get('decisions', [], 'ARRAY') as $row => $value) {
 			[$action, $target] = array_pad(explode(':', (string) $value, 2), 2, '');
 			if ((int) $row > 0 && in_array($action, self::DECISIONS, true)) {
@@ -1310,6 +1311,11 @@ class ImportController extends AdminController
 					'action' => $action,
 					'target' => $action === 'merge' && (int) $target > 0 ? (int) $target : null,
 				];
+				// Fusion : seulement les champs cochés « prendre du fichier » (fenêtre Comparer)
+				$fields = trim((string) ($mergeFields[$row] ?? ''));
+				if ($action === 'merge' && $fields !== '') {
+					$decisions[(int) $row]['fields'] = array_values(array_filter(explode(',', $fields)));
+				}
 			}
 		}
 		// Lignes dont tous les objets possibles sont retenus par d'autres lignes : à importer
@@ -1372,11 +1378,12 @@ class ImportController extends AdminController
             if ($action !== 'merge') {
                 return ['action' => $action, 'target' => count($matchIds) === 1 ? (int) $matchIds[0] : 0];
             }
+            $fields = isset($decision['fields']) ? ['fields' => (array) $decision['fields']] : [];
             if ($target > 0) {
-                return in_array($target, $matchIds, true) ? ['action' => 'merge', 'target' => $target] : null;
+                return in_array($target, $matchIds, true) ? ['action' => 'merge', 'target' => $target] + $fields : null;
             }
             // Fusion sans cible (conflit entre deux lignes du fichier) : un seul objet possible
-            return count($matchIds) === 1 ? ['action' => 'merge', 'target' => $matchIds[0]] : null;
+            return count($matchIds) === 1 ? ['action' => 'merge', 'target' => $matchIds[0]] + $fields : null;
         }
 
         $default = (string) ($session['default_decision'] ?? 'ask');
@@ -1409,7 +1416,9 @@ class ImportController extends AdminController
                 return ['action' => $action, 'target' => 0];
             }
 
-            return in_array($target, $candidateIds, true) ? ['action' => 'merge', 'target' => $target] : null;
+            return in_array($target, $candidateIds, true)
+                ? ['action' => 'merge', 'target' => $target] + (isset($decision['fields']) ? ['fields' => (array) $decision['fields']] : [])
+                : null;
         }
 
         $rule = (string) ($session['similar_decision'] ?? 'ask');
@@ -1512,7 +1521,8 @@ class ImportController extends AdminController
         $decision = $session['decisions'][$row] ?? null;
 
         if (is_array($decision) && in_array($decision['action'] ?? '', self::DECISIONS, true)) {
-            return ['action' => $decision['action'], 'target' => 0];
+            return ['action' => $decision['action'], 'target' => 0]
+                + (isset($decision['fields']) ? ['fields' => (array) $decision['fields']] : []);
         }
 
         $rule = (string) ($session['intra_decision'] ?? 'ask');
@@ -1542,9 +1552,15 @@ class ImportController extends AdminController
      */
     private function applyDecision(string $decision, int $existingId, array $data, int $collection,
                                    array $publishing, object $params, object $model, int $importHistoryId,
-                                   int &$imported, int &$merged, int &$skipped, int &$errors): void
+                                   int &$imported, int &$merged, int &$skipped, int &$errors,
+                                   ?array $fields = null): void
     {
         $this->lastCreatedItemId = 0;
+
+        // Fusion : seulement les valeurs choisies « prendre du fichier » ; les autres restent
+        if ($decision === 'merge' && $fields !== null) {
+            $data = array_intersect_key($data, array_flip($fields)) + ['collection' => $data['collection'] ?? $collection];
+        }
 
         try {
             switch ($decision) {
