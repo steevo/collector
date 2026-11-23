@@ -517,6 +517,12 @@ class ImportController extends AdminController
             }
 
             $fields = $model->getFields();
+            // Champs présents dans le fichier : les seuls qui peuvent différer (un champ
+            // comme Image, sans colonne, garde sa valeur en base et ne compte pas)
+            $cmpFields = array_values(array_filter(
+                $fields,
+                fn($f) => trim((string) ($colMap[$f->_field->tablecolumn] ?? '')) !== ''
+            ));
 
 			$conflictResult = null;
 			$autoLog        = []; // décisions appliquées automatiquement dans ce lot
@@ -614,7 +620,7 @@ class ImportController extends AdminController
 									'intraFile'    => true,
 									'importDisplay' => $model->getDisplayData($collection, $data, $fields) ?? [],
 									'existingDisplay' => $virtualEntry['_display'] ?? [],
-									'diff'         => $model->getDiffFields($data, (object) ($virtualEntry['_data'] ?? []), $fields),
+									'diff'         => $model->getDiffFields($data, (object) ($virtualEntry['_data'] ?? []), $cmpFields),
 									'existingId'   => null,
 									'existingRow'  => $virtualEntry['_row'] ?? null,
 								];
@@ -692,7 +698,7 @@ class ImportController extends AdminController
 
 							if ($skipIfIdenticalExists) {
 								foreach ($existing as $ex) {
-									if ($model->isIdentical($data, $ex, $fields)) {
+									if ($model->isIdentical($data, $ex, $cmpFields)) {
 										$skipped++;
 										$session['current_row'] = $row + 1;
 										$session['skipped']     = $skipped;
@@ -715,7 +721,7 @@ class ImportController extends AdminController
 									$matchList[] = [
 										'id'      => (int) $ex->id,
 										'display' => $model->getItemDisplayData($collection, (int) $ex->id, $fields),
-										'diff'    => $model->getDiffFields($data, $ex, $fields),
+										'diff'    => $model->getDiffFields($data, $ex, $cmpFields),
 									];
 								}
 
@@ -746,8 +752,8 @@ class ImportController extends AdminController
 								$matchList[] = [
 									'id'      => (int) $ex->id,
 									'display' => $model->getItemDisplayData($collection, (int) $ex->id, $fields),
-									'isIdentical' => $model->isIdentical($data, $ex, $fields),
-									'diff'        => $model->getDiffFields($data, $ex, $fields),
+									'isIdentical' => $model->isIdentical($data, $ex, $cmpFields),
+									'diff'        => $model->getDiffFields($data, $ex, $cmpFields),
 								];
 							}
 							
@@ -771,7 +777,7 @@ class ImportController extends AdminController
 							];
 							break;
 						} else {
-							$isIdentical = $model->isIdentical($data, $existing, $fields);
+							$isIdentical = $model->isIdentical($data, $existing, $cmpFields);
 							if ($isIdentical && $params->get('import_skip_identical', 0)) {
 								$skipped++;
 								$session['current_row'] = $row + 1;
@@ -796,7 +802,7 @@ class ImportController extends AdminController
 									'action'          => 'conflict',
 									'existingId'      => (int) $existing->id,
 									'existingDisplay' => $model->getItemDisplayData($collection, (int) $existing->id, $fields),
-									'diff'            => $model->getDiffFields($data, $existing, $fields),
+									'diff'            => $model->getDiffFields($data, $existing, $cmpFields),
 									'importDisplay'   => $model->getDisplayData($collection, $data, $fields),
 								];
 								continue;
@@ -829,7 +835,7 @@ class ImportController extends AdminController
 									'importDisplay'   => $model->getDisplayData($collection, $data, $fields),
 									'existingId'      => (int) $existing->id,
 									'existingDisplay' => $model->getItemDisplayData($collection, (int) $existing->id, $fields),
-									'diff'            => $model->getDiffFields($data, $existing, $fields),
+									'diff'            => $model->getDiffFields($data, $existing, $cmpFields),
 									'imported'        => $imported,
 									'skipped'         => $skipped,
 									'merged'          => $merged,
@@ -861,7 +867,7 @@ class ImportController extends AdminController
 								'importDisplay'   => $model->getDisplayData($collection, $data, $fields),
 								'existingId'      => (int) $existing->id,
 								'existingDisplay' => $model->getItemDisplayData($collection, (int) $existing->id, $fields),
-								'diff'            => $model->getDiffFields($data, $existing, $fields),
+								'diff'            => $model->getDiffFields($data, $existing, $cmpFields),
 								'imported'        => $imported,
 								'skipped'         => $skipped,
 								'merged'          => $merged,
@@ -1457,7 +1463,12 @@ class ImportController extends AdminController
         foreach ($fields as $field) {
             $col    = $field->_field->tablecolumn;
             $letter = strtoupper(trim($colMap[$col] ?? ''));
-            $raw    = $letter !== '' ? (string) ($row[ImportReader::colIndex($letter)] ?? '') : '';
+            if ($letter === '') {
+                // Champ absent du fichier : rien à importer, la valeur en base est conservée
+                $data[$col] = '';
+                continue;
+            }
+            $raw    = (string) ($row[ImportReader::colIndex($letter)] ?? '');
             $map    = $valueMap[$col] ?? [];
             $data[$col] = $field->getImportedValue($raw, (array) $map);
         }

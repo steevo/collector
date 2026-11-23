@@ -193,20 +193,34 @@ class ImportModel extends ListModel
 		foreach ($fields as $field) {
 			$fieldsByCol[$field->_field->tablecolumn] = $field;
 		}
+		$unknown = []; // « valeur absente en base » pour chaque champ cherché
 		foreach ($searchCols as $col) {
 			if (($data[$col] ?? '') === '') continue;
 			$field = $fieldsByCol[$col] ?? null;
-			$conditions[] = $field
+			$cond  = $field
 				? $field->getSearchCondition('h', (string) $data[$col], $db)
 				: $db->quoteName('h.' . $col) . ' = ' . $db->quote($data[$col]);
+
+			// Valeur vide en base (année, échelle… inconnue) : l'objet reste un candidat ;
+			// la fusion complétera la valeur
+			$q          = $db->quoteName('h.' . $col);
+			$isUnknown  = '(' . $q . ' IS NULL OR ' . $q . ' IN (\'\', \'0\'))';
+			$unknown[]  = $isUnknown;
+			$conditions[] = '(' . $cond . ' OR ' . $isUnknown . ')';
 		}
 
 		if (empty($conditions)) {
 			return null;
 		}
-		
+
 		foreach ($conditions as $cond) {
 			$query->where($cond);
+		}
+
+		// Au plus une valeur absente en base : sinon un objet presque vide
+		// correspondrait à toutes les lignes du fichier
+		if (count($unknown) > 1) {
+			$query->where('(' . implode(' + ', $unknown) . ') <= 1');
 		}
 
 		$db->setQuery($query);
@@ -426,10 +440,25 @@ class ImportModel extends ListModel
 			}
 
 			$displayed = $field->display($value, false, $params);
-			$display[$col] = self::compactDisplay(($displayed === false || $displayed === '') ? (string) $value : (string) $displayed);
+			$display[$col] = self::displayOrRaw($field, (string) $value, $displayed);
 		}
 
 		return $display;
+	}
+
+	/**
+	 * Texte affiché d'une valeur ; si l'affichage ne donne aucun texte (une image
+	 * s'affiche en HTML), la valeur brute (chemin du fichier…) pour la comparer.
+	 */
+	private static function displayOrRaw(object $field, string $value, $displayed): string
+	{
+		$text = self::compactDisplay(($displayed === false || $displayed === '') ? $value : (string) $displayed);
+
+		if ($text === '' && $field->normalizeForComparison($value) !== '') {
+			$text = self::compactDisplay(implode(' ', array_filter(array_map('trim', explode('|', $value)))));
+		}
+
+		return $text;
 	}
 
 	/**
@@ -496,7 +525,7 @@ class ImportModel extends ListModel
 			$col       = $field->_field->tablecolumn;
 			$value     = $row->$col ?? '';
 			$displayed = $field->display($value, false, $params);
-			$display[$col] = self::compactDisplay(($displayed === false || $displayed === '') ? (string) $value : (string) $displayed);
+			$display[$col] = self::displayOrRaw($field, (string) $value, $displayed);
 		}
 
 		return $display;
