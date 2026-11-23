@@ -622,6 +622,8 @@ class ImportModel extends ListModel
 			'default_decision'       => (string) ($sessionData['default_decision'] ?? 'ask'),
 			'similar_decision'       => (string) ($sessionData['similar_decision'] ?? 'ask'),
 			'intra_decision'         => (string) ($sessionData['intra_decision'] ?? 'ask'),
+			'similar_keys'           => array_values((array) ($sessionData['similar_keys'] ?? [])),
+			'similar_threshold'      => (int) ($sessionData['similar_threshold'] ?? 80),
 			'claimed'                => array_values(array_map('intval', array_keys(array_filter((array) ($sessionData['claimed'] ?? []))))),
 			'own_rows'               => (object) array_map('intval', (array) ($sessionData['own_rows'] ?? [])),
 			'dry_run_similar'        => (int) ($sessionData['dry_run_similar'] ?? 0),
@@ -741,6 +743,8 @@ class ImportModel extends ListModel
 			'default_decision'       => (string) ($payload['default_decision'] ?? 'ask'),
 			'similar_decision'       => (string) ($payload['similar_decision'] ?? 'ask'),
 			'intra_decision'         => (string) ($payload['intra_decision'] ?? 'ask'),
+			'similar_keys'           => array_values((array) ($payload['similar_keys'] ?? [])),
+			'similar_threshold'      => (int) ($payload['similar_threshold'] ?? 80),
 			'claimed'                => array_fill_keys(array_map('intval', (array) ($payload['claimed'] ?? [])), true),
 			'own_rows'               => array_map('intval', (array) ($payload['own_rows'] ?? [])),
 			'dry_run_similar'        => (int) ($payload['dry_run_similar'] ?? 0),
@@ -783,10 +787,47 @@ class ImportModel extends ListModel
 	 */
 	public function saveConfig(int $collection, array $colMapping, array $valueMapping,
                            int $firstLine, string $strategy = 'unik',
-                           array $compositeFields = []): bool
+                           array $compositeFields = [], ?array $similarKeys = null,
+                           ?int $similarThreshold = null): bool
 	{
 		$db  = $this->getDbo();
 		$now = Factory::getDate()->toSql();
+
+		$ok = $this->saveConfigBase($collection, $colMapping, $valueMapping, $firstLine, $strategy, $compositeFields, $now);
+
+		// Rapprochement par ressemblance (colonnes ajoutées en 0.9.7)
+		if ($ok && ($similarKeys !== null || $similarThreshold !== null) && $this->hasSimilarColumns()) {
+			$set = [];
+			if ($similarKeys !== null) {
+				$set[] = $db->quoteName('similar_keys') . ' = ' . $db->quote(json_encode(array_values($similarKeys)));
+			}
+			if ($similarThreshold !== null) {
+				$set[] = $db->quoteName('similar_threshold') . ' = ' . (int) $similarThreshold;
+			}
+			$db->setQuery(
+				'UPDATE ' . $db->quoteName('#__collector_import_config') . ' SET ' . implode(', ', $set)
+				. ' WHERE ' . $db->quoteName('collection') . ' = ' . $collection
+			)->execute();
+		}
+
+		return $ok;
+	}
+
+	/** Les colonnes du rapprochement existent-elles (base à jour) ? */
+	private function hasSimilarColumns(): bool
+	{
+		static $has = null;
+		if ($has === null) {
+			$cols = $this->getDbo()->getTableColumns('#__collector_import_config', false);
+			$has  = isset($cols['similar_keys'], $cols['similar_threshold']);
+		}
+		return $has;
+	}
+
+	private function saveConfigBase(int $collection, array $colMapping, array $valueMapping,
+	                                int $firstLine, string $strategy, array $compositeFields, string $now): bool
+	{
+		$db  = $this->getDbo();
 
 		$query = 'INSERT INTO ' . $db->quoteName('#__collector_import_config')
 			. ' (' . implode(', ', array_map([$db, 'quoteName'], [
@@ -832,7 +873,7 @@ class ImportModel extends ListModel
 		$db = $this->getDbo();
 
 		$query = $db->getQuery(true)
-			->select(['col_mapping', 'value_mapping', 'first_line', 'duplicate_strategy', 'composite_fields'])
+			->select('*')
 			->from($db->quoteName('#__collector_import_config'))
 			->where($db->quoteName('collection') . ' = ' . $collection);
 
@@ -853,6 +894,8 @@ class ImportModel extends ListModel
 			'first_line'    => (int) $row->first_line,
 			'duplicate_strategy' => $row->duplicate_strategy ?? 'unik',
 			'composite_fields'   => $compositeFields,
+			'similar_keys'       => json_decode((string) ($row->similar_keys ?? '[]'), true) ?: [],
+			'similar_threshold'  => (int) ($row->similar_threshold ?? 80) ?: 80,
 		];
 	}
 

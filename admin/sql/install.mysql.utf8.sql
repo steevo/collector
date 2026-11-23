@@ -174,6 +174,8 @@ CREATE TABLE IF NOT EXISTS `#__collector_import_config` (
     `first_line`          int(11)      NOT NULL DEFAULT 2,
     `duplicate_strategy`  varchar(20)  NOT NULL DEFAULT 'unik' COMMENT 'unik | composite',
     `composite_fields`    text         NOT NULL COMMENT 'JSON : [tablecolumn, ...]',
+    `similar_keys`        text         DEFAULT NULL COMMENT 'JSON : champs suffisants du rapprochement',
+    `similar_threshold`   int(11)      NOT NULL DEFAULT 80 COMMENT 'Seuil de ressemblance (%)',
     `updated`             datetime     NOT NULL DEFAULT '0000-00-00 00:00:00',
     PRIMARY KEY (`id`),
     UNIQUE KEY `idx_collection` (`collection`)

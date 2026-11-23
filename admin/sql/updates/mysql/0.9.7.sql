@@ -15,3 +15,6 @@ CREATE TABLE IF NOT EXISTS `#__collector_import_history_values` (
     PRIMARY KEY (`id`),
     KEY `idx_import_id` (`import_id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci;
+-- Rapprochement par ressemblance réglable par collection : champs suffisants et seuil
+ALTER TABLE `#__collector_import_config` ADD COLUMN `similar_keys` text DEFAULT NULL AFTER `composite_fields`;
+ALTER TABLE `#__collector_import_config` ADD COLUMN `similar_threshold` int(11) NOT NULL DEFAULT 80 AFTER `similar_keys`;

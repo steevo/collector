@@ -554,6 +554,48 @@ function changeCollection(sel) {
 		  </div>
 		</div>
 
+		<?php
+			$similarThreshold = (int) ($this->session['similar_threshold'] ?? ($this->savedConfig['similar_threshold'] ?? 80)) ?: 80;
+			$similarKeys      = (array) ($this->session['similar_keys'] ?? ($this->savedConfig['similar_keys'] ?? []));
+		?>
+		<div class="card mt-3">
+		  <div class="card-header fw-semibold small">
+			<?php echo Text::_('COM_COLLECTOR_IMPORT_SIMILAR_TITLE'); ?>
+		  </div>
+		  <div class="card-body">
+			<p class="text-muted small mb-3"><?php echo Text::_('COM_COLLECTOR_IMPORT_SIMILAR_DESC'); ?></p>
+
+			<div class="d-flex align-items-center gap-2 mb-3">
+			  <label for="similar-threshold" class="small fw-semibold mb-0">
+				<?php echo Text::_('COM_COLLECTOR_IMPORT_SIMILAR_THRESHOLD'); ?>
+			  </label>
+			  <input type="number" name="similar_threshold" id="similar-threshold"
+					 class="form-control form-control-sm" style="width:6rem"
+					 min="50" max="100" step="5" value="<?php echo $similarThreshold; ?>">
+			  <span class="small text-muted">%</span>
+			</div>
+
+			<p class="small fw-semibold mb-1"><?php echo Text::_('COM_COLLECTOR_IMPORT_SIMILAR_KEYS'); ?></p>
+			<p class="text-muted small mb-2"><?php echo Text::_('COM_COLLECTOR_IMPORT_SIMILAR_KEYS_DESC'); ?></p>
+			<div class="row g-2">
+			<?php foreach ($this->fields as $field):
+				$col = $field->_field->tablecolumn;
+			?>
+			  <div class="col-md-4 col-lg-3">
+				<div class="form-check">
+				  <input type="checkbox" name="similar_keys[]" value="<?php echo $col; ?>"
+						 id="sk-<?php echo $col; ?>" class="form-check-input"
+						 <?php echo in_array($col, $similarKeys, true) ? 'checked' : ''; ?>>
+				  <label for="sk-<?php echo $col; ?>" class="form-check-label small">
+					<?php echo htmlspecialchars($field->_field->field, ENT_QUOTES); ?>
+				  </label>
+				</div>
+			  </div>
+			<?php endforeach; ?>
+			</div>
+		  </div>
+		</div>
+
 		<script>
 		document.querySelectorAll('input[name="duplicate_strategy"]').forEach(r => {
 			r.addEventListener('change', () => {
@@ -956,6 +998,7 @@ const T = {
 	diffFields      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_FIELDS')); ?>,
 	diffNone        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_NONE')); ?>,
 	reassigned      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_REASSIGNED')); ?>,
+	byKeys          : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_SIMILAR_BY_KEYS')); ?>,
 	intraTitle      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_TITLE')); ?>,
 	intraCount      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_COUNT')); ?>,
 	intraRule       : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_RULE')); ?>,
@@ -1639,6 +1682,7 @@ function buildLookalikeTable(entries, displayCols) {
                  + '<a href="index.php?option=com_collector&task=item.edit&collection=' + COLLECTION + '&id=' + c.id
                  + '" target="_blank" class="badge bg-secondary text-decoration-none">#' + c.id + ' <span class="icon-out-2"></span></a> '
                  + '<span class="badge bg-info text-dark">' + esc(T.score.replace('%d', Math.round(c.score * 100))) + '</span>'
+                 + (c.keys ? ' <span class="badge bg-primary">' + esc(T.byKeys) + '</span>' : '')
                  + compareButton(e.row, e.importDisplay, c.display, '#' + c.id)
                  + '</td></tr>';
         });

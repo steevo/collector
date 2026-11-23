@@ -50,7 +50,14 @@ final class ImportSimilarity
      * @param  array  $cols    Colonnes à comparer (champs de comparaison des doublons)
      * @return array<int, array{id: int, score: float}>  Du plus ressemblant au moins ressemblant
      */
-    public static function find(int $collection, array $data, array $fields, array $cols, array $exclude = []): array
+    /**
+     * @param  array  $exclude    Objets à ignorer (créés par l'import, déjà retenus)
+     * @param  float  $threshold  Note minimale (0 à 1), réglée par collection
+     * @param  array  $keys       Champs suffisants, réglés par collection : s'ils sont
+     *                            tous identiques, l'objet est proposé quelle que soit sa note
+     */
+    public static function find(int $collection, array $data, array $fields, array $cols, array $exclude = [],
+                                float $threshold = self::THRESHOLD, array $keys = []): array
     {
         // Objets créés par l'import en cours : ce sont d'autres lignes du même fichier,
         // déjà comparées entre elles (règle des conflits entre lignes), pas des doublons
@@ -71,11 +78,30 @@ final class ImportSimilarity
             $use[$col] = (string) $byCol[$col]->_field->type;
         }
 
-        if (count($use) < 2) {
+        // Champs suffisants : tous renseignés dans le fichier par une vraie valeur
+        // (« ** », « ? » ne comptent pas), sinon la règle ne s'applique pas
+        $keyTypes = [];
+        foreach ($keys as $col) {
+            $value = trim((string) ($data[$col] ?? ''));
+            if (!isset($byCol[$col]) || $value === '' || $value === '0' || str_starts_with($value, 'new:')
+                || self::normalize($value) === '') {
+                $keyTypes = [];
+                break;
+            }
+            $type = (string) $byCol[$col]->_field->type;
+            // Texte trop court pour identifier un objet (« 6 », « 51 ») : la règle ne s'applique pas
+            if (!in_array($type, ['define', 'date'], true) && strlen(self::normalize($value)) < 3) {
+                $keyTypes = [];
+                break;
+            }
+            $keyTypes[$col] = $type;
+        }
+
+        if (count($use) < 2 && !$keyTypes) {
             return []; // trop peu d'éléments pour juger d'une ressemblance
         }
 
-        $pool = self::pool($collection, array_keys($use));
+        $pool = self::pool($collection, array_unique(array_merge(array_keys($use), array_keys($keyTypes))));
         $found = [];
 
         foreach ($pool as $id => $item) {
@@ -93,9 +119,11 @@ final class ImportSimilarity
                 $total += $weight * self::fieldScore($type, $a, $b);
             }
 
-            $score = $max > 0 ? $total / $max : 0;
-            if ($score >= self::THRESHOLD) {
-                $found[] = ['id' => (int) $id, 'score' => round($score, 2)];
+            $score  = $max > 0 ? $total / $max : 0;
+            $byKeys = $keyTypes && self::keysEqual($keyTypes, $data, $item);
+
+            if ($score >= $threshold || $byKeys) {
+                $found[] = ['id' => (int) $id, 'score' => round($score, 2)] + ($byKeys ? ['keys' => true] : []);
             }
         }
 
@@ -188,6 +216,27 @@ final class ImportSimilarity
     }
 
     // ── Interne ──────────────────────────────────────────────────────────────
+
+    /** Les champs suffisants sont-ils tous identiques entre la ligne et l'objet ? */
+    private static function keysEqual(array $keyTypes, array $data, array $item): bool
+    {
+        foreach ($keyTypes as $col => $type) {
+            $a = trim((string) $data[$col]);
+            $b = trim((string) ($item[$col] ?? ''));
+
+            $same = match ($type) {
+                'define' => $a === $b,
+                'date'   => substr($a, 0, 4) === substr($b, 0, 4),
+                default  => self::normalize($a) !== '' && self::normalize($a) === self::normalize($b),
+            };
+
+            if (!$same) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 
     private static function weight(string $type): float
     {

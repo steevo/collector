@@ -217,6 +217,8 @@ class ImportController extends AdminController
 			'step'               => 2,
 			'duplicate_strategy' => $savedConfig['duplicate_strategy'] ?? 'unik',
 			'composite_fields'   => $savedConfig['composite_fields']   ?? [],
+			'similar_keys'       => $savedConfig['similar_keys']       ?? [],
+			'similar_threshold'  => $savedConfig['similar_threshold']  ?? 80,
 		]);
 
         // Purger les anciens caches temporaires (> 1h) pour éviter de servir
@@ -297,6 +299,15 @@ class ImportController extends AdminController
 
 		$session['composite_fields'] = $compositeFields;
 
+		// Rapprochement par ressemblance : champs suffisants et seuil (en %)
+		$validCols = array_map(fn($f) => $f->_field->tablecolumn, $fields);
+		$similarKeys = array_values(array_intersect(
+			(array) $this->input->get('similar_keys', [], 'ARRAY'), $validCols
+		));
+		$similarThreshold = max(50, min(100, $this->input->getInt('similar_threshold', 80)));
+		$session['similar_keys']      = $similarKeys;
+		$session['similar_threshold'] = $similarThreshold;
+
 		$model->saveSession($collection, $userId, $session);
 
         // Sauvegarder le mapping colonnes sans écraser le value_mapping existant
@@ -304,7 +315,7 @@ class ImportController extends AdminController
         $existingValueMap = $existingConfig['value_mapping'] ?? [];
 
         $model->saveConfig($collection, $colMap, $existingValueMap, $firstLine,
-                   $strategy, $compositeFields);
+                   $strategy, $compositeFields, $similarKeys, $similarThreshold);
 
         $this->setRedirect(Route::_(
             'index.php?option=com_collector&view=import&collection=' . $collection . '&step=' . $nextStep,
@@ -645,7 +656,9 @@ class ImportController extends AdminController
 					if ($existing === null) {
 						$similar = ImportSimilarity::find($collection, $data, $fields,
 							$this->comparisonCols($fields, $strategy, $compositeCols),
-							array_merge(array_keys($ownRows), array_keys(array_filter($claimed))));
+							array_merge(array_keys($ownRows), array_keys(array_filter($claimed))),
+							(int) ($session['similar_threshold'] ?? 80) / 100,
+							(array) ($session['similar_keys'] ?? []));
 
 						if ($similar) {
 							$candidates = array_map(fn($c) => $c + [
