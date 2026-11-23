@@ -1153,12 +1153,13 @@ class ImportController extends AdminController
             $data      = array_intersect_key((array) $rawImport, array_flip($validCols));
             $data['collection'] = $collection;
 			
-			$publishing = (array) ($session['publishing'] ?? [
+			// Valeurs par défaut complétées (import lancé depuis la simulation : pas d'étape 4 enregistrée)
+			$publishing = array_merge([
 				'state'        => 1,
 				'access'       => 1,
 				'publish_up'   => null,
 				'publish_down' => null,
-			]);
+			], (array) ($session['publishing'] ?? []));
 			
             $imported = $session['imported'];
             $skipped  = $session['skipped'];
@@ -1627,8 +1628,8 @@ class ImportController extends AdminController
 		// Appliquer les paramètres de publication
 		$data['state']        = (int)   ($publishing['state']  ?? 1);
 		$data['access']       = (int)   ($publishing['access'] ?? 1);
-		$data['publish_up']   = $publishing['publish_up']   ?: null;
-		$data['publish_down'] = $publishing['publish_down'] ?: null;
+		$data['publish_up']   = ($publishing['publish_up']   ?? null) ?: null;
+		$data['publish_down'] = ($publishing['publish_down'] ?? null) ?: null;
 		
         if (!$table->bind($data)) {
             $this->lastInsertError = 'bind failed: ' . $table->getError();
