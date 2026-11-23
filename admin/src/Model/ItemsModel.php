@@ -254,6 +254,13 @@ class ItemsModel extends ListModel
 		// Add the list ordering clause.
 		$orderCol	= $this->state->get('list.ordering');
 		$orderDirn	= $this->state->get('list.direction');
+		// Empty ordering (list called with a limit but no ordering): default order, no SQL error
+		if (trim((string) $orderCol) === '') {
+			$orderCol = 'i.ordering';
+		}
+		if (!in_array(strtoupper(trim((string) $orderDirn)), ['ASC', 'DESC'], true)) {
+			$orderDirn = 'ASC';
+		}
 		if ($orderCol != 'i.alias') {
 			$query->order($db->escape($orderCol.' '.$orderDirn));
 		} else {

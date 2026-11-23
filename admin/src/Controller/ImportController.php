@@ -427,6 +427,8 @@ class ImportController extends AdminController
 		$session['decisions']              = [];
 		$session['default_decision']       = 'ask';
 		$session['similar_decision']       = 'ask';
+		$session['intra_decision']         = 'ask';
+		$session['own_rows']               = [];
 
 		$model->saveSession($collection, $userId, $session);
 
@@ -474,6 +476,8 @@ class ImportController extends AdminController
 			$dryMulticonflicts = $session['dry_run_multiconflicts'] ?? 0;
 			$dryVirtual        = (array) ($session['dry_run_virtual']  ?? []);
 			$drySimilar        = (int) ($session['dry_run_similar'] ?? 0);
+			// Import réel : objets créés par cet import [id => ligne du fichier]
+			$ownRows           = array_map('intval', (array) ($session['own_rows'] ?? []));
 			// Objets en base retrouvés par le fichier, et valeurs communes à toutes les lignes
 			// (pour lister à la fin les objets de même nature qu'aucune ligne n'a retrouvés)
 			$dryMatched        = array_map('intval', (array) ($session['dry_run_matched'] ?? []));
@@ -556,35 +560,21 @@ class ImportController extends AdminController
 					$strategy      = $session['duplicate_strategy'] ?? 'unik';
 					$compositeCols = (array) ($session['composite_fields'] ?? []);
 					
-					// ── Vérification intra-fichier (simulation uniquement) ───────────────────
-					if ($isDryRun && !empty($compositeCols)) {
-						foreach ($dryVirtual as $virtualEntry) {
-							$match = true;
-							foreach ($compositeCols as $col) {
-								$importVal  = $this->normalizeComposite($data[$col]  ?? '', $fields, $col);
-								$virtualVal = $this->normalizeComposite($virtualEntry[$col] ?? '', $fields, $col);
-								if ($importVal !== $virtualVal) {
-									$match = false;
-									break;
-								}
-							}
-							if ($match) {
-								$dryConflicts++;
-								$dryRunEntries[] = [
-									'row'          => $row,
-									'action'       => 'conflict',
-									'intraFile'    => true,
-									'importDisplay' => $model->getDisplayData($collection, $data, $fields) ?? [],
-									'existingDisplay' => $virtualEntry['_display'] ?? [],
-									'existingId'   => null,
-									'existingRow'  => $virtualEntry['_row'] ?? null,
-								];
-								continue 2;
-							}
-						}
-					}
 
 					$existing = $model->checkDuplicate($collection, $data, $fields, $strategy, $compositeCols);
+
+					// Import réel : les objets créés par cet import ne comptent que si la base
+					// n'a rien trouvé (même ordre que la simulation) ; ce sont alors des conflits entre lignes
+					if (!$isDryRun && $existing !== null && $ownRows) {
+						$found = is_array($existing) ? $existing : [$existing];
+						$inBase = array_values(array_filter($found, fn($ex) => !isset($ownRows[(int) $ex->id])));
+						$fromFile = array_values(array_filter($found, fn($ex) => isset($ownRows[(int) $ex->id])));
+						if ($inBase) {
+							$existing = count($inBase) === 1 ? $inBase[0] : $inBase;
+						} else {
+							$existing = $fromFile[0];
+						}
+					}
 
 					if ($isDryRun) {
 						foreach (is_array($existing) ? $existing : ($existing ? [$existing] : []) as $ex) {
@@ -600,11 +590,44 @@ class ImportController extends AdminController
 						}
 					}
 
+					// ── Vérification intra-fichier (simulation), si la base n'a rien trouvé :
+					// même ordre que l'import réel (base, puis lignes du fichier, puis ressemblance)
+					if ($isDryRun && $existing === null && !empty($compositeCols)) {
+						foreach ($dryVirtual as $virtualEntry) {
+							$match = true;
+							foreach ($compositeCols as $col) {
+								$importVal  = $this->normalizeComposite($data[$col]  ?? '', $fields, $col);
+								$virtualVal = $this->normalizeComposite($virtualEntry[$col] ?? '', $fields, $col);
+								if ($importVal === '') {
+									continue; // comme la recherche réelle : une case vide ne compte pas
+								}
+								if ($importVal !== $virtualVal) {
+									$match = false;
+									break;
+								}
+							}
+							if ($match) {
+								$dryConflicts++;
+								$dryRunEntries[] = [
+									'row'          => $row,
+									'action'       => 'conflict',
+									'intraFile'    => true,
+									'importDisplay' => $model->getDisplayData($collection, $data, $fields) ?? [],
+									'existingDisplay' => $virtualEntry['_display'] ?? [],
+									'diff'         => $model->getDiffFields($data, (object) ($virtualEntry['_data'] ?? []), $fields),
+									'existingId'   => null,
+									'existingRow'  => $virtualEntry['_row'] ?? null,
+								];
+								continue 2;
+							}
+						}
+					}
+
 					// Aucun doublon strict : objets qui ressemblent (fabricant écrit autrement,
 					// référence avec ou sans espace, année absente en base…) → à vérifier
 					if ($existing === null) {
 						$similar = ImportSimilarity::find($collection, $data, $fields,
-							$this->comparisonCols($fields, $strategy, $compositeCols));
+							$this->comparisonCols($fields, $strategy, $compositeCols), array_keys($ownRows));
 
 						if ($similar) {
 							$candidates = array_map(fn($c) => $c + [
@@ -629,6 +652,9 @@ class ImportController extends AdminController
 							if ($auto !== null) {
 								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
 									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
+								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
+									$ownRows[$this->lastCreatedItemId] = $row;
+								}
 								$autoLog[] = ['row' => $row] + $auto;
 								continue;
 							}
@@ -707,6 +733,9 @@ class ImportController extends AdminController
 							if ($auto !== null) {
 								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
 									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
+								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
+									$ownRows[$this->lastCreatedItemId] = $row;
+								}
 								$autoLog[] = ['row' => $row] + $auto;
 								continue;
 							}
@@ -773,11 +802,50 @@ class ImportController extends AdminController
 								continue;
 							}
 							
+							// Objet créé plus haut par ce même import : conflit entre deux lignes du fichier
+							$intraRow = $ownRows[(int) $existing->id] ?? null;
+							if ($intraRow !== null) {
+								$auto = $this->autoDecisionIntra($session, $row);
+								if ($auto !== null) {
+									$auto['target'] = (int) $existing->id;
+									$this->applyDecision($auto['action'], (int) $existing->id, $data, $collection, $publishing, $params,
+										$model, $importHistoryId, $imported, $merged, $skipped, $errors);
+									if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
+										$ownRows[$this->lastCreatedItemId] = $row;
+									}
+									$autoLog[] = ['row' => $row] + $auto;
+									continue;
+								}
+								$session['own_rows'] = $ownRows;
+								$conflictResult = [
+									'success'         => true,
+									'state'           => 'conflict',
+									'intraFile'       => true,
+									'existingRow'     => $intraRow,
+									'conflictRow'     => $row,
+									'multipleMatches' => false,
+									'isIdentical'     => $isIdentical,
+									'importData'      => $data,
+									'importDisplay'   => $model->getDisplayData($collection, $data, $fields),
+									'existingId'      => (int) $existing->id,
+									'existingDisplay' => $model->getItemDisplayData($collection, (int) $existing->id, $fields),
+									'diff'            => $model->getDiffFields($data, $existing, $fields),
+									'imported'        => $imported,
+									'skipped'         => $skipped,
+									'merged'          => $merged,
+									'errors'          => $errors,
+								];
+								break;
+							}
+
 							// Décision enregistrée (rapport de simulation ou « faire de même ») ?
 							$auto = $this->autoDecision($session, $row, [(int) $existing->id]);
 							if ($auto !== null) {
 								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
 									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
+								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
+									$ownRows[$this->lastCreatedItemId] = $row;
+								}
 								$autoLog[] = ['row' => $row] + $auto;
 								continue;
 							}
@@ -811,6 +879,7 @@ class ImportController extends AdminController
 						$virtualEntry = array_intersect_key($data, array_flip($compositeCols));
 						$virtualEntry['_display'] = $model->getDisplayData($collection, $data, $fields) ?? [];
 						$virtualEntry['_row']     = $row;
+						$virtualEntry['_data']    = $data;
 						$dryVirtual[]             = $virtualEntry;
 						$dryRunEntries[]          = ['row' => $row, 'action' => 'import'];
 						continue;
@@ -820,6 +889,7 @@ class ImportController extends AdminController
 					if ($insertResult !== false) {
 						$imported++;
 						$importedItems[] = $insertResult;
+						$ownRows[(int) $insertResult['item_id']] = $row;
 						if (!$isDryRun && $importHistoryId) {
 							$model->addImportHistoryItem(
 								$importHistoryId,
@@ -865,6 +935,7 @@ class ImportController extends AdminController
 			$session['dry_run_multiconflicts'] = $dryMulticonflicts;
 			$session['dry_run_virtual'] = $dryVirtual;
 			$session['dry_run_similar'] = $drySimilar;
+			$session['own_rows']        = $ownRows;
 			$session['dry_run_matched'] = array_values(array_unique($dryMatched));
 			$session['dry_run_scope']   = $dryScope;
 
@@ -1044,11 +1115,18 @@ class ImportController extends AdminController
 
             $this->applyDecision($decision, $existingId, $data, $collection, $publishing, $params,
                 $model, $importHistoryId, $imported, $merged, $skipped, $errors);
+            if ($decision === 'import' && $this->lastCreatedItemId) {
+                $ownRows = array_map('intval', (array) ($session['own_rows'] ?? []));
+                $ownRows[$this->lastCreatedItemId] = (int) $session['current_row'];
+                $session['own_rows'] = $ownRows;
+            }
 
             // « Faire de même pour les conflits suivants » : devient la règle générale
             if ($this->input->getInt('apply_to_next')) {
                 if ($this->input->getCmd('kind') === 'similar') {
                     $session['similar_decision'] = $decision;
+                } elseif ($this->input->getCmd('kind') === 'intra') {
+                    $session['intra_decision'] = $decision;
                 } else {
                     $session['default_decision'] = $decision;
                 }
@@ -1107,6 +1185,8 @@ class ImportController extends AdminController
 		$session['decisions']              = [];
 		$session['default_decision']       = 'ask';
 		$session['similar_decision']       = 'ask';
+		$session['intra_decision']         = 'ask';
+		$session['own_rows']               = [];
 		$session['dry_run_similar']        = 0;
 		$session['dry_run_matched']        = [];
 		$session['dry_run_scope']          = [];
@@ -1172,6 +1252,9 @@ class ImportController extends AdminController
 		$session['default_decision'] = in_array($default, self::DECISIONS, true) ? $default : 'ask';
 		$similarRule = $this->input->post->getCmd('similar_decision', 'ask');
 		$session['similar_decision'] = in_array($similarRule, self::DECISIONS, true) ? $similarRule : 'ask';
+		$intraRule = $this->input->post->getCmd('intra_decision', 'ask');
+		$session['intra_decision']   = in_array($intraRule, self::DECISIONS, true) ? $intraRule : 'ask';
+		$session['own_rows']         = [];
 
 		// Désactiver le mode simulation et réinitialiser les compteurs
 		$session['dry_run']              = false;
@@ -1267,6 +1350,27 @@ class ImportController extends AdminController
         return null;
     }
 
+    /** @var int Objet créé par la dernière décision « importer comme nouveau » (0 sinon) */
+    private int $lastCreatedItemId = 0;
+
+    /**
+     * Décision pour un conflit entre deux lignes du fichier (l'objet en base a été créé
+     * par une ligne précédente du même import), ou null s'il faut demander.
+     * Décision de la ligne (rapport de simulation), sinon règle des conflits entre lignes.
+     */
+    private function autoDecisionIntra(array $session, int $row): ?array
+    {
+        $decision = $session['decisions'][$row] ?? null;
+
+        if (is_array($decision) && in_array($decision['action'] ?? '', self::DECISIONS, true)) {
+            return ['action' => $decision['action'], 'target' => 0];
+        }
+
+        $rule = (string) ($session['intra_decision'] ?? 'ask');
+
+        return in_array($rule, self::DECISIONS, true) ? ['action' => $rule, 'target' => 0] : null;
+    }
+
     /**
      * Colonnes de comparaison des doublons : champs choisis (stratégie « composite »)
      * ou champs marqués uniques.
@@ -1291,6 +1395,8 @@ class ImportController extends AdminController
                                    array $publishing, object $params, object $model, int $importHistoryId,
                                    int &$imported, int &$merged, int &$skipped, int &$errors): void
     {
+        $this->lastCreatedItemId = 0;
+
         try {
             switch ($decision) {
                 case 'import':
@@ -1300,6 +1406,7 @@ class ImportController extends AdminController
                         break;
                     }
                     $imported++;
+                    $this->lastCreatedItemId = (int) $result['item_id'];
                     if ($importHistoryId) {
                         $model->addImportHistoryItem($importHistoryId, $result['item_id'], 'imported',
                             null, $result['version_after']);

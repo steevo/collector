@@ -50,8 +50,12 @@ final class ImportSimilarity
      * @param  array  $cols    Colonnes à comparer (champs de comparaison des doublons)
      * @return array<int, array{id: int, score: float}>  Du plus ressemblant au moins ressemblant
      */
-    public static function find(int $collection, array $data, array $fields, array $cols): array
+    public static function find(int $collection, array $data, array $fields, array $cols, array $exclude = []): array
     {
+        // Objets créés par l'import en cours : ce sont d'autres lignes du même fichier,
+        // déjà comparées entre elles (règle des conflits entre lignes), pas des doublons
+        $exclude = array_flip(array_map('intval', $exclude));
+
         $byCol = [];
         foreach ($fields as $field) {
             $byCol[$field->_field->tablecolumn] = $field;
@@ -75,6 +79,9 @@ final class ImportSimilarity
         $found = [];
 
         foreach ($pool as $id => $item) {
+            if (isset($exclude[(int) $id])) {
+                continue;
+            }
             $total = 0.0;
             $max   = 0.0;
 

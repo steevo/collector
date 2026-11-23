@@ -955,6 +955,17 @@ const T = {
 	missingMore     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_MORE')); ?>,
 	diffFields      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_FIELDS')); ?>,
 	diffNone        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_NONE')); ?>,
+	intraTitle      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_TITLE')); ?>,
+	intraCount      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_COUNT')); ?>,
+	intraRule       : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_RULE')); ?>,
+	intraHelp       : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_HELP')); ?>,
+	intraMerge      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_MERGE')); ?>,
+	intraLive       : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_LIVE')); ?>,
+	compareBtn      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_COMPARE_BTN')); ?>,
+	compareTitle    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_COMPARE_TITLE')); ?>,
+	compareFile     : <?php echo json_encode(Text::sprintf('COM_COLLECTOR_IMPORT_COMPARE_FILE_ROW', '%s')); ?>,
+	compareOnlyDiff : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_COMPARE_ONLY_DIFF')); ?>,
+	close           : <?php echo json_encode(Text::_('JCLOSE')); ?>,
 };
 
 let state = {
@@ -1054,7 +1065,9 @@ function showConflict(json) {
         + '<th><span class="icon-upload me-1"></span>' + T.conflictImported + '</th>';
 		
     const titleTpl = json.similar ? T.lookalike : (json.isIdentical ? T.identical : T.similar);
-	document.getElementById('conflict-title').textContent = titleTpl.replace('%s', json.conflictRow);
+	document.getElementById('conflict-title').textContent = json.intraFile
+		? T.intraLive.replace('%1$s', json.conflictRow).replace('%2$s', json.existingRow)
+		: titleTpl.replace('%s', json.conflictRow);
     document.getElementById('conflict-subtitle').textContent = (json.similar
         ? T.lookalikeSub.replace('%d', Math.round((json.score || 0) * 100))
         : T.conflictSub.replace('%s', json.conflictRow))
@@ -1221,6 +1234,8 @@ async function resolveConflict(decision) {
     }
     if (json.similar) {
         fd.append('kind', 'similar');
+    } else if (json.intraFile) {
+        fd.append('kind', 'intra');
     }
 
     if (decision === 'merge') {
@@ -1320,7 +1335,8 @@ function finishImport(hasError) {
 
 function renderDryRunReport() {
     const report         = state.dryRunReport || [];
-    const conflicts      = report.filter(e => e.action === 'conflict');
+    const conflicts      = report.filter(e => e.action === 'conflict' && !e.intraFile);
+    const intraConflicts = report.filter(e => e.action === 'conflict' && e.intraFile);
     const multiconflicts = report.filter(e => e.action === 'multiconflict');
     const imports        = report.filter(e => e.action === 'import');
     const skipped        = report.filter(e => e.action === 'skip_identical');
@@ -1347,6 +1363,8 @@ function renderDryRunReport() {
         html += '<li class="text-danger">⚠ ' + multiconflicts.length + ' ' + T.dryRunWouldMultiConflict + '</li>';
     if (lookalikes.length > 0)
         html += '<li class="text-info">≈ ' + lookalikes.length + ' ' + esc(T.lookalikeCount) + '</li>';
+    if (intraConflicts.length > 0)
+        html += '<li class="text-secondary">⇄ ' + intraConflicts.length + ' ' + esc(T.intraCount) + '</li>';
     html += '</ul>';
 
     // Règle générale pour les conflits laissés sur « Règle générale »
@@ -1359,6 +1377,19 @@ function renderDryRunReport() {
              + '<option value="skip">' + esc(T.decisionSkip) + '</option>'
              + '<option value="merge">' + esc(T.decisionMerge) + '</option>'
              + '<option value="import">' + esc(T.decisionImport) + '</option>'
+             + '</select>';
+        html += '</div>';
+    }
+
+    // Règle pour les conflits entre deux lignes du fichier
+    if (intraConflicts.length > 0) {
+        html += '<div class="mb-3">';
+        html += '<label class="form-label small fw-semibold mb-1" for="intra-decision">' + esc(T.intraRule) + '</label>';
+        html += '<select class="form-select form-select-sm w-auto" name="intra_decision" id="intra-decision">'
+             + '<option value="ask">' + esc(T.decisionAsk) + '</option>'
+             + '<option value="import">' + esc(T.decisionImport) + '</option>'
+             + '<option value="merge">' + esc(T.decisionMerge) + '</option>'
+             + '<option value="skip">' + esc(T.decisionSkip) + '</option>'
              + '</select>';
         html += '</div>';
     }
@@ -1398,6 +1429,14 @@ function renderDryRunReport() {
 			+ buildConflictTable(multiconflicts, displayCols, true));
 	}
 	
+    // Accordéon conflits entre lignes du fichier
+    if (intraConflicts.length > 0) {
+        html += buildAccordion('dry-intra',
+            esc(T.intraTitle) + ' <span class="badge bg-secondary ms-1">' + intraConflicts.length + '</span>',
+            '<div class="px-3 pt-2 pb-1 small text-muted">' + esc(T.intraHelp) + '</div>'
+            + buildConflictTable(intraConflicts, displayCols, false));
+    }
+
     // Accordéon objets ressemblants (à vérifier)
     if (lookalikes.length > 0) {
         html += buildAccordion('dry-lookalikes',
@@ -1512,6 +1551,7 @@ function buildConflictTable(entries, displayCols, isMulti) {
 				if (Array.isArray(match.diff)) {
 					html += '<div class="small text-muted mt-1">' + esc(diffText(match.diff)) + '</div>';
 				}
+				html += compareButton(e.row, e.importDisplay, match.display, '#' + match.id);
 				html += '</td>';
                 html += '</tr>';
             });
@@ -1525,7 +1565,7 @@ function buildConflictTable(entries, displayCols, isMulti) {
 			});
 				html += '<td></td>';
 				html += '<td class="align-middle" rowspan="2">'
-				     + decisionSelect(e.row, e.intraFile ? [null] : [e.existingId]) + '</td>';
+				     + (e.intraFile ? intraSelect(e.row, e.existingRow) : decisionSelect(e.row, [e.existingId])) + '</td>';
 			html += '</tr><tr>';
 			displayCols.forEach(f => {
 				const imp     = String((e.importDisplay   ?? {})[f.col] ?? '');
@@ -1540,6 +1580,10 @@ function buildConflictTable(entries, displayCols, isMulti) {
 				html += '<span class="badge bg-info">'
 					 + T.dryRunIntraFile.replace('%d', e.existingRow ?? 0)
 					 + '</span>';
+				if (Array.isArray(e.diff)) {
+					html += '<div class="small text-muted mt-1">' + esc(diffText(e.diff)) + '</div>';
+				}
+				html += compareButton(e.row, e.importDisplay, e.existingDisplay, T.compareFile.replace('%s', e.existingRow ?? '?'));
 			} else if (e.existingId) {
 				html += '<a href="index.php?option=com_collector&task=item.edit&collection='
 					 + COLLECTION + '&id=' + e.existingId
@@ -1549,6 +1593,7 @@ function buildConflictTable(entries, displayCols, isMulti) {
 				if (Array.isArray(e.diff)) {
 					html += '<div class="small text-muted mt-1">' + esc(diffText(e.diff)) + '</div>';
 				}
+				html += compareButton(e.row, e.importDisplay, e.existingDisplay, '#' + e.existingId);
 			}
 			html += '</td>';
 			html += '</tr>';
@@ -1586,6 +1631,7 @@ function buildLookalikeTable(entries, displayCols) {
                  + '<a href="index.php?option=com_collector&task=item.edit&collection=' + COLLECTION + '&id=' + c.id
                  + '" target="_blank" class="badge bg-secondary text-decoration-none">#' + c.id + ' <span class="icon-out-2"></span></a> '
                  + '<span class="badge bg-info text-dark">' + esc(T.score.replace('%d', Math.round(c.score * 100))) + '</span>'
+                 + compareButton(e.row, e.importDisplay, c.display, '#' + c.id)
                  + '</td></tr>';
         });
     });
@@ -1631,6 +1677,68 @@ function decisionSelect(row, targets) {
     html += '</select>';
     return html;
 }
+
+/** Choix pour un conflit entre deux lignes du fichier. */
+function intraSelect(row, otherRow) {
+    return '<select class="form-select form-select-sm" name="decisions[' + row + ']">'
+         + '<option value="">' + esc(T.decisionRule) + '</option>'
+         + '<option value="import">' + esc(T.decisionImport) + '</option>'
+         + '<option value="merge:">' + esc(T.intraMerge.replace('%d', otherRow ?? '?')) + '</option>'
+         + '<option value="skip">' + esc(T.decisionSkip) + '</option>'
+         + '</select>';
+}
+
+/** Bouton « Comparer » : ouvre la comparaison de tous les champs. */
+const COMPARES = [];
+function compareButton(row, importDisplay, otherDisplay, otherLabel) {
+    COMPARES.push({row, importDisplay: importDisplay || {}, otherDisplay: otherDisplay || {}, otherLabel});
+    return '<div class="mt-1"><button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"'
+         + ' onclick="collectorCompare(' + (COMPARES.length - 1) + ')">'
+         + '<span class="icon-search me-1" aria-hidden="true"></span>' + esc(T.compareBtn) + '</button></div>';
+}
+
+window.collectorCompare = function (idx) {
+    const c = COMPARES[idx];
+    if (!c) return;
+    let dlg = document.getElementById('collector-compare');
+    if (!dlg) {
+        dlg = document.createElement('dialog');
+        dlg.id = 'collector-compare';
+        dlg.className = 'p-0 border-0 rounded shadow';
+        dlg.style.maxWidth = 'min(960px, 95vw)';
+        dlg.style.width = '100%';
+        dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+        document.body.appendChild(dlg);
+    }
+    let rows = '';
+    FIELDS.forEach(({col, label}) => {
+        const a = String(c.importDisplay[col] ?? '');
+        const b = String(c.otherDisplay[col] ?? '');
+        const differs = a !== b;
+        rows += '<tr class="' + (differs ? 'cmp-diff' : 'cmp-same') + '">'
+             + '<th class="small text-muted fw-semibold">' + esc(label) + '</th>'
+             + '<td class="small"' + (differs ? ' style="background:rgba(220,53,69,.10)"' : '') + '>' + esc(a || '—') + '</td>'
+             + '<td class="small"' + (differs ? ' style="background:rgba(220,53,69,.10)"' : '') + '>' + esc(b || '—') + '</td>'
+             + '</tr>';
+    });
+    dlg.innerHTML = '<div class="p-3">'
+        + '<div class="d-flex justify-content-between align-items-center mb-2 gap-3">'
+        + '<strong>' + esc(T.compareTitle.replace('%1$s', c.row).replace('%2$s', c.otherLabel)) + '</strong>'
+        + '<label class="small text-nowrap"><input type="checkbox" class="form-check-input me-1" id="cmp-only-diff">' + esc(T.compareOnlyDiff) + '</label>'
+        + '</div>'
+        + '<div class="table-responsive" style="max-height:70vh"><table class="table table-sm table-bordered mb-2">'
+        + '<thead class="table-light"><tr><th class="small">' + esc(T.fields) + '</th>'
+        + '<th class="small"><span class="icon-upload me-1"></span>' + T.conflictImported + '</th>'
+        + '<th class="small"><span class="icon-database me-1"></span>' + esc(c.otherLabel) + '</th></tr></thead>'
+        + '<tbody>' + rows + '</tbody></table></div>'
+        + '<div class="text-end"><button type="button" class="btn btn-secondary btn-sm" id="cmp-close">' + esc(T.close) + '</button></div>'
+        + '</div>';
+    dlg.querySelector('#cmp-close').addEventListener('click', () => dlg.close());
+    dlg.querySelector('#cmp-only-diff').addEventListener('change', function () {
+        dlg.querySelectorAll('tr.cmp-same').forEach(tr => tr.classList.toggle('d-none', this.checked));
+    });
+    dlg.showModal();
+};
 
 /** « Diffère sur : Ouvrants, Annotations » (ou « Identique sur tous les champs »). */
 function diffText(fields) {
