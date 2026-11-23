@@ -955,6 +955,7 @@ const T = {
 	missingMore     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_MORE')); ?>,
 	diffFields      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_FIELDS')); ?>,
 	diffNone        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_NONE')); ?>,
+	reassigned      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_REASSIGNED')); ?>,
 	intraTitle      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_TITLE')); ?>,
 	intraCount      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_COUNT')); ?>,
 	intraRule       : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_INTRA_RULE')); ?>,
@@ -1044,6 +1045,10 @@ async function runImport() {
 	}
 	if (json.dry_run_entries) {
 		state.dryRunReport.push(...json.dry_run_entries);
+	}
+	// Fin de simulation : rapport corrigé (un objet de la base pour une seule ligne)
+	if (Array.isArray(json.dry_run_report_full)) {
+		state.dryRunReport = json.dry_run_report_full;
 	}
 
     if (json.state === 'end') { finishImport(false); return; }
@@ -1356,6 +1361,9 @@ function renderDryRunReport() {
     // Résumé
     html += '<ul class="list-unstyled mb-3 small">';
     html += '<li class="text-success">✓ ' + imports.length + ' ' + T.dryRunWouldImport + '</li>';
+    const reassigned = imports.filter(e => e.reassigned).length;
+    if (reassigned > 0)
+        html += '<li class="text-muted ms-3">' + esc(T.reassigned.replace('%d', reassigned)) + '</li>';
     html += '<li class="text-muted">— ' + skipped.length + ' ' + T.dryRunWouldSkip + '</li>';
     if (conflicts.length > 0)
         html += '<li class="text-warning">⚠ ' + conflicts.length + ' ' + T.dryRunWouldConflict + '</li>';

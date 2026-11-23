@@ -429,6 +429,7 @@ class ImportController extends AdminController
 		$session['similar_decision']       = 'ask';
 		$session['intra_decision']         = 'ask';
 		$session['own_rows']               = [];
+		$session['claimed']                = [];
 
 		$model->saveSession($collection, $userId, $session);
 
@@ -478,6 +479,8 @@ class ImportController extends AdminController
 			$drySimilar        = (int) ($session['dry_run_similar'] ?? 0);
 			// Import réel : objets créés par cet import [id => ligne du fichier]
 			$ownRows           = array_map('intval', (array) ($session['own_rows'] ?? []));
+			// Objets en base déjà retenus par une ligne précédente : un objet = une ligne
+			$claimed           = (array) ($session['claimed'] ?? []);
 			// Objets en base retrouvés par le fichier, et valeurs communes à toutes les lignes
 			// (pour lister à la fin les objets de même nature qu'aucune ligne n'a retrouvés)
 			$dryMatched        = array_map('intval', (array) ($session['dry_run_matched'] ?? []));
@@ -569,23 +572,31 @@ class ImportController extends AdminController
 
 					$existing = $model->checkDuplicate($collection, $data, $fields, $strategy, $compositeCols);
 
-					// Import réel : les objets créés par cet import ne comptent que si la base
-					// n'a rien trouvé (même ordre que la simulation) ; ce sont alors des conflits entre lignes
-					if (!$isDryRun && $existing !== null && $ownRows) {
+					// Un objet de la base ne correspond qu'à une seule ligne : on écarte ceux déjà
+					// retenus par une ligne précédente. Les objets créés par cet import ne comptent
+					// que si la base n'a plus rien de libre : ce sont alors des conflits entre lignes.
+					$allTaken = false;
+					if ($existing !== null) {
 						$found = is_array($existing) ? $existing : [$existing];
-						$inBase = array_values(array_filter($found, fn($ex) => !isset($ownRows[(int) $ex->id])));
+						if ($isDryRun) {
+							foreach ($found as $ex) {
+								$dryMatched[] = (int) $ex->id;
+							}
+						}
+						$inBase   = array_values(array_filter($found,
+							fn($ex) => !isset($ownRows[(int) $ex->id]) && empty($claimed[(int) $ex->id])));
 						$fromFile = array_values(array_filter($found, fn($ex) => isset($ownRows[(int) $ex->id])));
 						if ($inBase) {
 							$existing = count($inBase) === 1 ? $inBase[0] : $inBase;
-						} else {
+						} elseif ($fromFile) {
 							$existing = $fromFile[0];
+						} else {
+							$existing = null;
+							$allTaken = true; // ses objets sont déjà pris par d'autres lignes
 						}
 					}
 
 					if ($isDryRun) {
-						foreach (is_array($existing) ? $existing : ($existing ? [$existing] : []) as $ex) {
-							$dryMatched[] = (int) $ex->id;
-						}
 						foreach ($this->comparisonCols($fields, $strategy, $compositeCols) as $col) {
 							$value = (string) ($data[$col] ?? '');
 							if (!array_key_exists($col, $dryScope)) {
@@ -633,7 +644,8 @@ class ImportController extends AdminController
 					// référence avec ou sans espace, année absente en base…) → à vérifier
 					if ($existing === null) {
 						$similar = ImportSimilarity::find($collection, $data, $fields,
-							$this->comparisonCols($fields, $strategy, $compositeCols), array_keys($ownRows));
+							$this->comparisonCols($fields, $strategy, $compositeCols),
+							array_merge(array_keys($ownRows), array_keys(array_filter($claimed))));
 
 						if ($similar) {
 							$candidates = array_map(fn($c) => $c + [
@@ -660,6 +672,8 @@ class ImportController extends AdminController
 									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
+								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
+									$claimed[(int) $auto['target']] = true;
 								}
 								$autoLog[] = ['row' => $row] + $auto;
 								continue;
@@ -699,13 +713,15 @@ class ImportController extends AdminController
 							if ($skipIfIdenticalExists) {
 								foreach ($existing as $ex) {
 									if ($model->isIdentical($data, $ex, $cmpFields)) {
+										$claimed[(int) $ex->id] = true;
+										$session['claimed']     = $claimed;
 										$skipped++;
 										$session['current_row'] = $row + 1;
 										$session['skipped']     = $skipped;
 										$session['dry_run_virtual'] = $dryVirtual;
 										if ($isDryRun) {
 
-											$dryRunEntries[] = ['row' => $row, 'action' => 'skip_identical'];
+											$dryRunEntries[] = ['row' => $row, 'action' => 'skip_identical', 'existingId' => (int) $ex->id];
 											continue 2;
 										}
 										$this->persistSession($model, $collection, $userId, $session, $colMap, $valueMap);
@@ -741,6 +757,8 @@ class ImportController extends AdminController
 									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
+								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
+									$claimed[(int) $auto['target']] = true;
 								}
 								$autoLog[] = ['row' => $row] + $auto;
 								continue;
@@ -779,11 +797,12 @@ class ImportController extends AdminController
 						} else {
 							$isIdentical = $model->isIdentical($data, $existing, $cmpFields);
 							if ($isIdentical && $params->get('import_skip_identical', 0)) {
+								$claimed[(int) $existing->id] = true;
 								$skipped++;
 								$session['current_row'] = $row + 1;
 								$session['skipped']     = $skipped;
 								if ($isDryRun) {
-									$dryRunEntries[] = ['row' => $row, 'action' => 'skip_identical'];
+									$dryRunEntries[] = ['row' => $row, 'action' => 'skip_identical', 'existingId' => (int) $existing->id];
 									continue;
 								}
 								continue;
@@ -851,6 +870,8 @@ class ImportController extends AdminController
 									$model, $importHistoryId, $imported, $merged, $skipped, $errors);
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
+								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
+									$claimed[(int) $auto['target']] = true;
 								}
 								$autoLog[] = ['row' => $row] + $auto;
 								continue;
@@ -887,7 +908,7 @@ class ImportController extends AdminController
 						$virtualEntry['_row']     = $row;
 						$virtualEntry['_data']    = $data;
 						$dryVirtual[]             = $virtualEntry;
-						$dryRunEntries[]          = ['row' => $row, 'action' => 'import'];
+						$dryRunEntries[]          = ['row' => $row, 'action' => 'import'] + ($allTaken ? ['reassigned' => true] : []);
 						continue;
 					}
 
@@ -942,6 +963,7 @@ class ImportController extends AdminController
 			$session['dry_run_virtual'] = $dryVirtual;
 			$session['dry_run_similar'] = $drySimilar;
 			$session['own_rows']        = $ownRows;
+			$session['claimed']         = $claimed;
 			$session['dry_run_matched'] = array_values(array_unique($dryMatched));
 			$session['dry_run_scope']   = $dryScope;
 
@@ -955,6 +977,21 @@ class ImportController extends AdminController
 			if ($isDryRun && !empty($dryRunEntries)) {
 				$existing = (array) ($session['dry_run_report'] ?? []);  // ← cast en array
 				$session['dry_run_report'] = array_merge($existing, $dryRunEntries);
+			}
+
+			// Fin de simulation : un objet de la base pour une seule ligne, sur tout le fichier
+			$dryReportFull = null;
+			if ($isDryRun && $isEnd) {
+				[$session['dry_run_report'], $counts] = $this->reconcileDryRun((array) $session['dry_run_report'], $claimed);
+				$imported          = $counts['import'];
+				$dryConflicts      = $counts['conflict'];
+				$dryMulticonflicts = $counts['multiconflict'];
+				$drySimilar        = $counts['similar'];
+				$session['imported']               = $imported;
+				$session['dry_run_conflicts']      = $dryConflicts;
+				$session['dry_run_multiconflicts'] = $dryMulticonflicts;
+				$session['dry_run_similar']        = $drySimilar;
+				$dryReportFull = $session['dry_run_report'];
 			}
 
 			if (!$isDryRun && $importHistoryId) {
@@ -993,6 +1030,7 @@ class ImportController extends AdminController
 				'dry_run_multiconflicts' => $dryMulticonflicts,
 				'dry_run_similar'        => $drySimilar,
 				'dry_run_missing'        => $dryMissing,
+				'dry_run_report_full'    => $dryReportFull,
             ];
         });
     }
@@ -1127,6 +1165,12 @@ class ImportController extends AdminController
                 $session['own_rows'] = $ownRows;
             }
 
+            if ($decision !== 'import' && $existingId > 0) {
+                $claimed = (array) ($session['claimed'] ?? []);
+                $claimed[$existingId] = true;
+                $session['claimed'] = $claimed;
+            }
+
             // « Faire de même pour les conflits suivants » : devient la règle générale
             if ($this->input->getInt('apply_to_next')) {
                 if ($this->input->getCmd('kind') === 'similar') {
@@ -1193,6 +1237,7 @@ class ImportController extends AdminController
 		$session['similar_decision']       = 'ask';
 		$session['intra_decision']         = 'ask';
 		$session['own_rows']               = [];
+		$session['claimed']                = [];
 		$session['dry_run_similar']        = 0;
 		$session['dry_run_matched']        = [];
 		$session['dry_run_scope']          = [];
@@ -1253,6 +1298,14 @@ class ImportController extends AdminController
 				];
 			}
 		}
+		// Lignes dont tous les objets possibles sont retenus par d'autres lignes : à importer
+		// (l'import réel, qui avance ligne par ligne, ne peut pas le savoir à l'avance)
+		foreach ((array) ($session['dry_run_report'] ?? []) as $entry) {
+			if (!empty($entry['reassigned']) && !isset($decisions[(int) $entry['row']])) {
+				$decisions[(int) $entry['row']] = ['action' => 'import', 'target' => null];
+			}
+		}
+
 		$default = $this->input->post->getCmd('default_decision', 'ask');
 		$session['decisions']        = $decisions;
 		$session['default_decision'] = in_array($default, self::DECISIONS, true) ? $default : 'ask';
@@ -1261,6 +1314,7 @@ class ImportController extends AdminController
 		$intraRule = $this->input->post->getCmd('intra_decision', 'ask');
 		$session['intra_decision']   = in_array($intraRule, self::DECISIONS, true) ? $intraRule : 'ask';
 		$session['own_rows']         = [];
+		$session['claimed']          = [];
 
 		// Désactiver le mode simulation et réinitialiser les compteurs
 		$session['dry_run']              = false;
@@ -1302,7 +1356,7 @@ class ImportController extends AdminController
             $target = (int) ($decision['target'] ?? 0);
 
             if ($action !== 'merge') {
-                return ['action' => $action, 'target' => 0];
+                return ['action' => $action, 'target' => count($matchIds) === 1 ? (int) $matchIds[0] : 0];
             }
             if ($target > 0) {
                 return in_array($target, $matchIds, true) ? ['action' => 'merge', 'target' => $target] : null;
@@ -1354,6 +1408,81 @@ class ImportController extends AdminController
         }
 
         return null;
+    }
+
+    /**
+     * Fin de simulation : chaque objet de la base ne doit servir qu'à une seule ligne.
+     * Les lignes identiques ont déjà retenu le leur ($claimed) ; on parcourt ensuite le
+     * rapport dans l'ordre du fichier :
+     *  - conflit simple : son objet est retenu, sauf s'il l'est déjà → la ligne est à importer ;
+     *  - conflit multiple : on retire les objets déjà retenus (1 restant → conflit simple,
+     *    aucun → à importer) ;
+     *  - objet ressemblant : idem pour les objets proposés.
+     *
+     * @return array{0: array, 1: array<string, int>}  Rapport corrigé, nombre par catégorie
+     */
+    private function reconcileDryRun(array $report, array $claimed): array
+    {
+        $taken = array_filter($claimed);
+        usort($report, fn($a, $b) => (int) $a['row'] <=> (int) $b['row']);
+        $toImport = fn($e) => ['row' => $e['row'], 'action' => 'import', 'reassigned' => true];
+
+        foreach ($report as &$e) {
+            $action = $e['action'] ?? '';
+
+            if ($action === 'conflict' && empty($e['intraFile']) && !empty($e['existingId'])) {
+                $id = (int) $e['existingId'];
+                if (!empty($taken[$id])) {
+                    $e = $toImport($e);
+                } else {
+                    $taken[$id] = true;
+                }
+            } elseif ($action === 'multiconflict') {
+                $free = array_values(array_filter($e['matches'] ?? [], fn($m) => empty($taken[(int) $m['id']])));
+                if (!$free) {
+                    $e = $toImport($e);
+                } elseif (count($free) === 1) {
+                    $m = $free[0];
+                    $taken[(int) $m['id']] = true;
+                    $e = [
+                        'row'             => $e['row'],
+                        'action'          => 'conflict',
+                        'existingId'      => (int) $m['id'],
+                        'existingDisplay' => $m['display'] ?? [],
+                        'diff'            => $m['diff'] ?? null,
+                        'importDisplay'   => $e['importDisplay'] ?? [],
+                    ];
+                } else {
+                    $e['matches'] = $free;
+                }
+            }
+        }
+        unset($e);
+
+        // Ensuite seulement, les objets ressemblants : un objet retenu par une correspondance
+        // stricte (même plus bas dans le fichier) n'est plus proposé
+        foreach ($report as &$e) {
+            if (($e['action'] ?? '') !== 'similar') {
+                continue;
+            }
+            $free = array_values(array_filter($e['candidates'] ?? [], fn($c) => empty($taken[(int) $c['id']])));
+            if (!$free) {
+                $e = $toImport($e);
+            } else {
+                $e['candidates'] = $free;
+            }
+        }
+        unset($e);
+
+        $counts = ['import' => 0, 'conflict' => 0, 'multiconflict' => 0, 'similar' => 0];
+        foreach ($report as $e) {
+            $a = $e['action'] ?? '';
+            if (isset($counts[$a])) {
+                $counts[$a]++;
+            }
+        }
+
+        return [$report, $counts];
     }
 
     /** @var int Objet créé par la dernière décision « importer comme nouveau » (0 sinon) */
