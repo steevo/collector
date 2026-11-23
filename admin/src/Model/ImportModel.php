@@ -279,8 +279,11 @@ class ImportModel extends ListModel
 	 * Principe : on charge l'item existant, on écrase avec les valeurs importées
 	 * non vides, puis on crée une nouvelle version en historique.
 	 * Les champs vides dans l'import conservent la valeur existante.
+	 *
+	 * @param  bool  $applyEmpty  Valeurs choisies une à une : une valeur vide efface celle de l'objet
 	 */
-	public function mergeItem(int $collection, int $existingId, array $importData, object $params, array $publishing): array|false
+	public function mergeItem(int $collection, int $existingId, array $importData, object $params, array $publishing,
+	                          bool $applyEmpty = false): array|false
 	{
 		$db    = $this->getDbo();
 		$table = new CollectorItemsTable($db);
@@ -291,9 +294,11 @@ class ImportModel extends ListModel
 		// Charge les données historiques de la version active
 		$table->loadVersion($collection, $existingId);
 
-		// Applique les valeurs importées : les champs vides ne remplacent pas
+		// Applique les valeurs importées : les champs vides ne remplacent pas,
+		// sauf s'ils ont été choisis explicitement
 		foreach ($importData as $col => $value) {
-			if ($col !== 'collection' && $value !== '') {
+			$value = (string) ($value ?? '');
+			if ($col !== 'collection' && ($value !== '' || $applyEmpty)) {
 				$table->$col = $value;
 			}
 		}

@@ -980,6 +980,7 @@ const T = {
 	reassigned      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_REASSIGNED')); ?>,
 	matrixHelp      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MATRIX_HELP')); ?>,
 	takeFile        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_TAKE_FILE')); ?>,
+	takeEmpty       : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_TAKE_EMPTY')); ?>,
 	takeAll         : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_TAKE_ALL')); ?>,
 	takeNone        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_TAKE_NONE')); ?>,
 	skipThis        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_SKIP_THIS')); ?>,
@@ -1120,9 +1121,12 @@ function matrixHtml(rowNum, importDisplay, objects, checkedCols) {
         const checked = checkedCols ? checkedCols.includes(col) : (a !== '');
         h += '<tr><th class="cmp-sticky cmp-c1 small text-muted fw-semibold">' + esc(label) + '</th>';
         h += '<td class="cmp-sticky cmp-c2 small">'
-           + (differsAny && a !== ''
+           + (differsAny
               ? '<label class="d-flex gap-1 mb-0"><input type="checkbox" class="form-check-input take-file mt-1" data-col="' + col + '"'
-                + (checked ? ' checked' : '') + '><span>' + esc(a) + '</span></label>'
+                + (checked ? ' checked' : '') + '>'
+                + (a !== '' ? '<span>' + esc(a) + '</span>'
+                            : '<span class="text-muted fst-italic">— ' + esc(T.takeEmpty) + '</span>')
+                + '</label>'
               : esc(a || '—'))
            + '</td>';
         objects.forEach(o => {

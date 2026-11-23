@@ -1171,8 +1171,11 @@ class ImportController extends AdminController
                 $decision = 'skip';
             }
 
+            // Fusion : la fenêtre n'envoie que les valeurs cochées « prendre du fichier »
+            $mergeFields = $decision === 'merge' ? array_keys(array_diff_key($data, ['collection' => 1])) : null;
+
             $this->applyDecision($decision, $existingId, $data, $collection, $publishing, $params,
-                $model, $importHistoryId, $imported, $merged, $skipped, $errors);
+                $model, $importHistoryId, $imported, $merged, $skipped, $errors, $mergeFields);
             if ($decision === 'import' && $this->lastCreatedItemId) {
                 $ownRows = array_map('intval', (array) ($session['own_rows'] ?? []));
                 $ownRows[$this->lastCreatedItemId] = (int) $session['current_row'];
@@ -1557,7 +1560,8 @@ class ImportController extends AdminController
     {
         $this->lastCreatedItemId = 0;
 
-        // Fusion : seulement les valeurs choisies « prendre du fichier » ; les autres restent
+        // Fusion : seulement les valeurs choisies « prendre du fichier » ; les autres restent.
+        // Une valeur vide choisie explicitement efface celle de l'objet.
         if ($decision === 'merge' && $fields !== null) {
             $data = array_intersect_key($data, array_flip($fields)) + ['collection' => $data['collection'] ?? $collection];
         }
@@ -1579,7 +1583,7 @@ class ImportController extends AdminController
                     break;
 
                 case 'merge':
-                    $result = $model->mergeItem($collection, $existingId, $data, $params, $publishing);
+                    $result = $model->mergeItem($collection, $existingId, $data, $params, $publishing, $fields !== null);
                     if ($result === false) {
                         $errors++;
                         break;
