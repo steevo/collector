@@ -20,3 +20,5 @@ ALTER TABLE `#__collector_import_config` ADD COLUMN `similar_keys` text DEFAULT 
 ALTER TABLE `#__collector_import_config` ADD COLUMN `similar_threshold` int(11) NOT NULL DEFAULT 80 AFTER `similar_keys`;
 -- Objets de la base qu'aucune ligne du fichier n'a retrouvés à la fin d'un import réel
 ALTER TABLE `#__collector_import_history` ADD COLUMN `missing_items` mediumtext DEFAULT NULL AFTER `multiconflicts`;
+-- Périmètre d'un fichier d'import (objets absents) : champs qui délimitent les objets concernés
+ALTER TABLE `#__collector_import_config` ADD COLUMN `scope_fields` text DEFAULT NULL AFTER `similar_threshold`;

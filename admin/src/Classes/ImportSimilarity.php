@@ -165,7 +165,8 @@ final class ImportSimilarity
 
     /**
      * Ressemblance de deux références : identiques une fois normalisées → 1,
-     * l'une contient l'autre (7303 / 73030, 006 / 01006) → 0,8, sinon 0.
+     * l'une contient l'autre (7303 / 73030, 006 / 01006) → 0,8, compatible avec
+     * une référence à jokers (K*** / K69) → 0,8, sinon 0.
      */
     public static function refScore(string $a, string $b): float
     {
@@ -179,11 +180,42 @@ final class ImportSimilarity
         if ($x === $y) {
             return 1.0;
         }
+        if (self::wildcardMatch($a, $b) || self::wildcardMatch($b, $a)) {
+            return 0.8;
+        }
         if (min(strlen($x), strlen($y)) >= 3 && (str_contains($x, $y) || str_contains($y, $x))) {
             return 0.8;
         }
 
         return 0.0;
+    }
+
+    /**
+     * Référence à jokers : « * » et « ? » y désignent des caractères inconnus
+     * (K*** = K suivi de chiffres inconnus). Compatible si la partie connue
+     * correspond, dans l'ordre, à l'autre référence (K*** / K69, 4*25 / 4125).
+     */
+    public static function wildcardMatch(string $pattern, string $value): bool
+    {
+        $pattern = html_entity_decode($pattern, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        if (!preg_match('/[*?]/', $pattern)) {
+            return false;
+        }
+
+        // Morceaux connus, normalisés comme les références, séparés par les jokers
+        $parts = array_map([self::class, 'normalize'], preg_split('/[*?]+/', $pattern));
+        if (implode('', $parts) === '') {
+            return false; // que des jokers (« ** ») : référence inconnue, traitée à part
+        }
+
+        $value = self::normalize($value);
+        if ($value === '') {
+            return false;
+        }
+
+        $regex = '/^' . implode('[a-z0-9]*', array_map(fn($p) => preg_quote($p, '/'), $parts)) . '$/';
+
+        return (bool) preg_match($regex, $value);
     }
 
     /**

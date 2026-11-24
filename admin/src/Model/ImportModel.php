@@ -160,7 +160,13 @@ class ImportModel extends ListModel
 	 * @param  array  $fields       Instances CollectorField
 	 * @return object|null          Ligne de l'historique actif de l'item trouvé
 	 */
-	public function checkDuplicate(int $collection, array $data, array $fields, string $strategy = 'unik', array $compositeCols = []): object|array|null
+	/**
+	 * @param  bool  $jokers  Accepter aussi les objets dont la valeur texte en base est incomplète
+	 *                        (« ** », « K*** », « ? ») : recherche de repli quand la recherche
+	 *                        normale ne trouve rien ; ces valeurs ne comptent pas comme absentes
+	 */
+	public function checkDuplicate(int $collection, array $data, array $fields, string $strategy = 'unik',
+	                               array $compositeCols = [], bool $jokers = false): object|array|null
 	{
 		// Récupère les colonnes marquées comme uniques
 		$uniqueCols = array_values(array_filter(
@@ -206,7 +212,13 @@ class ImportModel extends ListModel
 			$q          = $db->quoteName('h.' . $col);
 			$isUnknown  = '(' . $q . ' IS NULL OR ' . $q . ' IN (\'\', \'0\'))';
 			$unknown[]  = $isUnknown;
-			$conditions[] = '(' . $cond . ' OR ' . $isUnknown . ')';
+
+			// Référence incomplète en base (« ** », « K*** ») : à faire vérifier
+			$isJoker = '';
+			if ($jokers && $field && !in_array((string) $field->_field->type, ['define', 'date'], true)) {
+				$isJoker = ' OR ' . $q . ' LIKE ' . $db->quote('%*%') . ' OR ' . $q . ' LIKE ' . $db->quote('%?%');
+			}
+			$conditions[] = '(' . $cond . ' OR ' . $isUnknown . $isJoker . ')';
 		}
 
 		if (empty($conditions)) {
@@ -540,11 +552,14 @@ class ImportModel extends ListModel
 	 * comparaison qui ne varient pas d'une ligne à l'autre, par ex. Type = 405)
 	 * qu'aucune ligne n'a retrouvés, ni à l'identique ni par ressemblance.
 	 *
-	 * @param  array  $scope    [colonne => valeur commune | null si elle varie]
-	 * @param  int[]  $matched  Objets retrouvés par le fichier
+	 * @param  array  $scope      [colonne => valeur commune | null si elle varie]
+	 * @param  int[]  $matched    Objets retrouvés par le fichier
+	 * @param  array  $scopeSets  Périmètre réglé pour la collection : [colonne => valeurs du fichier] ;
+	 *                            s'il est renseigné, il remplace les valeurs communes
 	 * @return array{scope: array, total: int, items: array}  items limités à 300
 	 */
-	public function getMissingItems(int $collection, array $scope, array $matched, array $fields): array
+	public function getMissingItems(int $collection, array $scope, array $matched, array $fields,
+	                                array $scopeSets = []): array
 	{
 		$labels = [];
 		foreach ($fields as $field) {
@@ -554,6 +569,26 @@ class ImportModel extends ListModel
 		$conditions = [];
 		$scopeText  = [];
 		$db         = $this->getDbo();
+
+		// Périmètre réglé : objets dont la valeur fait partie de celles du fichier
+		foreach ($scopeSets as $col => $values) {
+			$values = array_values(array_filter(array_map('strval', (array) $values),
+				fn($v) => $v !== '' && $v !== '0'));
+			if (!$values || !isset($labels[$col])) {
+				continue;
+			}
+			$conditions[] = $db->quoteName('h.' . $col) . ' IN (' . implode(',', array_map([$db, 'quote'], $values)) . ')';
+			$shown = [];
+			foreach ($values as $value) {
+				$display = $this->getDisplayData($collection, [$col => $value], [$labels[$col]]);
+				$shown[] = $display[$col] ?? $value;
+			}
+			sort($shown, SORT_NATURAL | SORT_FLAG_CASE);
+			$scopeText[] = $labels[$col]->_field->field . ' : ' . implode(', ', $shown);
+		}
+		if ($scopeSets) {
+			$scope = []; // le réglage remplace les valeurs communes
+		}
 
 		foreach ($scope as $col => $value) {
 			if ($value === null || $value === '' || $value === '0' || !isset($labels[$col])) {
@@ -607,6 +642,8 @@ class ImportModel extends ListModel
 				->set($db->quoteName('missing_items') . ' = ' . $db->quote(json_encode([
 					'scope' => array_values((array) ($missing['scope'] ?? [])),
 					'ids'   => array_values(array_map('intval', (array) ($missing['ids'] ?? []))),
+					// Ligne pour laquelle l'objet avait été trouvé, puis écarté [id => ligne]
+					'rows'  => (object) array_map('intval', (array) ($missing['rows'] ?? [])),
 				])))
 				->where($db->quoteName('id') . ' = ' . $importId)
 		)->execute();
@@ -647,6 +684,10 @@ class ImportModel extends ListModel
 			'similar_decision'       => (string) ($sessionData['similar_decision'] ?? 'ask'),
 			'intra_decision'         => (string) ($sessionData['intra_decision'] ?? 'ask'),
 			'similar_keys'           => array_values((array) ($sessionData['similar_keys'] ?? [])),
+			'scope_fields'           => array_values((array) ($sessionData['scope_fields'] ?? [])),
+			'scope_values'           => (object) array_map(fn($v) => array_values(array_map('strval', (array) $v)),
+			                                               (array) ($sessionData['scope_values'] ?? [])),
+			'cand_rows'              => (object) array_map('intval', (array) ($sessionData['cand_rows'] ?? [])),
 			'similar_threshold'      => (int) ($sessionData['similar_threshold'] ?? 80),
 			'claimed'                => array_values(array_map('intval', array_keys(array_filter((array) ($sessionData['claimed'] ?? []))))),
 			'own_rows'               => (object) array_map('intval', (array) ($sessionData['own_rows'] ?? [])),
@@ -768,6 +809,10 @@ class ImportModel extends ListModel
 			'similar_decision'       => (string) ($payload['similar_decision'] ?? 'ask'),
 			'intra_decision'         => (string) ($payload['intra_decision'] ?? 'ask'),
 			'similar_keys'           => array_values((array) ($payload['similar_keys'] ?? [])),
+			'scope_fields'           => array_values((array) ($payload['scope_fields'] ?? [])),
+			'scope_values'           => array_map(fn($v) => array_values(array_map('strval', (array) $v)),
+			                                      (array) ($payload['scope_values'] ?? [])),
+			'cand_rows'              => array_map('intval', (array) ($payload['cand_rows'] ?? [])),
 			'similar_threshold'      => (int) ($payload['similar_threshold'] ?? 80),
 			'claimed'                => array_fill_keys(array_map('intval', (array) ($payload['claimed'] ?? [])), true),
 			'own_rows'               => array_map('intval', (array) ($payload['own_rows'] ?? [])),
@@ -812,7 +857,7 @@ class ImportModel extends ListModel
 	public function saveConfig(int $collection, array $colMapping, array $valueMapping,
                            int $firstLine, string $strategy = 'unik',
                            array $compositeFields = [], ?array $similarKeys = null,
-                           ?int $similarThreshold = null): bool
+                           ?int $similarThreshold = null, ?array $scopeFields = null): bool
 	{
 		$db  = $this->getDbo();
 		$now = Factory::getDate()->toSql();
@@ -834,7 +879,26 @@ class ImportModel extends ListModel
 			)->execute();
 		}
 
+		// Périmètre du fichier (colonne ajoutée en 0.9.7)
+		if ($ok && $scopeFields !== null && $this->hasConfigColumn('scope_fields')) {
+			$db->setQuery(
+				'UPDATE ' . $db->quoteName('#__collector_import_config')
+				. ' SET ' . $db->quoteName('scope_fields') . ' = ' . $db->quote(json_encode(array_values($scopeFields)))
+				. ' WHERE ' . $db->quoteName('collection') . ' = ' . $collection
+			)->execute();
+		}
+
 		return $ok;
+	}
+
+	/** Une colonne de la configuration d'import existe-t-elle (base à jour) ? */
+	private function hasConfigColumn(string $column): bool
+	{
+		static $cols = null;
+		if ($cols === null) {
+			$cols = $this->getDbo()->getTableColumns('#__collector_import_config', false);
+		}
+		return isset($cols[$column]);
 	}
 
 	/** Les colonnes du rapprochement existent-elles (base à jour) ? */
@@ -920,6 +984,7 @@ class ImportModel extends ListModel
 			'composite_fields'   => $compositeFields,
 			'similar_keys'       => json_decode((string) ($row->similar_keys ?? '[]'), true) ?: [],
 			'similar_threshold'  => (int) ($row->similar_threshold ?? 80) ?: 80,
+			'scope_fields'       => json_decode((string) ($row->scope_fields ?? '[]'), true) ?: [],
 		];
 	}
 

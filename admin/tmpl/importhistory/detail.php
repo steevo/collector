@@ -200,7 +200,7 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
   </div>
   <div class="card-body">
     <p class="small text-muted"><?php echo Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_MISSING_HELP',
-        htmlspecialchars(implode(', ', $missing['scope']), ENT_QUOTES)); ?></p>
+        htmlspecialchars(implode(' ; ', $missing['scope']), ENT_QUOTES)); ?></p>
 
     <form action="<?php echo Route::_('index.php?option=com_collector&task=importhistory.trashmissing', false); ?>"
           method="post" id="missingForm">
@@ -251,6 +251,9 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
                  target="_blank" class="badge bg-secondary text-decoration-none">#<?php echo (int) $m['id']; ?> <span class="icon-out-2"></span></a>
               <?php else: ?>
               <span class="badge bg-light text-dark">#<?php echo (int) $m['id']; ?></span>
+              <?php endif; ?>
+              <?php if (!empty($m['row'])): ?>
+              <div class="small text-muted"><?php echo Text::sprintf('COM_COLLECTOR_IMPORT_MISSING_CANDIDATE', (int) $m['row']); ?></div>
               <?php endif; ?>
             </td>
             <?php foreach (array_keys($missing['cols']) as $col): ?>

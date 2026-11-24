@@ -604,6 +604,32 @@ function changeCollection(sel) {
 		  </div>
 		</div>
 
+		<?php $scopeFields = (array) ($this->session['scope_fields'] ?? ($this->savedConfig['scope_fields'] ?? [])); ?>
+		<div class="card mt-3">
+		  <div class="card-header fw-semibold small">
+			<?php echo Text::_('COM_COLLECTOR_IMPORT_SCOPE_TITLE'); ?>
+		  </div>
+		  <div class="card-body">
+			<p class="text-muted small mb-2"><?php echo Text::_('COM_COLLECTOR_IMPORT_SCOPE_DESC'); ?></p>
+			<div class="row g-2">
+			<?php foreach ($this->fields as $field):
+				$col = $field->_field->tablecolumn;
+			?>
+			  <div class="col-md-4 col-lg-3">
+				<div class="form-check">
+				  <input type="checkbox" name="scope_fields[]" value="<?php echo $col; ?>"
+						 id="sf-<?php echo $col; ?>" class="form-check-input"
+						 <?php echo in_array($col, $scopeFields, true) ? 'checked' : ''; ?>>
+				  <label for="sf-<?php echo $col; ?>" class="form-check-label small">
+					<?php echo htmlspecialchars($field->_field->field, ENT_QUOTES); ?>
+				  </label>
+				</div>
+			  </div>
+			<?php endforeach; ?>
+			</div>
+		  </div>
+		</div>
+
 		<script>
 		document.querySelectorAll('input[name="duplicate_strategy"]').forEach(r => {
 			r.addEventListener('change', () => {
@@ -976,6 +1002,7 @@ const T = {
 	missingHelp     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_HELP')); ?>,
 	missingMore     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_MORE')); ?>,
 	missingTrashHint: <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_TRASH_HINT')); ?>,
+	missingCandidate: <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_CANDIDATE')); ?>,
 	missingTrashLink: <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_MISSING_TRASH_LINK')); ?>,
 	diffFields      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_FIELDS')); ?>,
 	diffNone        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DIFF_NONE')); ?>,
@@ -1657,14 +1684,16 @@ function buildLookalikeTable(entries, displayCols) {
 /** Objets en base de même nature que le fichier, qu'aucune ligne n'a retrouvés. */
 function buildMissingTable(missing, displayCols) {
     let html = '<div class="px-3 pt-2 pb-1 small text-muted">'
-             + esc(T.missingHelp.replace('%s', (missing.scope || []).join(', '))) + '</div>';
+             + esc(T.missingHelp.replace('%s', (missing.scope || []).join(' ; '))) + '</div>';
     html += '<table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr>'
          + '<th class="small">' + T.dryRunExistingId + '</th>';
     displayCols.forEach(f => { html += '<th class="small">' + esc(f.label) + '</th>'; });
     html += '</tr></thead><tbody>';
     (missing.items || []).forEach(m => {
         html += '<tr><td class="small"><a href="index.php?option=com_collector&task=item.edit&collection=' + COLLECTION + '&id=' + m.id
-             + '" target="_blank" class="badge bg-secondary text-decoration-none">#' + m.id + ' <span class="icon-out-2"></span></a></td>';
+             + '" target="_blank" class="badge bg-secondary text-decoration-none">#' + m.id + ' <span class="icon-out-2"></span></a>'
+             + (m.row ? '<div class="small text-muted">' + esc(T.missingCandidate.replace('%d', m.row)) + '</div>' : '')
+             + '</td>';
         displayCols.forEach(f => { html += '<td class="small">' + esc((m.display || {})[f.col] || '—') + '</td>'; });
         html += '</tr>';
     });

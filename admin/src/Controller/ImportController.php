@@ -218,6 +218,7 @@ class ImportController extends AdminController
 			'duplicate_strategy' => $savedConfig['duplicate_strategy'] ?? 'unik',
 			'composite_fields'   => $savedConfig['composite_fields']   ?? [],
 			'similar_keys'       => $savedConfig['similar_keys']       ?? [],
+			'scope_fields'       => $savedConfig['scope_fields']       ?? [],
 			'similar_threshold'  => $savedConfig['similar_threshold']  ?? 80,
 		]);
 
@@ -308,6 +309,12 @@ class ImportController extends AdminController
 		$session['similar_keys']      = $similarKeys;
 		$session['similar_threshold'] = $similarThreshold;
 
+		// Périmètre du fichier : champs qui délimitent les objets concernés (objets absents)
+		$scopeFields = array_values(array_intersect(
+			(array) $this->input->get('scope_fields', [], 'ARRAY'), $validCols
+		));
+		$session['scope_fields'] = $scopeFields;
+
 		$model->saveSession($collection, $userId, $session);
 
         // Sauvegarder le mapping colonnes sans écraser le value_mapping existant
@@ -315,7 +322,7 @@ class ImportController extends AdminController
         $existingValueMap = $existingConfig['value_mapping'] ?? [];
 
         $model->saveConfig($collection, $colMap, $existingValueMap, $firstLine,
-                   $strategy, $compositeFields, $similarKeys, $similarThreshold);
+                   $strategy, $compositeFields, $similarKeys, $similarThreshold, $scopeFields);
 
         $this->setRedirect(Route::_(
             'index.php?option=com_collector&view=import&collection=' . $collection . '&step=' . $nextStep,
@@ -443,6 +450,8 @@ class ImportController extends AdminController
 		$session['claimed']                = [];
 		$session['dry_run_matched']        = [];
 		$session['dry_run_scope']          = [];
+		$session['scope_values']           = [];
+		$session['cand_rows']              = [];
 
 		$model->saveSession($collection, $userId, $session);
 
@@ -497,7 +506,15 @@ class ImportController extends AdminController
 			// Objets en base retrouvés par le fichier, et valeurs communes à toutes les lignes
 			// (pour lister à la fin les objets de même nature qu'aucune ligne n'a retrouvés)
 			$dryMatched        = array_map('intval', (array) ($session['dry_run_matched'] ?? []));
+			// Import réel : première ligne pour laquelle chaque objet a été trouvé [id => ligne]
+			$candRows          = array_map('intval', (array) ($session['cand_rows'] ?? []));
 			$dryScope          = (array) ($session['dry_run_scope'] ?? []);
+			// Périmètre réglé pour la collection : valeurs présentes dans le fichier [colonne => [valeur => true]]
+			$scopeFields       = (array) ($session['scope_fields'] ?? []);
+			$scopeValues       = [];
+			foreach ((array) ($session['scope_values'] ?? []) as $col => $values) {
+				$scopeValues[$col] = array_fill_keys(array_map('strval', (array) $values), true);
+			}
             $colMap    = (array) $session['mapping'];
             $valueMap  = (array) ($session['value_mapping'] ?? []);
 			$publishing = array_merge(
@@ -588,15 +605,33 @@ class ImportController extends AdminController
 					// Un objet de la base ne correspond qu'à une seule ligne : on écarte ceux déjà
 					// retenus par une ligne précédente. Les objets créés par cet import ne comptent
 					// que si la base n'a plus rien de libre : ce sont alors des conflits entre lignes.
+					$isFree   = fn($ex) => !isset($ownRows[(int) $ex->id]) && empty($claimed[(int) $ex->id]);
+					$found    = $existing === null ? [] : (is_array($existing) ? $existing : [$existing]);
+					$inBase   = array_values(array_filter($found, $isFree));
+
+					// Aucun objet libre : objets dont la référence en base est incomplète
+					// (« ** », « K*** ») et qui correspondent sur les autres champs → conflit
+					if (!$inBase) {
+						$withJokers = $model->checkDuplicate($collection, $data, $fields, $strategy, $compositeCols, true);
+						$knownIds   = array_map(fn($ex) => (int) $ex->id, $found);
+						$jokerFree  = array_values(array_filter(
+							$withJokers === null ? [] : (is_array($withJokers) ? $withJokers : [$withJokers]),
+							fn($ex) => $isFree($ex) && !in_array((int) $ex->id, $knownIds, true)
+						));
+						if ($jokerFree) {
+							$found    = array_merge($found, $jokerFree);
+							$inBase   = $jokerFree;
+							$existing = $jokerFree;
+						}
+					}
+
 					$allTaken = false;
 					if ($existing !== null) {
-						$found = is_array($existing) ? $existing : [$existing];
 						// Objets retrouvés (simulation et import réel) : pour lister à la fin les absents
 						foreach ($found as $ex) {
 							$dryMatched[] = (int) $ex->id;
+							$candRows[(int) $ex->id] ??= $row;
 						}
-						$inBase   = array_values(array_filter($found,
-							fn($ex) => !isset($ownRows[(int) $ex->id]) && empty($claimed[(int) $ex->id])));
 						$fromFile = array_values(array_filter($found, fn($ex) => isset($ownRows[(int) $ex->id])));
 						if ($inBase) {
 							$existing = count($inBase) === 1 ? $inBase[0] : $inBase;
@@ -605,6 +640,13 @@ class ImportController extends AdminController
 						} else {
 							$existing = null;
 							$allTaken = true; // ses objets sont déjà pris par d'autres lignes
+						}
+					}
+
+					foreach ($scopeFields as $col) {
+						$value = (string) ($data[$col] ?? '');
+						if ($value !== '' && $value !== '0' && !str_starts_with($value, 'new:')) {
+							$scopeValues[$col][$value] = true;
 						}
 					}
 
@@ -667,6 +709,7 @@ class ImportController extends AdminController
 
 							foreach ($similar as $c) {
 								$dryMatched[] = $c['id'];
+								$candRows[(int) $c['id']] ??= $row;
 							}
 
 							if ($isDryRun) {
@@ -960,7 +1003,9 @@ class ImportController extends AdminController
 				$session['own_rows']        = $ownRows;
 				$session['claimed']         = $claimed;
 				$session['dry_run_matched'] = array_values(array_unique($dryMatched));
+				$session['cand_rows']       = $candRows;
 				$session['dry_run_scope']   = $dryScope;
+				$session['scope_values']    = $this->scopeSets($scopeValues);
 				if ($importHistoryId) {
 					$model->updateImportHistory($importHistoryId, $imported, $merged, $skipped, $errors);
 				}
@@ -984,12 +1029,15 @@ class ImportController extends AdminController
 			$session['own_rows']        = $ownRows;
 			$session['claimed']         = $claimed;
 			$session['dry_run_matched'] = array_values(array_unique($dryMatched));
+			$session['cand_rows']       = $candRows;
 			$session['dry_run_scope']   = $dryScope;
+			$session['scope_values']    = $this->scopeSets($scopeValues);
 
 			// Fin de simulation : objets de même nature que le fichier qu'aucune ligne n'a retrouvés
 			$dryMissing = null;
 			if ($isDryRun && $isEnd) {
-				$dryMissing = $model->getMissingItems($collection, $dryScope, $session['dry_run_matched'], $fields);
+				$dryMissing = $model->getMissingItems($collection, $dryScope, $session['dry_run_matched'], $fields,
+					$session['scope_values']);
 				$session['dry_run_missing'] = $dryMissing;
 			}
 
@@ -1272,6 +1320,8 @@ class ImportController extends AdminController
 		$session['dry_run_similar']        = 0;
 		$session['dry_run_matched']        = [];
 		$session['dry_run_scope']          = [];
+		$session['scope_values']           = [];
+		$session['cand_rows']              = [];
 		$session['dry_run_missing']        = [];
 		$session['dry_run']                = true;
 		$session['step']                   = 5;
@@ -1354,6 +1404,8 @@ class ImportController extends AdminController
 		$session['claimed']          = [];
 		$session['dry_run_matched']  = [];
 		$session['dry_run_scope']    = [];
+		$session['scope_values']     = [];
+		$session['cand_rows']        = [];
 
 		// Désactiver le mode simulation et réinitialiser les compteurs
 		$session['dry_run']              = false;
@@ -1622,19 +1674,27 @@ class ImportController extends AdminController
 
     /**
      * Fin d'import réel : objets de la base de même nature que le fichier qu'aucune ligne
-     * n'a retrouvés (ni à l'identique, ni par ressemblance, ni désignés « c'est cet objet »).
+     * n'a retenus (ni identiques, ni fusionnés, ni désignés « c'est cet objet », ni créés).
+     * Un objet seulement trouvé pour une ligne, puis écarté, y figure avec cette ligne.
      * Ils sont notés dans l'historique, où l'on peut les mettre à la corbeille.
      */
     private function realImportMissing(object $model, int $collection, array $session, array $fields): array
     {
         $kept = array_merge(
-            array_map('intval', (array) ($session['dry_run_matched'] ?? [])),
             array_map('intval', array_keys(array_filter((array) ($session['claimed'] ?? [])))),
             array_map('intval', array_keys((array) ($session['own_rows'] ?? [])))
         );
 
         $missing = $model->getMissingItems($collection, (array) ($session['dry_run_scope'] ?? []),
-            array_values(array_unique($kept)), $fields);
+            array_values(array_unique($kept)), $fields, (array) ($session['scope_values'] ?? []));
+
+        // Ligne pour laquelle l'objet avait été trouvé, puis écarté
+        $candRows = array_map('intval', (array) ($session['cand_rows'] ?? []));
+        $missing['rows'] = array_intersect_key($candRows, array_flip($missing['ids'] ?? []));
+        foreach ($missing['items'] as &$item) {
+            $item['row'] = $candRows[$item['id']] ?? null;
+        }
+        unset($item);
 
         $historyId = (int) ($session['import_history_id'] ?? 0);
         if ($historyId) {
@@ -1643,6 +1703,12 @@ class ImportController extends AdminController
         unset($missing['ids']);
 
         return $missing;
+    }
+
+    /** [colonne => [valeur => true]] → [colonne => [valeurs]] */
+    private function scopeSets(array $scopeValues): array
+    {
+        return array_map(fn($values) => array_map('strval', array_keys($values)), $scopeValues);
     }
 
     private function sendJson(callable $callback): void

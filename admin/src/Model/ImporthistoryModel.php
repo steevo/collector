@@ -420,6 +420,7 @@ class ImporthistoryModel extends ListModel
                 'exists'  => $exists,
                 'state'   => $exists ? (int) $states[$id] : null,
                 'display' => $exists ? $importModel->getItemDisplayData($collection, $id, $fields) : [],
+                'row'     => isset($data['rows'][$id]) ? (int) $data['rows'][$id] : null,
             ];
         }
 
