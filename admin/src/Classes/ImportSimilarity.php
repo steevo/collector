@@ -21,8 +21,9 @@ use Joomla\Database\DatabaseInterface;
  * (RAC 042 / RAC042), année absente en base… Ces lignes sont proposées
  * « à vérifier » au lieu d'être importées comme nouveaux objets.
  *
- * Note par champ (de 0 à 1), pondérée : listes et dates comptent 1, textes
- * (références) 2, car une référence différente désigne presque toujours un autre objet.
+ * Note par champ (de 0 à 1), pondérée. La note, le poids et les « champs suffisants »
+ * sont définis par chaque type de champ (CollectorField::similarityScore()…) : cette
+ * classe ne connaît aucun type. Elle fournit aussi des outils de comparaison de textes.
  */
 final class ImportSimilarity
 {
@@ -35,8 +36,6 @@ final class ImportSimilarity
     /** @var array<int, array<int, array<string, string>>> Objets par collection */
     private static array $pool = [];
 
-    /** @var array<int, string> Libellés des valeurs de listes */
-    private static array $labels = [];
 
     /** @var array<string, float> Notes de ressemblance déjà calculées */
     private static array $labelCache = [];
@@ -71,37 +70,28 @@ final class ImportSimilarity
         // Colonnes utiles : renseignées dans le fichier
         $use = [];
         foreach ($cols as $col) {
-            $value = trim((string) ($data[$col] ?? ''));
-            if ($value === '' || $value === '0' || !isset($byCol[$col])) {
-                continue;
+            if (isset($byCol[$col]) && !$byCol[$col]->isEmptyValue((string) ($data[$col] ?? ''))) {
+                $use[$col] = $byCol[$col];
             }
-            $use[$col] = (string) $byCol[$col]->_field->type;
         }
 
-        // Champs suffisants : tous renseignés dans le fichier par une vraie valeur
-        // (« ** », « ? » ne comptent pas), sinon la règle ne s'applique pas
-        $keyTypes = [];
+        // Champs suffisants : tous renseignés dans le fichier par une valeur qui identifie
+        // (« ** », « ? », « 51 » ne comptent pas : c'est le type de champ qui en juge)
+        $keyFields = [];
         foreach ($keys as $col) {
             $value = trim((string) ($data[$col] ?? ''));
-            if (!isset($byCol[$col]) || $value === '' || $value === '0' || str_starts_with($value, 'new:')
-                || self::normalize($value) === '') {
-                $keyTypes = [];
+            if (!isset($byCol[$col]) || self::normalize($value) === '' || !$byCol[$col]->isSimilarityKey($value)) {
+                $keyFields = [];
                 break;
             }
-            $type = (string) $byCol[$col]->_field->type;
-            // Texte trop court pour identifier un objet (« 6 », « 51 ») : la règle ne s'applique pas
-            if (!in_array($type, ['define', 'date'], true) && strlen(self::normalize($value)) < 3) {
-                $keyTypes = [];
-                break;
-            }
-            $keyTypes[$col] = $type;
+            $keyFields[$col] = $byCol[$col];
         }
 
-        if (count($use) < 2 && !$keyTypes) {
+        if (count($use) < 2 && !$keyFields) {
             return []; // trop peu d'éléments pour juger d'une ressemblance
         }
 
-        $pool = self::pool($collection, array_unique(array_merge(array_keys($use), array_keys($keyTypes))));
+        $pool = self::pool($collection, array_unique(array_merge(array_keys($use), array_keys($keyFields))));
         $found = [];
 
         foreach ($pool as $id => $item) {
@@ -111,16 +101,17 @@ final class ImportSimilarity
             $total = 0.0;
             $max   = 0.0;
 
-            foreach ($use as $col => $type) {
+            foreach ($use as $col => $field) {
                 $a = (string) $data[$col];
-                $b = (string) ($item[$col] ?? '');
-                $weight = self::weight($type);
+                $b = trim((string) ($item[$col] ?? ''));
+                $weight = $field->getSimilarityWeight();
                 $max   += $weight;
-                $total += $weight * self::fieldScore($type, $a, $b);
+                // Valeur absente en base : ni pour ni contre
+                $total += $weight * ($field->isEmptyValue($b) ? 0.5 : $field->similarityScore($a, $b));
             }
 
             $score  = $max > 0 ? $total / $max : 0;
-            $byKeys = $keyTypes && self::keysEqual($keyTypes, $data, $item);
+            $byKeys = $keyFields && self::keysEqual($keyFields, $data, $item);
 
             if ($score >= $threshold || $byKeys) {
                 $found[] = ['id' => (int) $id, 'score' => round($score, 2)] + ($byKeys ? ['keys' => true] : []);
@@ -233,67 +224,19 @@ final class ImportSimilarity
         return preg_replace('/[^a-z0-9]+/', '', $value) ?? '';
     }
 
-    /**
-     * Libellé d'une valeur de liste.
-     */
-    public static function label(string $id): string
-    {
-        if (str_starts_with($id, 'new:')) {
-            return substr($id, 4); // valeur à créer (simulation)
-        }
-
-        self::loadLabels();
-
-        return self::$labels[(int) $id] ?? $id;
-    }
 
     // ── Interne ──────────────────────────────────────────────────────────────
 
     /** Les champs suffisants sont-ils tous identiques entre la ligne et l'objet ? */
-    private static function keysEqual(array $keyTypes, array $data, array $item): bool
+    private static function keysEqual(array $keyFields, array $data, array $item): bool
     {
-        foreach ($keyTypes as $col => $type) {
-            $a = trim((string) $data[$col]);
-            $b = trim((string) ($item[$col] ?? ''));
-
-            $same = match ($type) {
-                'define' => $a === $b,
-                'date'   => substr($a, 0, 4) === substr($b, 0, 4),
-                default  => self::normalize($a) !== '' && self::normalize($a) === self::normalize($b),
-            };
-
-            if (!$same) {
+        foreach ($keyFields as $col => $field) {
+            if (!$field->isSimilarityKeyEqual(trim((string) $data[$col]), trim((string) ($item[$col] ?? '')))) {
                 return false;
             }
         }
 
         return true;
-    }
-
-    private static function weight(string $type): float
-    {
-        return in_array($type, ['define', 'date'], true) ? 1.0 : 2.0;
-    }
-
-    private static function fieldScore(string $type, string $a, string $b): float
-    {
-        $b = trim($b);
-
-        // Valeur absente en base : ni pour ni contre
-        if ($b === '' || $b === '0' || str_starts_with($b, '0000')) {
-            return 0.5;
-        }
-
-        switch ($type) {
-            case 'define':
-                return $a === $b ? 1.0 : self::labelScore(self::label($a), self::label($b));
-
-            case 'date':
-                return substr(trim($a), 0, 4) === substr($b, 0, 4) ? 1.0 : 0.0;
-
-            default:
-                return self::refScore($a, $b);
-        }
     }
 
     /**
@@ -333,17 +276,4 @@ final class ImportSimilarity
         return self::$pool[$key] = $pool;
     }
 
-    private static function loadLabels(): void
-    {
-        if (self::$labels) {
-            return;
-        }
-
-        $db = Factory::getContainer()->get(DatabaseInterface::class);
-        $db->setQuery('SELECT id, content FROM ' . $db->quoteName('#__collector_defined_content'));
-
-        foreach ($db->loadAssocList() ?: [] as $row) {
-            self::$labels[(int) $row['id']] = (string) $row['content'];
-        }
-    }
 }

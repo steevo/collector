@@ -735,6 +735,78 @@ class CollectorField
 		return trim(html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 	}
 	
+	// ── Import : valeurs créées, recherche et ressemblance ─────────────────────
+	// Chaque type de champ adapte ces règles en redéfinissant les méthodes ci-dessous :
+	// le cœur de l'import (contrôleur, modèle, ImportSimilarity) n'en connaît aucun.
+
+	/** Préfixe d'une valeur « à créer » renvoyée pendant une simulation */
+	public const NEW_PREFIX = 'new:';
+
+	/** Simulation en cours : un type de champ qui crée des valeurs à l'import n'en crée aucune */
+	public static bool $deferCreation = false;
+
+	/** @var array<int, array{defined:int, id:int, content:string}> Valeurs créées par l'import depuis le dernier relevé */
+	public static array $createdValues = [];
+
+	/** Valeur absente (rien de renseigné) */
+	public function isEmptyValue(string $value): bool
+	{
+		$value = trim($value);
+		return $value === '' || $value === '0';
+	}
+
+	/**
+	 * Condition SQL « valeur incomplète en base » pour la recherche de doublons de repli :
+	 * l'objet reste un candidat, à faire vérifier. Chaîne vide : aucune valeur de ce type
+	 * n'est considérée comme incomplète.
+	 */
+	public function getUnknownValueCondition(string $tableAlias, object $db): string
+	{
+		return '';
+	}
+
+	/** Poids du champ dans la note de ressemblance (une référence compte double) */
+	public function getSimilarityWeight(): float
+	{
+		return 2.0;
+	}
+
+	/**
+	 * Ressemblance (0 à 1) entre la valeur importée et la valeur en base, renseignée.
+	 * Par défaut, comparaison de références (RAC 042 / RAC042, K*** / K69).
+	 */
+	public function similarityScore(string $importValue, string $baseValue): float
+	{
+		return ImportSimilarity::refScore($importValue, $baseValue);
+	}
+
+	/**
+	 * La valeur importée peut-elle servir de « champ suffisant » ? Par défaut, un texte
+	 * d'au moins 3 lettres ou chiffres (« 6 », « 51 », « ** » n'identifient rien).
+	 */
+	public function isSimilarityKey(string $value): bool
+	{
+		return !$this->isEmptyValue($value) && !str_starts_with($value, self::NEW_PREFIX)
+			&& strlen(ImportSimilarity::normalize($value)) >= 3;
+	}
+
+	/** « Champ suffisant » identique entre la valeur importée et la valeur en base */
+	public function isSimilarityKeyEqual(string $importValue, string $baseValue): bool
+	{
+		$a = ImportSimilarity::normalize($importValue);
+		return $a !== '' && $a === ImportSimilarity::normalize($baseValue);
+	}
+
+	/**
+	 * Condition SQL : valeur en base contenant un joker (« ** », « K*** », « ? ») ;
+	 * à utiliser par les types texte dans getUnknownValueCondition().
+	 */
+	protected function jokerCondition(string $tableAlias, object $db): string
+	{
+		$col = $db->quoteName($tableAlias . '.' . $this->_field->tablecolumn);
+		return '(' . $col . ' LIKE ' . $db->quote('%*%') . ' OR ' . $col . ' LIKE ' . $db->quote('%?%') . ')';
+	}
+
 	/**
 	 * Method to use ajax
 	 *

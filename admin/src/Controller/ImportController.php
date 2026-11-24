@@ -12,7 +12,7 @@ defined('_JEXEC') or die;
 use Joomla\CMS\Component\ComponentHelper;
 use Steevo\Component\Collector\Administrator\Classes\ImportReader;
 use Steevo\Component\Collector\Administrator\Classes\ImportSimilarity;
-use Steevo\Component\Collector\Administrator\Classes\Field\Define\CollectorFieldDefine;
+use Steevo\Component\Collector\Administrator\Classes\CollectorField;
 use Steevo\Component\Collector\Administrator\Table\CollectorItemsTable;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
@@ -561,8 +561,8 @@ class ImportController extends AdminController
 			$autoLog        = []; // décisions appliquées automatiquement dans ce lot
 
 			// Une simulation ne crée aucune valeur de liste ; un import réel note celles qu'il crée
-			CollectorFieldDefine::$deferCreation = $isDryRun;
-			CollectorFieldDefine::$createdValues = [];
+			CollectorField::$deferCreation = $isDryRun;
+			CollectorField::$createdValues = [];
 
 			$importedItems = [];
 			$mergedItems = [];
@@ -583,11 +583,11 @@ class ImportController extends AdminController
 
 					$data     = $this->buildData($rawRow, $fields, $colMap, $valueMap, $collection);
 
-					if (CollectorFieldDefine::$createdValues) {
+					if (CollectorField::$createdValues) {
 						if (!$isDryRun && $importHistoryId) {
-							$model->addImportHistoryValues($importHistoryId, CollectorFieldDefine::$createdValues);
+							$model->addImportHistoryValues($importHistoryId, CollectorField::$createdValues);
 						}
-						CollectorFieldDefine::$createdValues = [];
+						CollectorField::$createdValues = [];
 					}
 					
 					$updated = $this->refreshCreatedMappings($valueMap, $fields);
@@ -645,7 +645,7 @@ class ImportController extends AdminController
 
 					foreach ($scopeFields as $col) {
 						$value = (string) ($data[$col] ?? '');
-						if ($value !== '' && $value !== '0' && !str_starts_with($value, 'new:')) {
+						if ($value !== '' && $value !== '0' && !str_starts_with($value, CollectorField::NEW_PREFIX)) {
 							$scopeValues[$col][$value] = true;
 						}
 					}

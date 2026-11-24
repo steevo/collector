@@ -214,11 +214,8 @@ class ImportModel extends ListModel
 			$unknown[]  = $isUnknown;
 
 			// Référence incomplète en base (« ** », « K*** ») : à faire vérifier
-			$isJoker = '';
-			if ($jokers && $field && !in_array((string) $field->_field->type, ['define', 'date'], true)) {
-				$isJoker = ' OR ' . $q . ' LIKE ' . $db->quote('%*%') . ' OR ' . $q . ' LIKE ' . $db->quote('%?%');
-			}
-			$conditions[] = '(' . $cond . ' OR ' . $isUnknown . $isJoker . ')';
+			$isJoker = ($jokers && $field) ? $field->getUnknownValueCondition('h', $db) : '';
+			$conditions[] = '(' . $cond . ' OR ' . $isUnknown . ($isJoker !== '' ? ' OR ' . $isJoker : '') . ')';
 		}
 
 		if (empty($conditions)) {
@@ -450,9 +447,9 @@ class ImportModel extends ListModel
 			$col       = $field->_field->tablecolumn;
 			$value     = $rawData[$col] ?? '';
 
-			// Valeur de liste qui serait créée par l'import (simulation)
-			if (is_string($value) && str_starts_with($value, 'new:')) {
-				$display[$col] = substr($value, 4) . ' ' . Text::_('COM_COLLECTOR_IMPORT_NEW_VALUE');
+			// Valeur qui serait créée par l'import (simulation)
+			if (is_string($value) && str_starts_with($value, CollectorField::NEW_PREFIX)) {
+				$display[$col] = substr($value, strlen(CollectorField::NEW_PREFIX)) . ' ' . Text::_('COM_COLLECTOR_IMPORT_NEW_VALUE');
 				continue;
 			}
 

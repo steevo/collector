@@ -146,4 +146,10 @@ class CollectorFieldLine extends CollectorField
 		$display = $this->display($value, false, new \Joomla\Registry\Registry(['compare_view' => true]));
 		return ($display !== false && $display !== '') ? $display : htmlspecialchars((string)$value, ENT_QUOTES);
 	}
+
+	/** Référence incomplète en base (« ** », « K*** ») : candidat à faire vérifier */
+	public function getUnknownValueCondition(string $tableAlias, object $db): string
+	{
+		return $this->jokerCondition($tableAlias, $db);
+	}
 }

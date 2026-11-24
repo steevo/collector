@@ -486,14 +486,8 @@ class CollectorFieldDefine extends CollectorField
 	 * @param  array   $mapping  Mapping optionnel fourni par l'UI d'import
 	 * @return string  ID de la valeur dans #__collector_defined_content, ou ''
 	 */
-	/** Préfixe d'une valeur « à créer » renvoyée pendant une simulation */
-	public const NEW_PREFIX = 'new:';
-
-	/** Simulation en cours : ne rien créer, renvoyer « new:<libellé> » à la place */
-	public static bool $deferCreation = false;
-
-	/** @var array<int, array{defined:int, id:int, content:string}> Valeurs créées depuis le dernier relevé */
-	public static array $createdValues = [];
+	// Simulation (CollectorField::$deferCreation) : rien n'est créé, la valeur renvoyée est
+	// « new:<libellé> » ; les valeurs créées sont notées dans CollectorField::$createdValues
 
 	public function getImportedValue($value, array $mapping = [])
 	{
@@ -994,6 +988,52 @@ class CollectorFieldDefine extends CollectorField
 			return '';
 		}
 		return $value;
+	}
+
+	// ── Import : ressemblance ────────────────────────────────────────────────
+
+	/** @var array<int, string> Libellés des valeurs de listes */
+	private static array $similarityLabels = [];
+
+	public function getSimilarityWeight(): float
+	{
+		return 1.0;
+	}
+
+	/** Même valeur, ou libellés proches (Star-Model / Star-Models) */
+	public function similarityScore(string $importValue, string $baseValue): float
+	{
+		return $importValue === $baseValue
+			? 1.0
+			: ImportSimilarity::labelScore($this->similarityLabel($importValue), $this->similarityLabel($baseValue));
+	}
+
+	public function isSimilarityKey(string $value): bool
+	{
+		return !$this->isEmptyValue($value) && !str_starts_with($value, self::NEW_PREFIX);
+	}
+
+	public function isSimilarityKeyEqual(string $importValue, string $baseValue): bool
+	{
+		return trim($importValue) === trim($baseValue);
+	}
+
+	/** Libellé d'une valeur (identifiant, ou « new:<libellé> » en simulation) */
+	private function similarityLabel(string $id): string
+	{
+		if (str_starts_with($id, self::NEW_PREFIX)) {
+			return substr($id, strlen(self::NEW_PREFIX));
+		}
+
+		if (!self::$similarityLabels) {
+			$db = Factory::getContainer()->get(DatabaseInterface::class);
+			$db->setQuery('SELECT id, content FROM ' . $db->quoteName('#__collector_defined_content'));
+			foreach ($db->loadAssocList() ?: [] as $row) {
+				self::$similarityLabels[(int) $row['id']] = (string) $row['content'];
+			}
+		}
+
+		return self::$similarityLabels[(int) $id] ?? $id;
 	}
 
 	/**

@@ -387,6 +387,34 @@ class CollectorFieldDate extends CollectorField
 		return $col . ' = ' . $db->quote($value);
 	}
 	
+	// ── Import : ressemblance (l'année seule compte) ─────────────────────────
+
+	public function isEmptyValue(string $value): bool
+	{
+		$value = trim($value);
+		return $value === '' || $value === '0' || str_starts_with($value, '0000');
+	}
+
+	public function getSimilarityWeight(): float
+	{
+		return 1.0;
+	}
+
+	public function similarityScore(string $importValue, string $baseValue): float
+	{
+		return $this->isSimilarityKeyEqual($importValue, $baseValue) ? 1.0 : 0.0;
+	}
+
+	public function isSimilarityKey(string $value): bool
+	{
+		return !$this->isEmptyValue($value);
+	}
+
+	public function isSimilarityKeyEqual(string $importValue, string $baseValue): bool
+	{
+		return substr(trim($importValue), 0, 4) === substr(trim($baseValue), 0, 4);
+	}
+
 	public function normalizeForComparison(string $value): string
 	{
 		if ($value === '') return '';

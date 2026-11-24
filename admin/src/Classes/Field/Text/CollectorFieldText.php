@@ -126,5 +126,10 @@ class CollectorFieldText extends CollectorField
 		$text = html_entity_decode(strip_tags($value), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 		return trim(preg_replace('/\s+/u', ' ', str_replace("\xC2\xA0", ' ', $text)) ?? '');
 	}
-}
 
+	/** Référence incomplète en base (« ** », « K*** ») : candidat à faire vérifier */
+	public function getUnknownValueCondition(string $tableAlias, object $db): string
+	{
+		return $this->jokerCondition($tableAlias, $db);
+	}
+}
