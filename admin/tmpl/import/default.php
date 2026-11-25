@@ -979,6 +979,8 @@ const T = {
 	fileDupHelp     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_HELP')); ?>,
 	fileDupItem     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_ITEM')); ?>,
 	fileDupSim      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_SIM')); ?>,
+	fileDupCount    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_COUNT')); ?>,
+	fileDupHeader   : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_HEADER')); ?>,
 	token           : <?php echo json_encode($token); ?>,
 	decision        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DECISION')); ?>,
 	decisionRule    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DECISION_RULE')); ?>,
@@ -1341,6 +1343,12 @@ function finishImport(hasError) {
 		if (lk > 0) summary += ' — ' + lk + ' ' + T.lookalikeCount;
 	}
 
+	// Lignes répétant une ligne précédente du fichier (simulation : rapport ; import : journal)
+	const dupCount = state.isDryRun
+		? (state.dryRunReport || []).filter(e => e.action === 'skip_identical' && e.duplicateOf).length
+		: (state.fileDuplicates || []).length;
+	if (dupCount > 0) summary += ' — ⚠ ' + dupCount + ' ' + T.fileDupHeader;
+
 	const errCount = parseInt(document.getElementById('cnt-errors')?.textContent) || 0;
 	if (errCount > 0) {
 		summary += ', ' + errCount + ' ' + T.errors;
@@ -1392,6 +1400,7 @@ function renderDryRunReport() {
     const multiconflicts = report.filter(e => e.action === 'multiconflict');
     const imports        = report.filter(e => e.action === 'import');
     const skipped        = report.filter(e => e.action === 'skip_identical');
+    const fileDups       = skipped.filter(e => e.duplicateOf);
     const lookalikes     = report.filter(e => e.action === 'similar');
     const missing        = state.dryRunMissing || {};
 
@@ -1412,6 +1421,15 @@ function renderDryRunReport() {
     if (reassigned > 0)
         html += '<li class="text-muted ms-3">' + esc(T.reassigned.replace('%d', reassigned)) + '</li>';
     html += '<li class="text-muted">— ' + skipped.length + ' ' + T.dryRunWouldSkip + '</li>';
+    if (fileDups.length > 0) {
+        html += '<li class="text-warning fw-semibold">⚠ ' + fileDups.length + ' ' + esc(T.fileDupCount) + '<ul class="fw-normal">';
+        fileDups.forEach(e => {
+            html += '<li>' + esc(T.fileDupItem.replace('%1$d', e.row).replace('%2$d', e.duplicateOf))
+                  + ' <a href="index.php?option=com_collector&task=item.edit&collection=' + COLLECTION + '&id=' + e.existingId
+                  + '" target="_blank" class="badge bg-secondary text-decoration-none">#' + e.existingId + ' <span class="icon-out-2"></span></a></li>';
+        });
+        html += '</ul></li>';
+    }
     if (conflicts.length > 0)
         html += '<li class="text-warning">⚠ ' + conflicts.length + ' ' + T.dryRunWouldConflict + '</li>';
     if (multiconflicts.length > 0)

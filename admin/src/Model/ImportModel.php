@@ -742,7 +742,8 @@ class ImportModel extends ListModel
 			'cand_rows'              => (object) array_map('intval', (array) ($sessionData['cand_rows'] ?? [])),
 			'file_duplicates'        => array_values((array) ($sessionData['file_duplicates'] ?? [])),
 			'similar_threshold'      => (int) ($sessionData['similar_threshold'] ?? 80),
-			'claimed'                => array_values(array_map('intval', array_keys(array_filter((array) ($sessionData['claimed'] ?? []))))),
+			// [objet => ligne qui l'a retenu]
+			'claimed'                => (object) array_map('intval', array_filter((array) ($sessionData['claimed'] ?? []))),
 			'own_rows'               => (object) array_map('intval', (array) ($sessionData['own_rows'] ?? [])),
 			'dry_run_similar'        => (int) ($sessionData['dry_run_similar'] ?? 0),
 			'dry_run_matched'        => array_values(array_map('intval', (array) ($sessionData['dry_run_matched'] ?? []))),
@@ -868,7 +869,10 @@ class ImportModel extends ListModel
 			'cand_rows'              => array_map('intval', (array) ($payload['cand_rows'] ?? [])),
 			'file_duplicates'        => array_values((array) ($payload['file_duplicates'] ?? [])),
 			'similar_threshold'      => (int) ($payload['similar_threshold'] ?? 80),
-			'claimed'                => array_fill_keys(array_map('intval', (array) ($payload['claimed'] ?? [])), true),
+			// Ancien format : liste d'objets sans la ligne
+			'claimed'                => array_is_list((array) ($payload['claimed'] ?? []))
+				? array_fill_keys(array_map('intval', (array) ($payload['claimed'] ?? [])), true)
+				: array_map('intval', (array) $payload['claimed']),
 			'own_rows'               => array_map('intval', (array) ($payload['own_rows'] ?? [])),
 			'dry_run_similar'        => (int) ($payload['dry_run_similar'] ?? 0),
 			'dry_run_matched'        => (array) ($payload['dry_run_matched'] ?? []),

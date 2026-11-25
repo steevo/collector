@@ -503,6 +503,7 @@ class ImportController extends AdminController
 			// Import réel : objets créés par cet import [id => ligne du fichier]
 			$ownRows           = array_map('intval', (array) ($session['own_rows'] ?? []));
 			// Objets en base déjà retenus par une ligne précédente : un objet = une ligne
+			// [id => ligne qui l'a retenu]
 			$claimed           = (array) ($session['claimed'] ?? []);
 			// Objets en base retrouvés par le fichier, et valeurs communes à toutes les lignes
 			// (pour lister à la fin les objets de même nature qu'aucune ligne n'a retrouvés)
@@ -647,6 +648,33 @@ class ImportController extends AdminController
 						}
 					}
 
+					// Tous ses objets sont pris, et l'un d'eux est identique à la ligne : elle répète
+					// la ligne qui l'a retenu. Doublon du fichier : ignoré et signalé, pas importé.
+					if ($allTaken) {
+						$dupOf = null;
+						foreach ($found as $ex) {
+							if (!isset($ownRows[(int) $ex->id]) && !empty($claimed[(int) $ex->id])
+								&& $model->isIdentical($data, $ex, $cmpFields)) {
+								$dupOf = $ex;
+								break;
+							}
+						}
+						if ($dupOf !== null) {
+							$dup = ['row' => $row, 'of_row' => (int) $claimed[(int) $dupOf->id], 'item' => (int) $dupOf->id];
+							$skipped++;
+							$session['current_row'] = $row + 1;
+							$session['skipped']     = $skipped;
+							if ($isDryRun) {
+								$dryRunEntries[] = ['row' => $row, 'action' => 'skip_identical',
+								                    'existingId' => $dup['item'], 'duplicateOf' => $dup['of_row']];
+							} else {
+								$fileDups[] = $dup;
+								$newDups[]  = $dup;
+							}
+							continue;
+						}
+					}
+
 					foreach ($scopeFields as $col) {
 						$value = (string) ($data[$col] ?? '');
 						if ($value !== '' && $value !== '0' && !str_starts_with($value, CollectorField::NEW_PREFIX)) {
@@ -735,7 +763,7 @@ class ImportController extends AdminController
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
 								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
-									$claimed[(int) $auto['target']] = true;
+									$claimed[(int) $auto['target']] = $row;
 								}
 								$autoLog[] = ['row' => $row] + $auto;
 								continue;
@@ -775,7 +803,7 @@ class ImportController extends AdminController
 							if ($skipIfIdenticalExists) {
 								foreach ($existing as $ex) {
 									if ($model->isIdentical($data, $ex, $cmpFields)) {
-										$claimed[(int) $ex->id] = true;
+										$claimed[(int) $ex->id] = $row;
 										$session['claimed']     = $claimed;
 										$skipped++;
 										$session['current_row'] = $row + 1;
@@ -821,7 +849,7 @@ class ImportController extends AdminController
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
 								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
-									$claimed[(int) $auto['target']] = true;
+									$claimed[(int) $auto['target']] = $row;
 								}
 								$autoLog[] = ['row' => $row] + $auto;
 								continue;
@@ -866,7 +894,7 @@ class ImportController extends AdminController
 									$fileDups[] = $dup;
 									$newDups[]  = $dup;
 								}
-								$claimed[(int) $existing->id] = true;
+								$claimed[(int) $existing->id] = $row;
 								$skipped++;
 								$session['current_row'] = $row + 1;
 								$session['skipped']     = $skipped;
@@ -942,7 +970,7 @@ class ImportController extends AdminController
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
 								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
-									$claimed[(int) $auto['target']] = true;
+									$claimed[(int) $auto['target']] = $row;
 								}
 								$autoLog[] = ['row' => $row] + $auto;
 								continue;
@@ -1263,7 +1291,7 @@ class ImportController extends AdminController
 
             if ($decision !== 'import' && $existingId > 0) {
                 $claimed = (array) ($session['claimed'] ?? []);
-                $claimed[$existingId] = true;
+                $claimed[$existingId] = (int) $session['current_row'] ?: true;
                 $session['claimed'] = $claimed;
             }
 
