@@ -694,6 +694,8 @@ class ImportModel extends ListModel
 					'ids'   => array_values(array_map('intval', (array) ($missing['ids'] ?? []))),
 					// Ligne pour laquelle l'objet avait été trouvé, puis écarté [id => ligne]
 					'rows'  => (object) array_map('intval', (array) ($missing['rows'] ?? [])),
+					// Lignes ignorées car identiques à une ligne précédente du fichier
+					'duplicates' => array_values((array) ($missing['duplicates'] ?? [])),
 				])))
 				->where($db->quoteName('id') . ' = ' . $importId)
 		)->execute();
@@ -738,6 +740,7 @@ class ImportModel extends ListModel
 			'scope_values'           => (object) array_map(fn($v) => array_values(array_map('strval', (array) $v)),
 			                                               (array) ($sessionData['scope_values'] ?? [])),
 			'cand_rows'              => (object) array_map('intval', (array) ($sessionData['cand_rows'] ?? [])),
+			'file_duplicates'        => array_values((array) ($sessionData['file_duplicates'] ?? [])),
 			'similar_threshold'      => (int) ($sessionData['similar_threshold'] ?? 80),
 			'claimed'                => array_values(array_map('intval', array_keys(array_filter((array) ($sessionData['claimed'] ?? []))))),
 			'own_rows'               => (object) array_map('intval', (array) ($sessionData['own_rows'] ?? [])),
@@ -863,6 +866,7 @@ class ImportModel extends ListModel
 			'scope_values'           => array_map(fn($v) => array_values(array_map('strval', (array) $v)),
 			                                      (array) ($payload['scope_values'] ?? [])),
 			'cand_rows'              => array_map('intval', (array) ($payload['cand_rows'] ?? [])),
+			'file_duplicates'        => array_values((array) ($payload['file_duplicates'] ?? [])),
 			'similar_threshold'      => (int) ($payload['similar_threshold'] ?? 80),
 			'claimed'                => array_fill_keys(array_map('intval', (array) ($payload['claimed'] ?? [])), true),
 			'own_rows'               => array_map('intval', (array) ($payload['own_rows'] ?? [])),

@@ -464,8 +464,11 @@ class ImporthistoryModel extends ListModel
     {
         $data = json_decode((string) ($import->missing_items ?? ''), true);
         $ids  = array_values(array_filter(array_map('intval', (array) ($data['ids'] ?? []))));
+        // Lignes du fichier ignorées car identiques à une ligne précédente
+        $duplicates = array_values(array_filter((array) ($data['duplicates'] ?? []), 'is_array'));
+
         if (!$ids) {
-            return ['scope' => [], 'items' => [], 'cols' => []];
+            return ['scope' => [], 'items' => [], 'cols' => [], 'duplicates' => $duplicates];
         }
 
         $db     = $this->getDbo();
@@ -532,7 +535,8 @@ class ImporthistoryModel extends ListModel
             $allFields[$field->_field->tablecolumn] = $field->_field->field;
         }
 
-        return ['scope' => (array) ($data['scope'] ?? []), 'items' => $items, 'cols' => $cols, 'fields' => $allFields];
+        return ['scope' => (array) ($data['scope'] ?? []), 'items' => $items, 'cols' => $cols, 'fields' => $allFields,
+                'duplicates' => $duplicates];
     }
 
     /**

@@ -214,6 +214,28 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
 
 <?php /* ── Objets de la base absents du fichier ──────────────────────────── */ ?>
 <?php $missing = $this->missing ?? ['items' => []]; ?>
+<?php if (!empty($missing['duplicates'])): ?>
+<div class="card mt-4 border-warning" id="file-duplicates">
+  <div class="card-header fw-semibold">
+    <span class="icon-warning me-1 text-warning"></span>
+    <?php echo Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_TITLE'); ?>
+    <span class="badge bg-warning text-dark ms-1"><?php echo count($missing['duplicates']); ?></span>
+  </div>
+  <div class="card-body">
+    <p class="small text-muted"><?php echo Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_HELP'); ?></p>
+    <ul class="small mb-0">
+      <?php foreach ($missing['duplicates'] as $d): ?>
+      <li>
+        <?php echo Text::sprintf('COM_COLLECTOR_IMPORT_FILE_DUP_ITEM', (int) ($d['row'] ?? 0), (int) ($d['of_row'] ?? 0)); ?>
+        <a href="<?php echo Route::_('index.php?option=com_collector&task=item.edit&collection=' . $collection . '&id=' . (int) ($d['item'] ?? 0), false); ?>"
+           target="_blank" class="badge bg-secondary text-decoration-none ms-1">#<?php echo (int) ($d['item'] ?? 0); ?> <span class="icon-out-2"></span></a>
+      </li>
+      <?php endforeach; ?>
+    </ul>
+  </div>
+</div>
+<?php endif; ?>
+
 <?php if (!empty($missing['items'])):
 	$present = count(array_filter($missing['items'], fn($m) => $m['exists'] && $m['state'] !== -2 && empty($m['merged'])));
 	$dupCmp  = []; // comparaisons objet non retrouvé / objet créé par l'import

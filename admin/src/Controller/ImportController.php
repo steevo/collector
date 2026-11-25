@@ -452,6 +452,7 @@ class ImportController extends AdminController
 		$session['dry_run_scope']          = [];
 		$session['scope_values']           = [];
 		$session['cand_rows']              = [];
+		$session['file_duplicates'] = [];
 
 		$model->saveSession($collection, $userId, $session);
 
@@ -508,6 +509,9 @@ class ImportController extends AdminController
 			$dryMatched        = array_map('intval', (array) ($session['dry_run_matched'] ?? []));
 			// Import réel : première ligne pour laquelle chaque objet a été trouvé [id => ligne]
 			$candRows          = array_map('intval', (array) ($session['cand_rows'] ?? []));
+			// Lignes ignorées car identiques à une ligne précédente du fichier
+			$fileDups          = array_values((array) ($session['file_duplicates'] ?? []));
+			$newDups           = []; // celles de ce lot, pour le journal
 			$dryScope          = (array) ($session['dry_run_scope'] ?? []);
 			// Périmètre réglé pour la collection : valeurs présentes dans le fichier [colonne => [valeur => true]]
 			$scopeFields       = (array) ($session['scope_fields'] ?? []);
@@ -856,6 +860,12 @@ class ImportController extends AdminController
 						} else {
 							$isIdentical = $model->isIdentical($data, $existing, $cmpFields);
 							if ($isIdentical && $params->get('import_skip_identical', 0)) {
+								// Identique à l'objet créé par une ligne précédente : doublon du fichier, signalé
+								if (!$isDryRun && isset($ownRows[(int) $existing->id])) {
+									$dup        = ['row' => $row, 'of_row' => (int) $ownRows[(int) $existing->id], 'item' => (int) $existing->id];
+									$fileDups[] = $dup;
+									$newDups[]  = $dup;
+								}
 								$claimed[(int) $existing->id] = true;
 								$skipped++;
 								$session['current_row'] = $row + 1;
@@ -1010,13 +1020,15 @@ class ImportController extends AdminController
 				$session['claimed']         = $claimed;
 				$session['dry_run_matched'] = array_values(array_unique($dryMatched));
 				$session['cand_rows']       = $candRows;
+				$session['file_duplicates'] = $fileDups;
 				$session['dry_run_scope']   = $dryScope;
 				$session['scope_values']    = $this->scopeSets($scopeValues);
 				if ($importHistoryId) {
 					$model->updateImportHistory($importHistoryId, $imported, $merged, $skipped, $errors);
 				}
 				$this->persistSession($model, $collection, $userId, $session, $colMap, $valueMap);
-				$conflictResult['auto'] = $autoLog;
+				$conflictResult['auto']       = $autoLog;
+				$conflictResult['duplicates'] = $newDups;
 				return $conflictResult;
 			}
 
@@ -1036,6 +1048,7 @@ class ImportController extends AdminController
 			$session['claimed']         = $claimed;
 			$session['dry_run_matched'] = array_values(array_unique($dryMatched));
 			$session['cand_rows']       = $candRows;
+			$session['file_duplicates'] = $fileDups;
 			$session['dry_run_scope']   = $dryScope;
 			$session['scope_values']    = $this->scopeSets($scopeValues);
 
@@ -1101,6 +1114,7 @@ class ImportController extends AdminController
                 'merged'   => $merged,
 				'errors'   => $errors,
 				'auto'     => $autoLog,
+				'duplicates' => $newDups,
 				'dry_run'         => $isDryRun,
 				'dry_run_entries' => $dryRunEntries,
 				'dry_run_conflicts'      => $dryConflicts,
@@ -1329,6 +1343,7 @@ class ImportController extends AdminController
 		$session['dry_run_scope']          = [];
 		$session['scope_values']           = [];
 		$session['cand_rows']              = [];
+		$session['file_duplicates'] = [];
 		$session['dry_run_missing']        = [];
 		$session['dry_run']                = true;
 		$session['step']                   = 5;
@@ -1413,6 +1428,7 @@ class ImportController extends AdminController
 		$session['dry_run_scope']    = [];
 		$session['scope_values']     = [];
 		$session['cand_rows']        = [];
+		$session['file_duplicates'] = [];
 
 		// Désactiver le mode simulation et réinitialiser les compteurs
 		$session['dry_run']              = false;
@@ -1702,6 +1718,9 @@ class ImportController extends AdminController
             $item['row'] = $candRows[$item['id']] ?? null;
         }
         unset($item);
+
+        // Lignes ignorées car identiques à une ligne précédente du fichier
+        $missing['duplicates'] = array_values((array) ($session['file_duplicates'] ?? []));
 
         $historyId = (int) ($session['import_history_id'] ?? 0);
         if ($historyId) {

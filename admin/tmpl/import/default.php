@@ -974,6 +974,11 @@ const T = {
 	conflictImported: <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_CONFLICT_IMPORTED')); ?>,
 	dryRunWarning : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_WARNING')); ?>,
 	dryRunIntraFile : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_INTRA_FILE')); ?>,
+	fileDupLog      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_LOG')); ?>,
+	fileDupTitle    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_TITLE')); ?>,
+	fileDupHelp     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_HELP')); ?>,
+	fileDupItem     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_ITEM')); ?>,
+	fileDupSim      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_SIM')); ?>,
 	token           : <?php echo json_encode($token); ?>,
 	decision        : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DECISION')); ?>,
 	decisionRule    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DECISION_RULE')); ?>,
@@ -1083,6 +1088,7 @@ async function runImport() {
 
     applyCounters(json);
     logAutoDecisions(json.auto);
+    logFileDuplicates(json.duplicates);
 
 	if (json.state === 'multiconflict') {
 		state.conflict   = json;
@@ -1348,6 +1354,7 @@ function finishImport(hasError) {
         renderDryRunReport();
     } else if (!hasError) {
         renderRealMissing();
+        renderFileDuplicates();
     }
 }
 
@@ -1625,9 +1632,11 @@ function buildConflictTable(entries, displayCols, isMulti) {
 			});
 			html += '<td class="small align-middle">';
 			if (e.intraFile) {
-				html += '<span class="badge bg-info">'
-					 + T.dryRunIntraFile.replace('%d', e.existingRow ?? 0)
-					 + '</span>';
+				// Ligne identique à une ligne précédente : doublon du fichier
+				const sameAsRow = Array.isArray(e.diff) && e.diff.length === 0;
+				html += sameAsRow
+					? '<span class="badge bg-warning text-dark">⚠ ' + esc(T.fileDupSim.replace('%d', e.existingRow ?? 0)) + '</span>'
+					: '<span class="badge bg-info">' + T.dryRunIntraFile.replace('%d', e.existingRow ?? 0) + '</span>';
 				if (Array.isArray(e.diff)) {
 					html += '<div class="small text-muted mt-1">' + esc(diffText(e.diff)) + '</div>';
 				}
@@ -1830,6 +1839,33 @@ function diffText(fields) {
 }
 
 /** Note dans le journal les conflits tranchés sans demander. */
+/** Lignes ignorées car identiques à une ligne précédente du fichier : signalées dans le journal. */
+function logFileDuplicates(list) {
+    (list || []).forEach(d => {
+        state.fileDuplicates = (state.fileDuplicates || []).concat([d]);
+        appendLog('⚠ ' + T.fileDupLog.replace('%1$d', d.row).replace('%2$d', d.of_row).replace('%3$d', d.item),
+                  'text-warning fw-semibold');
+    });
+}
+
+/** Fin d'import réel : lignes du fichier ignorées comme doublons d'une ligne précédente. */
+function renderFileDuplicates() {
+    const list = state.fileDuplicates || [];
+    if (!list.length) return;
+    let html = '<div class="px-3 py-3 border-top"><div class="card border-warning"><div class="card-header fw-semibold small">'
+             + '<span class="icon-warning me-1 text-warning"></span>' + esc(T.fileDupTitle)
+             + ' <span class="badge bg-warning text-dark ms-1">' + list.length + '</span></div><div class="card-body small">'
+             + '<p class="text-muted">' + esc(T.fileDupHelp) + '</p><ul class="mb-0">';
+    list.forEach(d => {
+        html += '<li>' + esc(T.fileDupItem.replace('%1$d', d.row).replace('%2$d', d.of_row))
+              + ' <a href="index.php?option=com_collector&task=item.edit&collection=' + COLLECTION + '&id=' + d.item
+              + '" target="_blank" class="badge bg-secondary text-decoration-none">#' + d.item + ' <span class="icon-out-2"></span></a></li>';
+    });
+    html += '</ul></div></div></div>';
+    const footer = document.getElementById('summary-footer');
+    if (footer) footer.insertAdjacentHTML('beforebegin', html);
+}
+
 function logAutoDecisions(list) {
     (list || []).forEach(a => {
         const tpl = a.action === 'merge' ? T.autoMerge : (a.action === 'import' ? T.autoImport : T.autoSkip);
