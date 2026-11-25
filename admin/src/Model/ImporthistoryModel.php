@@ -5,6 +5,7 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\ListModel;
+use Steevo\Component\Collector\Administrator\Classes\ImportSimilarity;
 use Steevo\Component\Collector\Administrator\Table\CollectorItemsTable;
 use Steevo\Component\Collector\Administrator\Table\CollectorDefinedContentTable;
 use Steevo\Component\Collector\Administrator\Table\CollectorImportHistoryTable;
@@ -412,19 +413,86 @@ class ImporthistoryModel extends ListModel
             }
         }
 
+        // Objets créés par cet import qui ressemblent à chaque objet absent : sa ligne du
+        // fichier a peut-être été importée comme nouvel objet au lieu d'être rapprochée de lui
+        $cmpCols = ($config['duplicate_strategy'] ?? 'unik') === 'composite'
+            ? array_values((array) ($config['composite_fields'] ?? []))
+            : array_values(array_filter(array_map(fn($f) => $f->_field->unik ? $f->_field->tablecolumn : null, $fields)));
+        $keys     = (array) ($config['similar_keys'] ?? []);
+        $readCols = array_values(array_unique(array_merge($cmpCols, $keys)));
+        $imported = $this->loadItemValues($collection, $this->getCreatedItemIds((int) $import->id), $readCols);
+        $missing  = $this->loadItemValues($collection, $ids, $readCols);
+
         $items = [];
         foreach ($ids as $id) {
             $exists  = array_key_exists($id, $states);
+            $similar = [];
+            if ($exists && $imported && isset($missing[$id])) {
+                $prepared = ImportSimilarity::prepare($missing[$id], $fields, $cmpCols, $keys);
+                foreach ($prepared ? ImportSimilarity::rank($missing[$id], $prepared, $imported, self::SIMILAR_IMPORTED) : [] as $c) {
+                    $similar[] = $c + ['display' => $importModel->getItemDisplayData($collection, $c['id'], $fields)];
+                }
+            }
             $items[] = [
                 'id'      => $id,
                 'exists'  => $exists,
                 'state'   => $exists ? (int) $states[$id] : null,
                 'display' => $exists ? $importModel->getItemDisplayData($collection, $id, $fields) : [],
                 'row'     => isset($data['rows'][$id]) ? (int) $data['rows'][$id] : null,
+                'similar' => $similar,
             ];
         }
 
         return ['scope' => (array) ($data['scope'] ?? []), 'items' => $items, 'cols' => $cols];
+    }
+
+    /** Note minimale d'un objet créé par l'import pour être proposé sous un objet absent */
+    private const SIMILAR_IMPORTED = 0.65;
+
+    /** Objets créés par un import, ni annulés ni à la corbeille */
+    private function getCreatedItemIds(int $importId): array
+    {
+        $db = $this->getDbo();
+
+        return array_map('intval', $db->setQuery(
+            $db->getQuery(true)
+               ->select('hi.item_id')
+               ->from($db->quoteName('#__collector_import_history_items', 'hi'))
+               ->join('INNER', $db->quoteName('#__collector_items', 'i') . ' ON i.id = hi.item_id')
+               ->where('hi.import_id = ' . $importId)
+               ->where('hi.action = ' . $db->quote('imported'))
+               ->where('hi.rolled_back_at IS NULL')
+               ->where('i.state >= 0')
+        )->loadColumn() ?: []);
+    }
+
+    /** Valeurs actives de quelques colonnes [id => [colonne => valeur]] */
+    private function loadItemValues(int $collection, array $ids, array $cols): array
+    {
+        if (!$ids || !$cols) {
+            return [];
+        }
+
+        $db     = $this->getDbo();
+        $select = ['h.item'];
+        foreach ($cols as $col) {
+            $select[] = $db->quoteName('h.' . $col);
+        }
+
+        $values = [];
+        foreach ($db->setQuery(
+            $db->getQuery(true)
+               ->select($select)
+               ->from($db->quoteName('#__collector_items_history_' . $collection, 'h'))
+               ->where('h.state = 1')
+               ->whereIn($db->quoteName('h.item'), array_map('intval', $ids))
+        )->loadAssocList() ?: [] as $row) {
+            $id = (int) $row['item'];
+            unset($row['item']);
+            $values[$id] = array_map('strval', $row);
+        }
+
+        return $values;
     }
 
     /**

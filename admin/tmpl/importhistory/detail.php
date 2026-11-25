@@ -201,6 +201,9 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
   <div class="card-body">
     <p class="small text-muted"><?php echo Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_MISSING_HELP',
         htmlspecialchars(implode(' ; ', $missing['scope']), ENT_QUOTES)); ?></p>
+    <?php if (array_filter(array_column($missing['items'], 'similar'))): ?>
+    <p class="small text-muted"><span class="icon-arrow-right-4 me-1"></span><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_MISSING_SIMILAR_HELP'); ?></p>
+    <?php endif; ?>
 
     <form action="<?php echo Route::_('index.php?option=com_collector&task=importhistory.trashmissing', false); ?>"
           method="post" id="missingForm">
@@ -271,6 +274,23 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
               <?php endif; ?>
             </td>
           </tr>
+          <?php foreach ($m['similar'] ?? [] as $s): ?>
+          <tr class="table-info">
+            <td></td>
+            <td class="small text-nowrap">
+              <span class="icon-arrow-right-4 me-1" aria-hidden="true"></span>
+              <a href="<?php echo Route::_('index.php?option=com_collector&task=item.edit&collection=' . $collection . '&id=' . (int) $s['id'], false); ?>"
+                 target="_blank" class="badge bg-info text-dark text-decoration-none">#<?php echo (int) $s['id']; ?> <span class="icon-out-2"></span></a>
+              <div class="small text-muted"><?php echo Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_MISSING_SIMILAR', (int) round($s['score'] * 100)); ?>
+                <?php if (!empty($s['keys'])): ?><span class="badge bg-primary"><?php echo Text::_('COM_COLLECTOR_IMPORT_SIMILAR_BY_KEYS'); ?></span><?php endif; ?>
+              </div>
+            </td>
+            <?php foreach (array_keys($missing['cols']) as $col): ?>
+            <td class="small"><?php echo htmlspecialchars((string) ($s['display'][$col] ?? '') ?: '—', ENT_QUOTES); ?></td>
+            <?php endforeach; ?>
+            <td></td>
+          </tr>
+          <?php endforeach; ?>
           <?php endforeach; ?>
         </tbody>
       </table>

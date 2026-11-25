@@ -58,10 +58,67 @@ final class ImportSimilarity
     public static function find(int $collection, array $data, array $fields, array $cols, array $exclude = [],
                                 float $threshold = self::THRESHOLD, array $keys = []): array
     {
+        $prepared = self::prepare($data, $fields, $cols, $keys);
+        if ($prepared === null) {
+            return []; // trop peu d'éléments pour juger d'une ressemblance
+        }
+
+        $pool = self::pool($collection, array_unique(array_merge(array_keys($prepared['use']), array_keys($prepared['keys']))));
+
         // Objets créés par l'import en cours : ce sont d'autres lignes du même fichier,
         // déjà comparées entre elles (règle des conflits entre lignes), pas des doublons
-        $exclude = array_flip(array_map('intval', $exclude));
+        return self::rank($data, $prepared, $pool, $threshold, $exclude);
+    }
 
+    /**
+     * Objets les plus ressemblants parmi $items [id => [colonne => valeur]].
+     *
+     * @param  array  $prepared  Résultat de prepare()
+     * @return array<int, array{id: int, score: float, keys?: bool}>  Du plus ressemblant au moins ressemblant
+     */
+    public static function rank(array $data, array $prepared, array $items, float $threshold,
+                                array $exclude = [], int $limit = self::MAX_CANDIDATES): array
+    {
+        $exclude = array_flip(array_map('intval', $exclude));
+        $found   = [];
+
+        foreach ($items as $id => $item) {
+            if (isset($exclude[(int) $id])) {
+                continue;
+            }
+            $total = 0.0;
+            $max   = 0.0;
+
+            foreach ($prepared['use'] as $col => $field) {
+                $a = (string) $data[$col];
+                $b = trim((string) ($item[$col] ?? ''));
+                $weight = $field->getSimilarityWeight();
+                $max   += $weight;
+                // Valeur absente en base : ni pour ni contre
+                $total += $weight * ($field->isEmptyValue($b) ? 0.5 : $field->similarityScore($a, $b));
+            }
+
+            $score  = $max > 0 ? $total / $max : 0;
+            $byKeys = $prepared['keys'] && self::keysEqual($prepared['keys'], $data, $item);
+
+            if ($score >= $threshold || $byKeys) {
+                $found[] = ['id' => (int) $id, 'score' => round($score, 2)] + ($byKeys ? ['keys' => true] : []);
+            }
+        }
+
+        usort($found, fn($x, $y) => $y['score'] <=> $x['score']);
+
+        return array_slice($found, 0, $limit);
+    }
+
+    /**
+     * Champs utiles à la comparaison d'une ligne : renseignés dans ses données, et champs
+     * suffisants s'ils sont tous renseignés par une valeur qui identifie.
+     *
+     * @return array{use: array, keys: array}|null  null : trop peu d'éléments pour juger
+     */
+    public static function prepare(array $data, array $fields, array $cols, array $keys = []): ?array
+    {
         $byCol = [];
         foreach ($fields as $field) {
             $byCol[$field->_field->tablecolumn] = $field;
@@ -88,39 +145,10 @@ final class ImportSimilarity
         }
 
         if (count($use) < 2 && !$keyFields) {
-            return []; // trop peu d'éléments pour juger d'une ressemblance
+            return null;
         }
 
-        $pool = self::pool($collection, array_unique(array_merge(array_keys($use), array_keys($keyFields))));
-        $found = [];
-
-        foreach ($pool as $id => $item) {
-            if (isset($exclude[(int) $id])) {
-                continue;
-            }
-            $total = 0.0;
-            $max   = 0.0;
-
-            foreach ($use as $col => $field) {
-                $a = (string) $data[$col];
-                $b = trim((string) ($item[$col] ?? ''));
-                $weight = $field->getSimilarityWeight();
-                $max   += $weight;
-                // Valeur absente en base : ni pour ni contre
-                $total += $weight * ($field->isEmptyValue($b) ? 0.5 : $field->similarityScore($a, $b));
-            }
-
-            $score  = $max > 0 ? $total / $max : 0;
-            $byKeys = $keyFields && self::keysEqual($keyFields, $data, $item);
-
-            if ($score >= $threshold || $byKeys) {
-                $found[] = ['id' => (int) $id, 'score' => round($score, 2)] + ($byKeys ? ['keys' => true] : []);
-            }
-        }
-
-        usort($found, fn($x, $y) => $y['score'] <=> $x['score']);
-
-        return array_slice($found, 0, self::MAX_CANDIDATES);
+        return ['use' => $use, 'keys' => $keyFields];
     }
 
     /**
