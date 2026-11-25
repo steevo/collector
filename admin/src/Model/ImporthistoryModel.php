@@ -458,6 +458,57 @@ class ImporthistoryModel extends ListModel
     }
 
     /**
+     * Comparaison d'un objet non retrouvé avec un objet créé par cet import, choisi par
+     * son numéro : mêmes contrôles que la fusion.
+     *
+     * @return array{target: int, source: int, score: int, a: array, b: array}|string  Message d'erreur
+     */
+    public function getDuplicateComparison(object $import, int $collection, int $targetId, int $sourceId): array|string
+    {
+        $data = json_decode((string) ($import->missing_items ?? ''), true) ?: [];
+
+        if (!in_array($targetId, array_map('intval', (array) ($data['ids'] ?? [])), true)
+            || isset($data['merged'][$targetId])) {
+            return \Joomla\CMS\Language\Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_NOT_ALLOWED');
+        }
+        if (!in_array($sourceId, $this->getCreatedItemIds((int) $import->id), true)) {
+            return \Joomla\CMS\Language\Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_DUP_NOT_CREATED', $sourceId);
+        }
+
+        /** @var ImportModel $importModel */
+        $importModel = Factory::getApplication()->bootComponent('com_collector')->getMVCFactory()
+                              ->createModel('Import', 'Administrator', ['ignore_request' => true]);
+        $fields = $importModel->getFields();
+        $config = $importModel->getConfig($collection) ?? [];
+
+        // Note de ressemblance, pour information
+        $cmpCols = ($config['duplicate_strategy'] ?? 'unik') === 'composite'
+            ? array_values((array) ($config['composite_fields'] ?? []))
+            : array_values(array_filter(array_map(fn($f) => $f->_field->unik ? $f->_field->tablecolumn : null, $fields)));
+        $keys     = (array) ($config['similar_keys'] ?? []);
+        $values   = $this->loadItemValues($collection, [$targetId, $sourceId], array_values(array_unique(array_merge($cmpCols, $keys))));
+        $score    = 0;
+        if (isset($values[$targetId], $values[$sourceId])
+            && ($prepared = ImportSimilarity::prepare($values[$targetId], $fields, $cmpCols, $keys))) {
+            $ranked = ImportSimilarity::rank($values[$targetId], $prepared, [$sourceId => $values[$sourceId]], 0.0);
+            $score  = (int) round(($ranked[0]['score'] ?? 0) * 100);
+        }
+
+        $states = $this->getDbo()->setQuery(
+            'SELECT state FROM ' . $this->getDbo()->quoteName('#__collector_items') . ' WHERE id = ' . $targetId
+        )->loadResult();
+
+        return [
+            'target'  => $targetId,
+            'source'  => $sourceId,
+            'score'   => $score,
+            'a'       => $importModel->getItemDisplayData($collection, $targetId, $fields),
+            'b'       => $importModel->getItemDisplayData($collection, $sourceId, $fields),
+            'trashed' => (int) $states === -2,
+        ];
+    }
+
+    /**
      * Fusionne un objet non retrouvé dans le fichier (cible) avec un objet créé par cet
      * import qui lui ressemble (doublon) : les valeurs choisies du doublon passent sur la
      * cible, dans une nouvelle version notée dans l'historique (donc annulable), puis le

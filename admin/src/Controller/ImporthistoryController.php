@@ -132,6 +132,31 @@ class ImporthistoryController extends AdminController
         ) . '#missing-items');
     }
 
+    // ── Objet non retrouvé : comparaison avec un objet choisi par son numéro (JSON) ──
+
+    public function dupcompare(): void
+    {
+        $app = Factory::getApplication();
+
+        if (!$this->checkToken('get', false)) {
+            $result = ['success' => false, 'message' => Text::_('JINVALID_TOKEN')];
+        } else {
+            $collection = $this->input->getInt('collection');
+            $model      = $this->getModel();
+            $import     = $model->getImport($this->input->getInt('import_id'));
+            $data       = (!$import || (int) $import->collection !== $collection)
+                ? Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_NOT_ALLOWED')
+                : $model->getDuplicateComparison($import, $collection,
+                      $this->input->getInt('target_id'), $this->input->getInt('source_id'));
+            $result = is_array($data) ? ['success' => true] + $data : ['success' => false, 'message' => $data];
+        }
+
+        $app->setHeader('Content-Type', 'application/json; charset=utf-8', true);
+        $app->sendHeaders();
+        echo json_encode($result);
+        $app->close();
+    }
+
     // ── Objet non retrouvé : fusion avec l'objet créé par erreur ──────────────
 
     public function mergeduplicate(): void

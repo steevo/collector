@@ -275,6 +275,19 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
               <?php else: ?>
               <span class="text-muted"><?php echo Text::_('JUNPUBLISHED'); ?></span>
               <?php endif; ?>
+              <?php if ($m['exists'] && !$trashed && empty($m['merged'])): ?>
+              <div class="input-group input-group-sm mt-1 flex-nowrap" style="max-width:14rem">
+                <span class="input-group-text">#</span>
+                <input type="number" min="1" class="form-control dup-manual" data-target="<?php echo (int) $m['id']; ?>"
+                       placeholder="<?php echo htmlspecialchars(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_MANUAL_PH'), ENT_QUOTES); ?>"
+                       aria-label="<?php echo htmlspecialchars(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_MANUAL'), ENT_QUOTES); ?>"
+                       onkeydown="if (event.key === 'Enter') { event.preventDefault(); collectorDupManual(this); }">
+                <button type="button" class="btn btn-outline-primary" onclick="collectorDupManual(this.previousElementSibling)"
+                        title="<?php echo htmlspecialchars(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_MANUAL'), ENT_QUOTES); ?>">
+                  <?php echo Text::_('COM_COLLECTOR_IMPORT_COMPARE_BTN'); ?>
+                </button>
+              </div>
+              <?php endif; ?>
             </td>
           </tr>
           <?php foreach ($m['similar'] ?? [] as $s):
@@ -402,6 +415,28 @@ function collectorDupCompare(i) {
     });
     dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
     dlg.showModal();
+}
+
+/** « Comparer avec # » : objet créé par l'import choisi par son numéro. */
+async function collectorDupManual(input) {
+    const source = parseInt(input.value, 10);
+    if (!source) { input.focus(); return; }
+    const url = 'index.php?option=com_collector&task=importhistory.dupcompare&format=raw'
+              + '&import_id=<?php echo (int) $importId; ?>&collection=<?php echo (int) $collection; ?>'
+              + '&target_id=' + encodeURIComponent(input.dataset.target) + '&source_id=' + source
+              + '&<?php echo $token; ?>=1';
+    let json = null;
+    try {
+        json = await (await fetch(url, {credentials: 'same-origin'})).json();
+    } catch (e) {
+        json = {success: false, message: String(e)};
+    }
+    if (!json || !json.success) {
+        alert(json?.message || 'Erreur');
+        return;
+    }
+    DUP_CMP.push(json);
+    collectorDupCompare(DUP_CMP.length - 1);
 }
 
 function confirmTrashMissing() {
