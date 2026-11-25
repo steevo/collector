@@ -1048,6 +1048,13 @@ let isPaused  = false;
 let isRunning = false;
 
 window.addEventListener('DOMContentLoaded', function () {
+    // Compteurs enregistrés avec la session : en-tête complet à la réouverture
+    applyCounters({
+        errors                 : <?php echo (int) ($session['errors'] ?? 0); ?>,
+        dry_run_conflicts      : <?php echo (int) ($session['dry_run_conflicts'] ?? 0); ?>,
+        dry_run_multiconflicts : <?php echo (int) ($session['dry_run_multiconflicts'] ?? 0); ?>,
+    });
+
     if (TOTAL_ROWS > 0 && state.currentRow <= TOTAL_ROWS) {
         isRunning = true;
         if (AUTO_START) {
