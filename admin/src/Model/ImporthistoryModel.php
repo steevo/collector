@@ -3,6 +3,7 @@ namespace Steevo\Component\Collector\Administrator\Model;
 
 defined('_JEXEC') or die;
 
+use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Model\ListModel;
 use Steevo\Component\Collector\Administrator\Classes\ImportSimilarity;
@@ -423,11 +424,14 @@ class ImporthistoryModel extends ListModel
         $imported = $this->loadItemValues($collection, $this->getCreatedItemIds((int) $import->id), $readCols);
         $missing  = $this->loadItemValues($collection, $ids, $readCols);
 
+        // Objets déjà fusionnés avec un objet créé par l'import [objet en base => objet créé]
+        $merged = array_map('intval', (array) ($data['merged'] ?? []));
+
         $items = [];
         foreach ($ids as $id) {
             $exists  = array_key_exists($id, $states);
             $similar = [];
-            if ($exists && $imported && isset($missing[$id])) {
+            if ($exists && $imported && isset($missing[$id]) && !isset($merged[$id])) {
                 $prepared = ImportSimilarity::prepare($missing[$id], $fields, $cmpCols, $keys);
                 foreach ($prepared ? ImportSimilarity::rank($missing[$id], $prepared, $imported, self::SIMILAR_IMPORTED) : [] as $c) {
                     $similar[] = $c + ['display' => $importModel->getItemDisplayData($collection, $c['id'], $fields)];
@@ -440,10 +444,81 @@ class ImporthistoryModel extends ListModel
                 'display' => $exists ? $importModel->getItemDisplayData($collection, $id, $fields) : [],
                 'row'     => isset($data['rows'][$id]) ? (int) $data['rows'][$id] : null,
                 'similar' => $similar,
+                'merged'  => $merged[$id] ?? null,
             ];
         }
 
-        return ['scope' => (array) ($data['scope'] ?? []), 'items' => $items, 'cols' => $cols];
+        // Tous les champs, pour la fenêtre de comparaison
+        $allFields = [];
+        foreach ($fields as $field) {
+            $allFields[$field->_field->tablecolumn] = $field->_field->field;
+        }
+
+        return ['scope' => (array) ($data['scope'] ?? []), 'items' => $items, 'cols' => $cols, 'fields' => $allFields];
+    }
+
+    /**
+     * Fusionne un objet non retrouvé dans le fichier (cible) avec un objet créé par cet
+     * import qui lui ressemble (doublon) : les valeurs choisies du doublon passent sur la
+     * cible, dans une nouvelle version notée dans l'historique (donc annulable), puis le
+     * doublon est mis à la corbeille.
+     *
+     * @param  string[]  $cols  Colonnes dont la valeur est prise du doublon
+     * @return string|null  Message d'erreur, ou null si tout s'est bien passé
+     */
+    public function mergeDuplicate(object $import, int $collection, int $targetId, int $sourceId, array $cols): ?string
+    {
+        $data = json_decode((string) ($import->missing_items ?? ''), true) ?: [];
+
+        if (!in_array($targetId, array_map('intval', (array) ($data['ids'] ?? [])), true)
+            || isset($data['merged'][$targetId])
+            || !in_array($sourceId, $this->getCreatedItemIds((int) $import->id), true)) {
+            return \Joomla\CMS\Language\Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_NOT_ALLOWED');
+        }
+
+        /** @var ImportModel $importModel */
+        $importModel = Factory::getApplication()->bootComponent('com_collector')->getMVCFactory()
+                              ->createModel('Import', 'Administrator', ['ignore_request' => true]);
+        $validCols   = array_map(fn($f) => $f->_field->tablecolumn, $importModel->getFields());
+        $cols        = array_values(array_intersect($cols, $validCols));
+
+        if ($cols) {
+            $values = $this->loadItemValues($collection, [$sourceId], $cols)[$sourceId] ?? null;
+            if ($values === null) {
+                return \Joomla\CMS\Language\Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_NOT_ALLOWED');
+            }
+
+            // Valeurs choisies une à une : une valeur vide efface aussi celle de la cible
+            $result = $importModel->mergeItem($collection, $targetId, $values + ['collection' => $collection],
+                ComponentHelper::getParams('com_collector'), [], true);
+            if ($result === false) {
+                return $importModel->getError() ?: 'mergeItem';
+            }
+            $importModel->addImportHistoryItem((int) $import->id, $targetId, 'merged',
+                $result['version_before'], $result['version_after']);
+        }
+
+        // Le doublon va à la corbeille
+        $table = new CollectorItemsTable($this->getDbo());
+        $table->initVersion($collection);
+        if ($table->load($sourceId) && (int) $table->state !== -2) {
+            $table->state = -2;
+            if (!$table->store()) {
+                return $table->getError();
+            }
+        }
+
+        // Rapprochement noté : l'objet n'est plus proposé à la corbeille ni comparé
+        $data['merged'][(string) $targetId] = $sourceId;
+        $db = $this->getDbo();
+        $db->setQuery(
+            $db->getQuery(true)
+               ->update($db->quoteName('#__collector_import_history'))
+               ->set($db->quoteName('missing_items') . ' = ' . $db->quote(json_encode($data)))
+               ->where($db->quoteName('id') . ' = ' . (int) $import->id)
+        )->execute();
+
+        return null;
     }
 
     /** Note minimale d'un objet créé par l'import pour être proposé sous un objet absent */
@@ -502,7 +577,8 @@ class ImporthistoryModel extends ListModel
     public function trashMissing(object $import, int $collection, array $itemIds): int
     {
         $data    = json_decode((string) ($import->missing_items ?? ''), true);
-        $allowed = array_map('intval', (array) ($data['ids'] ?? []));
+        $allowed = array_diff(array_map('intval', (array) ($data['ids'] ?? [])),
+                              array_map('intval', array_keys((array) ($data['merged'] ?? []))));
         $count   = 0;
 
         foreach (array_intersect(array_map('intval', $itemIds), $allowed) as $itemId) {

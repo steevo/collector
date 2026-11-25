@@ -132,6 +132,37 @@ class ImporthistoryController extends AdminController
         ) . '#missing-items');
     }
 
+    // ── Objet non retrouvé : fusion avec l'objet créé par erreur ──────────────
+
+    public function mergeduplicate(): void
+    {
+        $this->checkToken();
+
+        $importId   = $this->input->getInt('import_id');
+        $collection = $this->input->getInt('collection');
+        $targetId   = $this->input->getInt('target_id');
+        $sourceId   = $this->input->getInt('source_id');
+        $cols       = array_map('strval', (array) $this->input->get('take', [], 'ARRAY'));
+        $model      = $this->getModel();
+        $import     = $model->getImport($importId);
+        $user       = Factory::getApplication()->getIdentity();
+
+        if (!$user->authorise('core.edit', 'com_collector') || !$user->authorise('core.edit.state', 'com_collector')) {
+            $this->setMessage(Text::_('JLIB_APPLICATION_ERROR_EDIT_NOT_PERMITTED'), 'error');
+        } elseif (!$import || (int) $import->collection !== $collection || !$targetId || !$sourceId) {
+            $this->setMessage(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_NOT_ALLOWED'), 'error');
+        } elseif (($error = $model->mergeDuplicate($import, $collection, $targetId, $sourceId, $cols)) !== null) {
+            $this->setMessage(Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_DUP_ERROR', $error), 'error');
+        } else {
+            $this->setMessage(Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_DUP_MERGED', $targetId, $sourceId));
+        }
+
+        $this->setRedirect(Route::_(
+            'index.php?option=com_collector&view=importhistory&layout=detail'
+            . '&import_id=' . $importId . '&collection=' . $collection, false
+        ) . '#missing-items');
+    }
+
     // ── Suppression de l'entrée historique ────────────────────────────────────
 
     public function delete(): void

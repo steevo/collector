@@ -536,12 +536,13 @@ class CollectorItemsTable extends Table
 		$this->alias = ApplicationHelper::stringURLSafe($this->fulltitle);
 		
 		// Set publish_up to null if not set
-        if (!$this->publish_up) {
+        // "0000-00-00 00:00:00" (old items): no date, never compared below (swap would unpublish)
+        if (!$this->publish_up || str_starts_with((string) $this->publish_up, "0000")) {
             $this->publish_up = null;
         }
 
         // Set publish_down to null if not set
-        if (!$this->publish_down) {
+        if (!$this->publish_down || str_starts_with((string) $this->publish_down, "0000")) {
             $this->publish_down = null;
         }
 		

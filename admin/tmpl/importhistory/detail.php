@@ -190,7 +190,8 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
 <?php /* ── Objets de la base absents du fichier ──────────────────────────── */ ?>
 <?php $missing = $this->missing ?? ['items' => []]; ?>
 <?php if (!empty($missing['items'])):
-	$present = count(array_filter($missing['items'], fn($m) => $m['exists'] && $m['state'] !== -2));
+	$present = count(array_filter($missing['items'], fn($m) => $m['exists'] && $m['state'] !== -2 && empty($m['merged'])));
+	$dupCmp  = []; // comparaisons objet non retrouvé / objet créé par l'import
 ?>
 <div class="card mt-4" id="missing-items">
   <div class="card-header fw-semibold">
@@ -242,9 +243,9 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
           <?php foreach ($missing['items'] as $m):
             $trashed = $m['exists'] && $m['state'] === -2;
           ?>
-          <tr class="<?php echo !$m['exists'] || $trashed ? 'table-secondary' : ''; ?>">
+          <tr class="<?php echo !$m['exists'] || $trashed || !empty($m['merged']) ? 'table-secondary' : ''; ?>">
             <td>
-              <?php if ($m['exists'] && !$trashed): ?>
+              <?php if ($m['exists'] && !$trashed && empty($m['merged'])): ?>
               <input type="checkbox" name="missing_ids[]" value="<?php echo (int) $m['id']; ?>" class="form-check-input missing-chk">
               <?php endif; ?>
             </td>
@@ -263,7 +264,9 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
             <td class="small"><?php echo htmlspecialchars((string) ($m['display'][$col] ?? '') ?: '—', ENT_QUOTES); ?></td>
             <?php endforeach; ?>
             <td class="small">
-              <?php if (!$m['exists']): ?>
+              <?php if (!empty($m['merged'])): ?>
+              <span class="text-success"><span class="icon-check me-1"></span><?php echo Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_DUP_MERGED_STATUS', (int) $m['merged']); ?></span>
+              <?php elseif (!$m['exists']): ?>
               <span class="text-muted"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ITEM_GONE'); ?></span>
               <?php elseif ($trashed): ?>
               <span class="text-muted"><span class="icon-trash me-1"></span><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_MISSING_IN_TRASH'); ?></span>
@@ -274,7 +277,10 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
               <?php endif; ?>
             </td>
           </tr>
-          <?php foreach ($m['similar'] ?? [] as $s): ?>
+          <?php foreach ($m['similar'] ?? [] as $s):
+            $dupCmp[] = ['target' => (int) $m['id'], 'source' => (int) $s['id'], 'score' => (int) round($s['score'] * 100),
+                         'a' => $m['display'], 'b' => $s['display'], 'trashed' => $trashed];
+          ?>
           <tr class="table-info">
             <td></td>
             <td class="small text-nowrap">
@@ -288,7 +294,12 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
             <?php foreach (array_keys($missing['cols']) as $col): ?>
             <td class="small"><?php echo htmlspecialchars((string) ($s['display'][$col] ?? '') ?: '—', ENT_QUOTES); ?></td>
             <?php endforeach; ?>
-            <td></td>
+            <td>
+              <button type="button" class="btn btn-outline-primary btn-sm py-0 px-2"
+                      onclick="collectorDupCompare(<?php echo count($dupCmp) - 1; ?>)">
+                <span class="icon-search me-1" aria-hidden="true"></span><?php echo Text::_('COM_COLLECTOR_IMPORT_COMPARE_BTN'); ?>
+              </button>
+            </td>
           </tr>
           <?php endforeach; ?>
           <?php endforeach; ?>
@@ -298,7 +309,101 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
     </form>
   </div>
 </div>
+<?php /* ── Comparaison et fusion avec l'objet créé par erreur ───────── */ ?>
+<form action="<?php echo Route::_('index.php?option=com_collector&task=importhistory.mergeduplicate', false); ?>"
+      method="post" id="dupForm" class="d-none">
+  <input type="hidden" name="import_id"  value="<?php echo $importId; ?>">
+  <input type="hidden" name="collection" value="<?php echo $collection; ?>">
+  <input type="hidden" name="target_id"  value="">
+  <input type="hidden" name="source_id"  value="">
+  <input type="hidden" name="<?php echo $token; ?>" value="1">
+</form>
+<dialog id="dup-compare" class="p-0 border-0 rounded shadow" style="max-width:min(1100px,96vw);width:100%"></dialog>
 <script>
+const DUP_CMP    = <?php echo json_encode($dupCmp, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+const DUP_FIELDS = <?php echo json_encode($missing['fields'] ?? [], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+const DUP_T = {
+    title    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_TITLE')); ?>,
+    help     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_HELP')); ?>,
+    field    : <?php echo json_encode(Text::_('COM_COLLECTOR_FIELDS')); ?>,
+    inBase   : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_IN_BASE')); ?>,
+    created  : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_CREATED')); ?>,
+    take     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_TAKE')); ?>,
+    all      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_TAKE_ALL')); ?>,
+    none     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_TAKE_NONE')); ?>,
+    onlyDiff : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_COMPARE_ONLY_DIFF')); ?>,
+    merge    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_MERGE_BTN')); ?>,
+    confirm  : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_CONFIRM')); ?>,
+    trashed  : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORTHISTORY_DUP_TARGET_TRASHED')); ?>,
+    close    : <?php echo json_encode(Text::_('JCLOSE')); ?>,
+};
+
+function dupEsc(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/** Objet non retrouvé et objet créé par l'import côte à côte, valeurs à reporter cochées. */
+function collectorDupCompare(i) {
+    const c = DUP_CMP[i];
+    if (!c) return;
+    const dlg = document.getElementById('dup-compare');
+    const link = id => '<a href="index.php?option=com_collector&task=item.edit&collection=<?php echo (int) $collection; ?>&id=' + id
+                     + '" target="_blank">#' + id + ' <span class="icon-out-2"></span></a>';
+
+    let rows = '';
+    Object.entries(DUP_FIELDS).forEach(([col, label]) => {
+        const a = String(c.a[col] ?? ''), b = String(c.b[col] ?? '');
+        const differs = a !== b;
+        rows += '<tr' + (differs ? '' : ' data-same="1"') + '><th class="small text-muted fw-semibold">' + dupEsc(label) + '</th>'
+              + '<td class="small">' + dupEsc(a || '—') + '</td>'
+              + '<td class="small"' + (differs ? ' style="background:rgba(220,53,69,.10)"' : '') + '>'
+              + (differs
+                  ? '<label class="d-flex gap-1 mb-0"><input type="checkbox" class="form-check-input dup-take mt-1" value="' + dupEsc(col) + '"'
+                    + (b !== '' ? ' checked' : '') + '><span>' + dupEsc(b || '—') + '</span></label>'
+                  : dupEsc(b || '—'))
+              + '</td></tr>';
+    });
+
+    dlg.innerHTML = '<div class="p-3">'
+        + '<div class="d-flex justify-content-between align-items-center mb-2 gap-3">'
+        + '<strong>' + dupEsc(DUP_T.title.replaceAll('%1$d', c.target).replaceAll('%2$d', c.source).replaceAll('%3$d', c.score)) + '</strong>'
+        + '<label class="small text-nowrap"><input type="checkbox" class="form-check-input me-1" id="dup-only-diff">' + dupEsc(DUP_T.onlyDiff) + '</label></div>'
+        + '<p class="small text-muted mb-2">' + dupEsc(DUP_T.help) + '</p>'
+        + '<div class="table-responsive" style="max-height:60vh"><table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr>'
+        + '<th class="small">' + dupEsc(DUP_T.field) + '</th>'
+        + '<th class="small">' + dupEsc(DUP_T.inBase) + ' ' + link(c.target) + '</th>'
+        + '<th class="small">' + dupEsc(DUP_T.created) + ' ' + link(c.source)
+        + '<div class="fw-normal">' + dupEsc(DUP_T.take) + ' : <a href="#" data-take="all">' + dupEsc(DUP_T.all) + '</a> · <a href="#" data-take="none">' + dupEsc(DUP_T.none) + '</a></div></th>'
+        + '</tr></thead><tbody>' + rows + '</tbody></table></div>'
+        + '<div class="d-flex justify-content-end gap-2 mt-3">'
+        + (c.trashed ? '<span class="small text-muted me-auto">' + dupEsc(DUP_T.trashed) + '</span>'
+                     : '<button type="button" class="btn btn-primary btn-sm" id="dup-merge"><span class="icon-git-merge me-1"></span>'
+                       + dupEsc(DUP_T.merge.replaceAll('%1$d', c.target).replaceAll('%2$d', c.source)) + '</button>')
+        + '<button type="button" class="btn btn-secondary btn-sm" id="dup-close">' + dupEsc(DUP_T.close) + '</button></div></div>';
+
+    dlg.querySelectorAll('[data-take]').forEach(a => a.addEventListener('click', e => {
+        e.preventDefault();
+        dlg.querySelectorAll('input.dup-take').forEach(x => { x.checked = a.dataset.take === 'all'; });
+    }));
+    dlg.querySelector('#dup-only-diff').addEventListener('change', function () {
+        dlg.querySelectorAll('tbody tr[data-same]').forEach(tr => tr.classList.toggle('d-none', this.checked));
+    });
+    dlg.querySelector('#dup-close').addEventListener('click', () => dlg.close());
+    dlg.querySelector('#dup-merge')?.addEventListener('click', () => {
+        if (!confirm(DUP_T.confirm.replaceAll('%1$d', c.target).replaceAll('%2$d', c.source))) return;
+        const form = document.getElementById('dupForm');
+        form.querySelector('[name="target_id"]').value = c.target;
+        form.querySelector('[name="source_id"]').value = c.source;
+        form.querySelectorAll('input[name="take[]"]').forEach(x => x.remove());
+        dlg.querySelectorAll('input.dup-take:checked').forEach(x => {
+            form.insertAdjacentHTML('beforeend', '<input type="hidden" name="take[]" value="' + dupEsc(x.value) + '">');
+        });
+        form.submit();
+    });
+    dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+    dlg.showModal();
+}
+
 function confirmTrashMissing() {
     const n = document.querySelectorAll('.missing-chk:checked').length;
     if (!n) {
