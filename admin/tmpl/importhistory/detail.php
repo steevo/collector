@@ -109,6 +109,7 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
         <th style="width:30px"></th>
         <th><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ITEM'); ?></th>
         <th><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ACTION'); ?></th>
+        <th><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ORIGIN'); ?></th>
         <th><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_STATUS'); ?></th>
         <th><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_VERSION_BEFORE'); ?></th>
         <th><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_VERSION_AFTER'); ?></th>
@@ -155,6 +156,30 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
           <span class="badge bg-success"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ACTION_IMPORTED'); ?></span>
           <?php else: ?>
           <span class="badge bg-primary"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ACTION_MERGED'); ?></span>
+          <?php endif; ?>
+        </td>
+        <td class="small">
+          <?php if (!empty($item->origin)): ?>
+          <span class="badge <?php echo $item->origin === 'auto' ? 'bg-light text-dark border' : 'bg-warning text-dark'; ?>">
+            <?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_ORIGIN_' . strtoupper($item->origin)); ?>
+          </span>
+          <?php endif; ?>
+          <?php if (!empty($item->file_row)): ?>
+          <span class="text-muted ms-1"><?php echo Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_FILE_ROW', (int) $item->file_row); ?></span>
+          <?php endif; ?>
+          <?php if (!empty($item->intra_merge) && empty($item->rolled_back)): ?>
+          <div class="mt-1">
+            <span class="badge bg-danger"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_INTRA_MERGE'); ?></span>
+            <?php if ($item->can_split): ?>
+            <button type="button" class="btn btn-outline-danger btn-sm py-0 px-2 ms-1"
+                    onclick="collectorSplit(<?php echo (int) $item->id; ?>, <?php echo (int) $item->item_id; ?>)"
+                    title="<?php echo htmlspecialchars(Text::_('COM_COLLECTOR_IMPORTHISTORY_SPLIT_DESC'), ENT_QUOTES); ?>">
+              <?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_SPLIT_BTN'); ?>
+            </button>
+            <?php else: ?>
+            <span class="small text-muted"><?php echo Text::_('COM_COLLECTOR_IMPORTHISTORY_SPLIT_IMPOSSIBLE'); ?></span>
+            <?php endif; ?>
+          </div>
           <?php endif; ?>
         </td>
         <td class="small">
@@ -451,6 +476,24 @@ function confirmTrashMissing() {
 }
 </script>
 <?php endif; ?>
+
+<?php /* ── Séparation d'une fusion entre lignes du fichier ──────────────── */ ?>
+<form action="<?php echo Route::_('index.php?option=com_collector&task=importhistory.split', false); ?>"
+      method="post" id="splitForm" class="d-none">
+  <input type="hidden" name="import_id"       value="<?php echo $importId; ?>">
+  <input type="hidden" name="collection"      value="<?php echo $collection; ?>">
+  <input type="hidden" name="history_item_id" value="">
+  <input type="hidden" name="<?php echo $token; ?>" value="1">
+</form>
+<script>
+function collectorSplit(historyItemId, itemId) {
+    const msg = <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORTHISTORY_SPLIT_CONFIRM')); ?>;
+    if (!confirm(msg.replaceAll('%d', itemId))) return;
+    const form = document.getElementById('splitForm');
+    form.querySelector('[name="history_item_id"]').value = historyItemId;
+    form.submit();
+}
+</script>
 
 <?php /* ── Modale de confirmation rollback ──────────────────────────────── */ ?>
 <div class="modal fade" id="modal-rollback" tabindex="-1" aria-hidden="true">

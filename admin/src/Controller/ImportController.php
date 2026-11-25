@@ -726,7 +726,8 @@ class ImportController extends AdminController
 							$auto = $this->autoDecisionSimilar($session, $row, array_column($similar, 'id'));
 							if ($auto !== null) {
 								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
-									$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null);
+									$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null,
+									$this->decisionOrigin($session, $row), $row);
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
 								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
@@ -811,7 +812,8 @@ class ImportController extends AdminController
 							$auto = $this->autoDecision($session, $row, array_map(fn($ex) => (int) $ex->id, $existing));
 							if ($auto !== null) {
 								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
-									$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null);
+									$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null,
+									$this->decisionOrigin($session, $row), $row);
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
 								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
@@ -891,7 +893,8 @@ class ImportController extends AdminController
 								if ($auto !== null) {
 									$auto['target'] = (int) $existing->id;
 									$this->applyDecision($auto['action'], (int) $existing->id, $data, $collection, $publishing, $params,
-										$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null);
+										$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null,
+									$this->decisionOrigin($session, $row), $row);
 									if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 										$ownRows[$this->lastCreatedItemId] = $row;
 									}
@@ -924,7 +927,8 @@ class ImportController extends AdminController
 							$auto = $this->autoDecision($session, $row, [(int) $existing->id]);
 							if ($auto !== null) {
 								$this->applyDecision($auto['action'], $auto['target'], $data, $collection, $publishing, $params,
-									$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null);
+									$model, $importHistoryId, $imported, $merged, $skipped, $errors, $auto['fields'] ?? null,
+									$this->decisionOrigin($session, $row), $row);
 								if ($auto['action'] === 'import' && $this->lastCreatedItemId) {
 									$ownRows[$this->lastCreatedItemId] = $row;
 								} elseif ($auto['action'] !== 'import' && !empty($auto['target'])) {
@@ -980,7 +984,9 @@ class ImportController extends AdminController
 								$insertResult['item_id'],
 								'imported',
 								null,
-								$insertResult['version_after']
+								$insertResult['version_after'],
+								'auto',
+								$row
 							);
 						}
 					} elseif ($imported === 0 && $i === 0) {
@@ -1233,7 +1239,8 @@ class ImportController extends AdminController
             $mergeFields = $decision === 'merge' ? array_keys(array_diff_key($data, ['collection' => 1])) : null;
 
             $this->applyDecision($decision, $existingId, $data, $collection, $publishing, $params,
-                $model, $importHistoryId, $imported, $merged, $skipped, $errors, $mergeFields);
+                $model, $importHistoryId, $imported, $merged, $skipped, $errors, $mergeFields,
+                'conflict', (int) $session['current_row']);
             if ($decision === 'import' && $this->lastCreatedItemId) {
                 $ownRows = array_map('intval', (array) ($session['own_rows'] ?? []));
                 $ownRows[$this->lastCreatedItemId] = (int) $session['current_row'];
@@ -1624,7 +1631,7 @@ class ImportController extends AdminController
     private function applyDecision(string $decision, int $existingId, array $data, int $collection,
                                    array $publishing, object $params, object $model, int $importHistoryId,
                                    int &$imported, int &$merged, int &$skipped, int &$errors,
-                                   ?array $fields = null): void
+                                   ?array $fields = null, string $origin = 'rule', int $row = 0): void
     {
         $this->lastCreatedItemId = 0;
 
@@ -1646,7 +1653,7 @@ class ImportController extends AdminController
                     $this->lastCreatedItemId = (int) $result['item_id'];
                     if ($importHistoryId) {
                         $model->addImportHistoryItem($importHistoryId, $result['item_id'], 'imported',
-                            null, $result['version_after']);
+                            null, $result['version_after'], $origin, $row);
                     }
                     break;
 
@@ -1659,7 +1666,7 @@ class ImportController extends AdminController
                     $merged++;
                     if ($importHistoryId) {
                         $model->addImportHistoryItem($importHistoryId, $result['item_id'], 'merged',
-                            $result['version_before'], $result['version_after']);
+                            $result['version_before'], $result['version_after'], $origin, $row);
                     }
                     break;
 
@@ -1748,37 +1755,19 @@ class ImportController extends AdminController
 
     private function insertRow(int $collection, array $data, object $params, array $publishing = []): array|false
     {
-        $db    = Factory::getContainer()->get(DatabaseInterface::class);
-        $table = new CollectorItemsTable($db);
-        $table->initVersion($collection);
-		
-		// Appliquer les paramètres de publication
-		$data['state']        = (int)   ($publishing['state']  ?? 1);
-		$data['access']       = (int)   ($publishing['access'] ?? 1);
-		$data['publish_up']   = ($publishing['publish_up']   ?? null) ?: null;
-		$data['publish_down'] = ($publishing['publish_down'] ?? null) ?: null;
-		
-        if (!$table->bind($data)) {
-            $this->lastInsertError = 'bind failed: ' . $table->getError();
-            return false;
-        }
-        if (!$table->checkVersion()) {
-            $this->lastInsertError = 'checkVersion failed: ' . $table->getError();
-            return false;
-        }
-		
-		$importDate          = Factory::getDate()->format(Text::_('DATE_FORMAT_LC2'));
-		$table->modification = Text::sprintf('COM_COLLECTOR_IMPORT_VERSION_NOTE', $importDate);
-        
-        if (!(bool) $table->storeVersion(null, 1)) {
-            $this->lastInsertError = 'storeVersion failed: ' . $table->getError();
-            return false;
-        }
-        $this->lastInsertError = '';
-        return [
-			'item_id'       => (int) $table->id,
-			'version_after' => (int) ($table->history->id ?? 0),
-		];
+        $model  = $this->getModel();
+        $result = $model->createItem($collection, $data, $publishing);
+        $this->lastInsertError = $model->lastCreateError;
+
+        return $result;
+    }
+
+    /** D'où vient une décision automatique : rapport de simulation pour cette ligne, sinon règle générale */
+    private function decisionOrigin(array $session, int $row): string
+    {
+        $decision = $session['decisions'][$row] ?? null;
+
+        return is_array($decision) && in_array($decision['action'] ?? '', self::DECISIONS, true) ? 'report' : 'rule';
     }
 
     /** @var string Dernière erreur d'insertion (debug) */

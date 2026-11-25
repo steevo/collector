@@ -339,6 +339,49 @@ class ImportModel extends ListModel
 		];
 	}
 
+	/** @var string Dernière erreur de createItem() */
+	public string $lastCreateError = '';
+
+	/**
+	 * Crée un objet avec ses valeurs de champs (nouvelle version active).
+	 *
+	 * @return array{item_id: int, version_after: int}|false
+	 */
+	public function createItem(int $collection, array $data, array $publishing = []): array|false
+	{
+		$table = new CollectorItemsTable($this->getDbo());
+		$table->initVersion($collection);
+
+		$data['collection']   = $collection;
+		$data['state']        = (int) ($publishing['state']  ?? 1);
+		$data['access']       = (int) ($publishing['access'] ?? 1);
+		$data['publish_up']   = ($publishing['publish_up']   ?? null) ?: null;
+		$data['publish_down'] = ($publishing['publish_down'] ?? null) ?: null;
+
+		if (!$table->bind($data)) {
+			$this->lastCreateError = 'bind failed: ' . $table->getError();
+			return false;
+		}
+		if (!$table->checkVersion()) {
+			$this->lastCreateError = 'checkVersion failed: ' . $table->getError();
+			return false;
+		}
+
+		$importDate          = Factory::getDate()->format(Text::_('DATE_FORMAT_LC2'));
+		$table->modification = Text::sprintf('COM_COLLECTOR_IMPORT_VERSION_NOTE', $importDate);
+
+		if (!(bool) $table->storeVersion(null, 1)) {
+			$this->lastCreateError = 'storeVersion failed: ' . $table->getError();
+			return false;
+		}
+		$this->lastCreateError = '';
+
+		return [
+			'item_id'       => (int) $table->id,
+			'version_after' => (int) ($table->history->id ?? 0),
+		];
+	}
+
 	/**
 	 * Crée l'entrée d'historique au début d'un import.
 	 * Retourne l'ID de l'entrée créée.
@@ -363,9 +406,15 @@ class ImportModel extends ListModel
 	/**
 	 * Enregistre un objet affecté par l'import.
 	 */
+	/**
+	 * @param  string|null  $origin   D'où vient la décision : 'auto' (aucune correspondance),
+	 *                                'conflict' (choisi dans un conflit), 'report' (rapport de
+	 *                                simulation), 'rule' (règle générale), 'history', 'split'
+	 * @param  int|null     $fileRow  Ligne du fichier
+	 */
 	public function addImportHistoryItem(int $importId, int $itemId,
                                      string $action, ?int $versionBefore,
-                                     ?int $versionAfter): bool
+                                     ?int $versionAfter, ?string $origin = null, ?int $fileRow = null): bool
 	{
 		$db    = $this->getDbo();
 		$table = new CollectorImportHistoryItemsTable($db);
@@ -380,6 +429,10 @@ class ImportModel extends ListModel
 		// (Colonne ajoutée en 0.9.7 : ignorée tant que la base n'est pas à jour.)
 		if ($table->hasField('done_at')) {
 			$table->done_at = Factory::getDate()->toSql();
+		}
+		if ($table->hasField('origin')) {
+			$table->origin   = $origin;
+			$table->file_row = $fileRow ?: null;
 		}
 
 		return $table->check() && $table->store();

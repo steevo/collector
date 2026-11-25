@@ -338,6 +338,8 @@ CREATE TABLE IF NOT EXISTS `#__collector_import_history_items` (
     `version_after`  int(11)     DEFAULT NULL,         -- historyId après action,
     `done_at`        datetime    DEFAULT NULL,         -- date de l'action (repère les modifications ultérieures),
 	`rolled_back_at` datetime    DEFAULT NULL,
+    `origin`         varchar(10) DEFAULT NULL,         -- 'auto' | 'conflict' | 'report' | 'rule' | 'history' | 'split'
+    `file_row`       int(11)     DEFAULT NULL,         -- ligne du fichier
     PRIMARY KEY (`id`),
     KEY `idx_import_id` (`import_id`),
     KEY `idx_item_id`   (`item_id`)

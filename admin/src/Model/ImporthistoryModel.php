@@ -137,7 +137,85 @@ class ImporthistoryModel extends ListModel
             $item->can_rollback   = $item->item_exists && !$item->rolled_back && !$item->before_missing;
         }
 
+        // Fusion entre deux lignes du fichier : l'objet fusionné avait été créé par une ligne
+        // précédente du même import, dont les valeurs ont été remplacées. « Séparer » remet
+        // l'objet de la première ligne et recrée celui de la seconde.
+        $createdHere = [];
+        foreach ($rows as $item) {
+            if ($item->action === 'imported' && !$item->rolled_back) {
+                $createdHere[(int) $item->item_id] = (int) $item->id;
+            }
+        }
+        foreach ($rows as $item) {
+            $item->intra_merge = $item->action === 'merged'
+                && isset($createdHere[(int) $item->item_id]) && $createdHere[(int) $item->item_id] < (int) $item->id;
+            $item->can_split   = $item->intra_merge && $item->can_rollback && !$item->modified_since;
+        }
+
         return $rows;
+    }
+
+    /**
+     * Sépare une fusion entre deux lignes du fichier : l'objet reprend la version créée
+     * par la première ligne, et la version fusionnée (seconde ligne) devient un nouvel objet.
+     * Les deux opérations sont notées dans l'historique de l'import.
+     *
+     * @return array{restored: int, created: int}|string  Message d'erreur
+     */
+    public function splitMerge(int $importId, int $collection, int $historyItemId): array|string
+    {
+        $row = null;
+        foreach ($this->getImportItems($importId, $collection) as $item) {
+            if ((int) $item->id === $historyItemId) {
+                $row = $item;
+                break;
+            }
+        }
+        if (!$row || !$row->can_split) {
+            return \Joomla\CMS\Language\Text::_('COM_COLLECTOR_IMPORTHISTORY_SPLIT_NOT_ALLOWED');
+        }
+
+        $itemId = (int) $row->item_id;
+
+        /** @var ImportModel $importModel */
+        $importModel = Factory::getApplication()->bootComponent('com_collector')->getMVCFactory()
+                              ->createModel('Import', 'Administrator', ['ignore_request' => true]);
+        $cols   = array_map(fn($f) => $f->_field->tablecolumn, $importModel->getFields());
+        $values = $this->loadItemValues($collection, [$itemId], $cols)[$itemId] ?? null;
+        if ($values === null) {
+            return \Joomla\CMS\Language\Text::_('COM_COLLECTOR_IMPORTHISTORY_SPLIT_NOT_ALLOWED');
+        }
+
+        $db      = $this->getDbo();
+        $current = $db->setQuery(
+            'SELECT state, access FROM ' . $db->quoteName('#__collector_items') . ' WHERE id = ' . $itemId
+        )->loadAssoc() ?: [];
+
+        // Seconde ligne : nouvel objet avec les valeurs fusionnées
+        $created = $importModel->createItem($collection, $values,
+            ['state' => (int) ($current['state'] ?? 1), 'access' => (int) ($current['access'] ?? 1)]);
+        if ($created === false) {
+            return $importModel->lastCreateError;
+        }
+
+        // Première ligne : l'objet reprend sa version d'avant la fusion
+        try {
+            $this->rollbackMerged($itemId, $collection, (int) $row->version_before);
+        } catch (\Throwable $e) {
+            return $e->getMessage();
+        }
+
+        $db->setQuery(
+            $db->getQuery(true)
+               ->update($db->quoteName('#__collector_import_history_items'))
+               ->set($db->quoteName('rolled_back_at') . ' = ' . $db->quote(Factory::getDate()->toSql()))
+               ->where($db->quoteName('id') . ' = ' . $historyItemId)
+        )->execute();
+
+        $importModel->addImportHistoryItem($importId, $created['item_id'], 'imported', null,
+            $created['version_after'], 'split', isset($row->file_row) ? (int) $row->file_row : null);
+
+        return ['restored' => $itemId, 'created' => (int) $created['item_id']];
     }
 
     // ── Rollback ──────────────────────────────────────────────────────────────
@@ -546,7 +624,7 @@ class ImporthistoryModel extends ListModel
                 return $importModel->getError() ?: 'mergeItem';
             }
             $importModel->addImportHistoryItem((int) $import->id, $targetId, 'merged',
-                $result['version_before'], $result['version_after']);
+                $result['version_before'], $result['version_after'], 'history');
         }
 
         // Le doublon va à la corbeille

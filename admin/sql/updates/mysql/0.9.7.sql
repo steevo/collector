@@ -22,3 +22,6 @@ ALTER TABLE `#__collector_import_config` ADD COLUMN `similar_threshold` int(11) 
 ALTER TABLE `#__collector_import_history` ADD COLUMN `missing_items` mediumtext DEFAULT NULL AFTER `multiconflicts`;
 -- Périmètre d'un fichier d'import (objets absents) : champs qui délimitent les objets concernés
 ALTER TABLE `#__collector_import_config` ADD COLUMN `scope_fields` text DEFAULT NULL AFTER `similar_threshold`;
+-- Origine de chaque action d'import (automatique, conflit tranché, rapport, règle…) et ligne du fichier
+ALTER TABLE `#__collector_import_history_items` ADD COLUMN `origin` varchar(10) DEFAULT NULL AFTER `rolled_back_at`;
+ALTER TABLE `#__collector_import_history_items` ADD COLUMN `file_row` int(11) DEFAULT NULL AFTER `origin`;

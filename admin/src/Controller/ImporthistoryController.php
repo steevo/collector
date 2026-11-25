@@ -132,6 +132,33 @@ class ImporthistoryController extends AdminController
         ) . '#missing-items');
     }
 
+    // ── Fusion entre deux lignes du fichier : séparation ──────────────────────
+
+    public function split(): void
+    {
+        $this->checkToken();
+
+        $importId   = $this->input->getInt('import_id');
+        $collection = $this->input->getInt('collection');
+        $user       = Factory::getApplication()->getIdentity();
+
+        if (!$user->authorise('core.create', 'com_collector') || !$user->authorise('core.edit', 'com_collector')) {
+            $this->setMessage(Text::_('JLIB_APPLICATION_ERROR_CREATE_RECORD_NOT_PERMITTED'), 'error');
+        } else {
+            $result = $this->getModel()->splitMerge($importId, $collection, $this->input->getInt('history_item_id'));
+            if (is_array($result)) {
+                $this->setMessage(Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_SPLIT_DONE', $result['restored'], $result['created']));
+            } else {
+                $this->setMessage(Text::sprintf('COM_COLLECTOR_IMPORTHISTORY_SPLIT_ERROR', $result), 'error');
+            }
+        }
+
+        $this->setRedirect(Route::_(
+            'index.php?option=com_collector&view=importhistory&layout=detail'
+            . '&import_id=' . $importId . '&collection=' . $collection, false
+        ));
+    }
+
     // ── Objet non retrouvé : comparaison avec un objet choisi par son numéro (JSON) ──
 
     public function dupcompare(): void
