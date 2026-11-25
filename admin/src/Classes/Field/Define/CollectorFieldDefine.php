@@ -983,17 +983,29 @@ class CollectorFieldDefine extends CollectorField
 
 	public function normalizeForComparison(string $value): string
 	{
-		// "" et "0" signifient tous les deux "pas de valeur" pour un champ define
-		if ($value === '' || $value === '0') {
+		// "" et "0" signifient tous les deux "pas de valeur" pour un champ define,
+		// tout comme une valeur de liste dont le libellé est vide (affichée « — »)
+		if ($this->isEmptyValue($value)) {
 			return '';
 		}
 		return $value;
 	}
 
+	/** Pas de valeur : "", "0", ou valeur de liste au libellé vide */
+	public function isEmptyValue(string $value): bool
+	{
+		if (parent::isEmptyValue($value)) {
+			return true;
+		}
+		$value = trim($value);
+
+		return ctype_digit($value) && trim($this->valueLabel($value)) === '';
+	}
+
 	// ── Import : ressemblance ────────────────────────────────────────────────
 
 	/** @var array<int, string> Libellés des valeurs de listes */
-	private static array $similarityLabels = [];
+	private static array $valueLabels = [];
 
 	public function getSimilarityWeight(): float
 	{
@@ -1005,7 +1017,7 @@ class CollectorFieldDefine extends CollectorField
 	{
 		return $importValue === $baseValue
 			? 1.0
-			: ImportSimilarity::labelScore($this->similarityLabel($importValue), $this->similarityLabel($baseValue));
+			: ImportSimilarity::labelScore($this->valueLabel($importValue), $this->valueLabel($baseValue));
 	}
 
 	public function isSimilarityKey(string $value): bool
@@ -1019,21 +1031,21 @@ class CollectorFieldDefine extends CollectorField
 	}
 
 	/** Libellé d'une valeur (identifiant, ou « new:<libellé> » en simulation) */
-	private function similarityLabel(string $id): string
+	private function valueLabel(string $id): string
 	{
 		if (str_starts_with($id, self::NEW_PREFIX)) {
 			return substr($id, strlen(self::NEW_PREFIX));
 		}
 
-		if (!self::$similarityLabels) {
+		if (!self::$valueLabels) {
 			$db = Factory::getContainer()->get(DatabaseInterface::class);
 			$db->setQuery('SELECT id, content FROM ' . $db->quoteName('#__collector_defined_content'));
 			foreach ($db->loadAssocList() ?: [] as $row) {
-				self::$similarityLabels[(int) $row['id']] = (string) $row['content'];
+				self::$valueLabels[(int) $row['id']] = (string) $row['content'];
 			}
 		}
 
-		return self::$similarityLabels[(int) $id] ?? $id;
+		return self::$valueLabels[(int) $id] ?? $id;
 	}
 
 	/**
