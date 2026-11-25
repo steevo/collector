@@ -874,6 +874,16 @@ function resolveDbId(input) {
           <?php echo Text::_('COM_COLLECTOR_IMPORT_CNT_DRY_MULTICONFLICTS'); ?>
       </span>
       <?php endif; ?>
+      <?php
+        // Lignes répétant une ligne précédente du fichier
+        $fileDupCount = !empty($session['dry_run'])
+            ? count(array_filter((array) ($session['dry_run_report'] ?? []), fn($e) => !empty($e['duplicateOf'])))
+            : count((array) ($session['file_duplicates'] ?? []));
+      ?>
+      <span class="text-warning fw-semibold<?php echo $fileDupCount ? '' : ' d-none'; ?>" id="cnt-file-dups-wrap">
+          ⚠ <span id="cnt-file-dups"><?php echo $fileDupCount; ?></span>
+          <?php echo Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_HEADER'); ?>
+      </span>
 	  <span class="text-danger fw-semibold<?php echo ($errors ?? 0) === 0 ? ' d-none' : ''; ?>"
 			id="cnt-errors-wrap">
 		<span id="cnt-errors"><?php echo $errors ?? 0; ?></span>
@@ -1045,6 +1055,8 @@ let state = {
     isDryRun     : <?php echo !empty($session['dry_run']) ? 'true' : 'false'; ?>,
     dryRunReport : <?php echo json_encode(array_values((array) ($session['dry_run_report'] ?? [])), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
     dryRunMissing: <?php echo json_encode((object) ($session['dry_run_missing'] ?? []), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
+    // Import réel : lignes ignorées car identiques à une ligne précédente du fichier
+    fileDuplicates: <?php echo json_encode(array_values((array) ($session['file_duplicates'] ?? [])), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>,
 };
 
 // L'import ne démarre que lancé explicitement (étape 4, simulation, « Lancer l'import réel ») ;
@@ -1124,6 +1136,7 @@ async function runImport() {
 	if (Array.isArray(json.dry_run_report_full)) {
 		state.dryRunReport = json.dry_run_report_full;
 	}
+	refreshFileDupCount();
 
     if (json.state === 'end') { keepRealMissing(json); finishImport(false); return; }
     setTimeout(runImport, 0);
@@ -1864,6 +1877,17 @@ function logFileDuplicates(list) {
         appendLog('⚠ ' + T.fileDupLog.replace('%1$d', d.row).replace('%2$d', d.of_row).replace('%3$d', d.item),
                   'text-warning fw-semibold');
     });
+    refreshFileDupCount();
+}
+
+/** En-tête : nombre de doublons du fichier (simulation : rapport ; import : journal). */
+function refreshFileDupCount() {
+    const n = state.isDryRun
+        ? (state.dryRunReport || []).filter(e => e.action === 'skip_identical' && e.duplicateOf).length
+        : (state.fileDuplicates || []).length;
+    const el = document.getElementById('cnt-file-dups');
+    if (el) el.textContent = n;
+    document.getElementById('cnt-file-dups-wrap')?.classList.toggle('d-none', n === 0);
 }
 
 /** Fin d'import réel : lignes du fichier ignorées comme doublons d'une ligne précédente. */
