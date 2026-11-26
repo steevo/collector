@@ -349,25 +349,14 @@ class ImportController extends AdminController
         $model      = $this->getModel();
 
 		$existingConfig = $model->getConfig($collection);
-		$submittedMap   = $this->input->get('valuemap', [], 'ARRAY');
 
-		// Fusionner : conserver les db résolus du config sauf si le formulaire
-		// soumet explicitement une nouvelle valeur (create ou db non vide)
-		$existingValueMap = $existingConfig['value_mapping'] ?? [];
-		foreach ($existingValueMap as $col => $colData) {
-			if (!isset($submittedMap[$col])) continue;
-			foreach (($colData['values'] ?? []) as $idx => $existingPair) {
-				$submitted = $submittedMap[$col]['values'][$idx] ?? [];
-				$submittedDb = (string)($submitted['db'] ?? '');
-				$existingDb  = (string)($existingPair['db'] ?? '');
-				// Si le formulaire soumet db="" mais config a un ID valide → garder l'ID
-				if ($submittedDb === '' && $existingDb !== '' && empty($submitted['create'])) {
-					$submittedMap[$col]['values'][$idx]['db'] = $existingDb;
-				}
-			}
-		}
-
-		$valueMap = $submittedMap;
+		// Chaque type de champ garde ce que la configuration enregistrée a déjà résolu
+		$valueMap = $this->mergeValueMaps(
+			(array) ($existingConfig['value_mapping'] ?? []),
+			$this->input->get('valuemap', [], 'ARRAY'),
+			$model->getFields(),
+			true
+		);
 
         $session = $model->getSession($collection, $userId);
         if (!$session) {
@@ -1180,27 +1169,19 @@ class ImportController extends AdminController
 		return $valueMap;
 	}
 	
-	private function mergeValueMaps(array $existing, array $current): array
+	/**
+	 * Mapping des valeurs fusionné avec la configuration enregistrée, colonne par colonne,
+	 * par le type de champ de chaque colonne (CollectorField::mergeImportMapping).
+	 */
+	private function mergeValueMaps(array $existing, array $current, array $fields, bool $fromForm = false): array
 	{
-		foreach ($current as $col => &$colData) {
-			if (!isset($colData['values'])) continue;
-			$existingPairs = $existing[$col]['values'] ?? [];
-			foreach ($colData['values'] as &$pair) {
-				if (($pair['db'] ?? '') !== '') continue; // déjà résolu → pas toucher
-				// Chercher l'ID correspondant dans la config existante
-				foreach ($existingPairs as $ep) {
-					if (mb_strtolower(trim((string)($ep['file'] ?? '')))
-						=== mb_strtolower(trim((string)($pair['file'] ?? '')))
-						&& ($ep['db'] ?? '') !== '') {
-						$pair['db'] = $ep['db'];
-						unset($pair['create'], $pair['create_label']);
-						break;
-					}
-				}
+		foreach ($fields as $field) {
+			$col = $field->_field->tablecolumn;
+			if (isset($current[$col]) && \is_array($current[$col])) {
+				$current[$col] = $field->mergeImportMapping($current[$col], (array) ($existing[$col] ?? []), $fromForm);
 			}
-			unset($pair);
 		}
-		unset($colData);
+
 		return $current;
 	}
 	
@@ -1217,8 +1198,9 @@ class ImportController extends AdminController
 		// Fusionner avec la config existante pour préserver les IDs résolus
 		$existingConfig = $model->getConfig($collection) ?? [];
 		$mergedValueMap  = $this->mergeValueMaps(
-			$existingConfig['value_mapping'] ?? [],
-			$valueMap
+			(array) ($existingConfig['value_mapping'] ?? []),
+			$valueMap,
+			$model->getFields()
 		);
 
 		$model->saveConfig(

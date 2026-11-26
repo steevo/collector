@@ -711,6 +711,21 @@ class CollectorField
 	{
 		return '';
 	}
+
+	/**
+	 * Fusionne le mapping d'une colonne (formulaire de l'étape 3, ou session pendant l'import)
+	 * avec celui de la configuration enregistrée, pour ne pas perdre ce qui y est déjà résolu.
+	 * La classe de base garde le mapping tel quel. Chaque type surcharge si besoin.
+	 *
+	 * @param  array  $current   Mapping de la colonne à enregistrer
+	 * @param  array  $existing  Mapping de la colonne dans la configuration enregistrée
+	 * @param  bool   $fromForm  true : choix faits à l'étape 3
+	 * @return array             Mapping de la colonne à enregistrer
+	 */
+	public function mergeImportMapping(array $current, array $existing, bool $fromForm): array
+	{
+		return $current;
+	}
 	
 	/**
 	 * Appelée après import pour mettre à jour le mapping avec les valeurs

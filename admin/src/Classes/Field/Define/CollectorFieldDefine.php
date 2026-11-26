@@ -511,6 +511,11 @@ class CollectorFieldDefine extends CollectorField
 
 					if (mb_strtolower($fileVal) !== mb_strtolower($valueTrimmed)) continue;
 
+					// « Aucune association » : la valeur du fichier (« ? », « ** »…) est ignorée
+					if (!empty($pair['none'])) {
+						return '';
+					}
+
 					if ($dbId !== '') {
 						// Vérifier que l'ID existe encore en base
 						$db = Factory::getContainer()->get(DatabaseInterface::class);
@@ -858,7 +863,8 @@ class CollectorFieldDefine extends CollectorField
 			  <?php endif; ?>
 			</td>
 			<?php
-			$shouldCreate  = (bool) ($savedPair['create']       ?? ($savedDbId === ''));
+			$savedNone     = !empty($savedPair['none']);
+			$shouldCreate  = !$savedNone && (bool) ($savedPair['create'] ?? ($savedDbId === ''));
 			$createLabel   = (string) ($savedPair['create_label'] ?? $savedFile);
 			$rowId         = $colEsc . '-' . $rowIdx;
 			?>
@@ -875,6 +881,19 @@ class CollectorFieldDefine extends CollectorField
 						 <?php echo $shouldCreate ? 'checked' : ''; ?>>
 				  <label for="create-chk-<?php echo $rowId; ?>" class="form-check-label small">
 					<?php echo Text::_('COM_COLLECTOR_IMPORT_DEFINE_CREATE'); ?>
+				  </label>
+				</div>
+				<div class="form-check form-check-inline mb-1">
+				  <input type="checkbox"
+						 name="valuemap[<?php echo $colEsc; ?>][values][<?php echo $rowIdx; ?>][none]"
+						 value="1"
+						 id="none-chk-<?php echo $rowId; ?>"
+						 class="form-check-input none-chk"
+						 data-row="<?php echo $rowId; ?>"
+						 <?php echo $savedNone ? 'checked' : ''; ?>>
+				  <label for="none-chk-<?php echo $rowId; ?>" class="form-check-label small"
+						 title="<?php echo htmlspecialchars(Text::_('COM_COLLECTOR_IMPORT_DEFINE_NONE_DESC'), ENT_QUOTES); ?>">
+					<?php echo Text::_('COM_COLLECTOR_IMPORT_DEFINE_NONE'); ?>
 				  </label>
 				</div>
 				<input type="text"
@@ -923,8 +942,21 @@ class CollectorFieldDefine extends CollectorField
 						if (!hasDb) {
 							const chk = document.getElementById('create-chk-' + rowId);
 							if (chk) { chk.checked = false; chk.dispatchEvent(new Event('change')); }
+						} else {
+							// Valeur de la base choisie : plus « aucune association »
+							const none = document.getElementById('none-chk-' + rowId);
+							if (none) none.checked = false;
 						}
 					}, 0);
+				});
+			});
+
+			// « Aucune association » : ni valeur de la base, ni création
+			document.querySelectorAll('.none-chk').forEach(function (none) {
+				none.addEventListener('change', function () {
+					if (!this.checked) return;
+					const chk = document.getElementById('create-chk-' + this.dataset.row);
+					if (chk && chk.checked) { chk.checked = false; chk.dispatchEvent(new Event('change')); }
 				});
 			});
 
@@ -935,6 +967,8 @@ class CollectorFieldDefine extends CollectorField
 
 					if (this.checked) {
 						const rowId  = this.id.replace('create-chk-', '');
+						const none   = document.getElementById('none-chk-' + rowId);
+						if (none) none.checked = false;
 						const dbInput = document.querySelector('[data-target="db-id-' + rowId + '"]');
 						const dbHid   = document.getElementById('db-id-' + rowId);
 						if (dbInput) dbInput.value = '';
@@ -948,6 +982,42 @@ class CollectorFieldDefine extends CollectorField
 		JS;
 	}
 	
+	/**
+	 * Valeurs du fichier restées sans valeur de la base : reprend celle que la configuration
+	 * enregistrée leur associe déjà. Une valeur marquée « aucune association » le reste ;
+	 * une création demandée à l'étape 3 aussi.
+	 */
+	public function mergeImportMapping(array $current, array $existing, bool $fromForm): array
+	{
+		if (!isset($current['values']) || !\is_array($current['values'])) {
+			return $current;
+		}
+
+		$resolved = [];
+		foreach ((array) ($existing['values'] ?? []) as $ep) {
+			if (\is_array($ep) && (string) ($ep['db'] ?? '') !== '') {
+				$resolved[mb_strtolower(trim((string) ($ep['file'] ?? '')))] = (string) $ep['db'];
+			}
+		}
+
+		foreach ($current['values'] as &$pair) {
+			if (!\is_array($pair) || (string) ($pair['db'] ?? '') !== '' || !empty($pair['none'])) {
+				continue;
+			}
+			if ($fromForm && !empty($pair['create'])) {
+				continue;
+			}
+			$db = $resolved[mb_strtolower(trim((string) ($pair['file'] ?? '')))] ?? '';
+			if ($db !== '') {
+				$pair['db'] = $db;
+				unset($pair['create'], $pair['create_label']);
+			}
+		}
+		unset($pair);
+
+		return $current;
+	}
+
 	public function refreshImportMapping(array $colMapping): ?array
 	{
 		$defined = $this->_field->attribs['list'] ?? '';
