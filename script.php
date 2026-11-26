@@ -322,6 +322,8 @@ class com_collectorInstallerScript
 
 		$this->convertLegacyImageValues();
 
+		$this->convertTablesToUtf8mb4();
+
 		// Une collection d'utilisateur (type 2) n'est que privée (0) ou publique (2) :
 		// l'ancienne valeur « matchs uniquement » (1) devient privée, comme elle s'affichait déjà
 		try {
@@ -333,6 +335,35 @@ class com_collectorInstallerScript
 			)->execute();
 		} catch (\Exception $e) {
 			// tables absentes (installation partielle) : rien à convertir
+		}
+	}
+
+	/**
+	 * Tables Collector encore en latin1 (anciennes installations) converties en utf8mb4 :
+	 * un texte en grec, en cyrillique ou avec des emojis y faisait échouer l'enregistrement.
+	 * Les textes existants sont convertis sans perte. Sans effet une fois les tables converties.
+	 */
+	private function convertTablesToUtf8mb4(): void
+	{
+		$db = Factory::getContainer()->get(DatabaseInterface::class);
+
+		try {
+			$tables = $db->setQuery(
+				"SELECT DISTINCT TABLE_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE()"
+				. " AND TABLE_NAME LIKE " . $db->quote(str_replace("_", "\_", $db->getPrefix()) . "collector%")
+				. " AND CHARACTER_SET_NAME IS NOT NULL AND CHARACTER_SET_NAME <> 'utf8mb4'"
+			)->loadColumn();
+		} catch (\Exception $e) {
+			return;
+		}
+
+		foreach ($tables as $table) {
+			try {
+				$db->setQuery("ALTER TABLE " . $db->quoteName($table) . " CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+					->execute();
+			} catch (\Exception $e) {
+				Factory::getApplication()->enqueueMessage("Collector : conversion en utf8mb4 impossible pour " . $table . " : " . $e->getMessage(), "warning");
+			}
 		}
 	}
 
