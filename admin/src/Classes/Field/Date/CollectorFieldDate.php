@@ -90,7 +90,12 @@ class CollectorFieldDate extends CollectorField
 			$format = str_replace('%','',$format);
 			if (\DateTime::createFromFormat('Y-m-d H:i:s', $value) === FALSE) {
 				// it's not a datetime format
-				$value = \DateTime::createFromFormat($format, $value)->format('Y-m-d H:i:s');
+				$dt = \DateTime::createFromFormat($format, $value);
+				if ($dt === false) {
+					// Pas une date (« 196* », « Fin »…) : valeur affichée telle quelle
+					return parent::display(htmlspecialchars((string) $value, ENT_QUOTES), $listing, $params, $itemId);
+				}
+				$value = $dt->format('Y-m-d H:i:s');
 			}
 			$return = HTMLHelper::_( 'date', $value, $format);
 		}
@@ -156,7 +161,7 @@ class CollectorFieldDate extends CollectorField
 	}
 
 	/**
-	 * Convertit les années à 2 chiffres en 4 chiffres (règle POSIX)
+	 * Convertit les années à 2 chiffres en 4 chiffres (siècle choisi par fullYear : pas de date future)
 	 * dans une valeur en se basant sur la position du token 'y' dans le format.
 	 * Retourne [$newValue, $newFormat] avec 'y' remplacé par 'Y'.
 	 */
@@ -193,7 +198,7 @@ class CollectorFieldDate extends CollectorField
 
 		if ($groupIdx > 0 && preg_match($pattern, trim($value), $matches) && isset($matches[$groupIdx])) {
 			$yr       = (int)$matches[$groupIdx];
-			$fullYear = ($yr >= 69 ? 1900 : 2000) + $yr;
+			$fullYear = self::fullYear($yr);
 
 			// Reconstruire la valeur en remplaçant l'année 2 chiffres par 4 chiffres
 			$newValue  = '';
@@ -229,6 +234,19 @@ class CollectorFieldDate extends CollectorField
 	 *
 	 * @param	string		$value	Field value
 	 */
+	/**
+	 * Année à 2 chiffres → 4 chiffres, sans date future : jusqu'à l'année en cours,
+	 * siècle actuel (« 23 » → 2023), au-delà, siècle précédent (« 62 » → 1962).
+	 * (La règle POSIX, 69-99 → 19xx et 00-68 → 20xx, donnait « 62 » → 2062.)
+	 */
+	private static function fullYear(int $twoDigits): int
+	{
+		$current = (int) date('Y');
+		$year    = intdiv($current, 100) * 100 + $twoDigits;
+
+		return $year > $current ? $year - 100 : $year;
+	}
+
 	public function getImportedValue($value, array $mapping = [])
 	{
 		if (trim($value) === '') return '';
@@ -236,17 +254,22 @@ class CollectorFieldDate extends CollectorField
 		$val          = trim($value);
 		$sourceFormat = $mapping['format'] ?? null;
 
+		// Décennie avec joker en année à 2 chiffres (« 6* » = années 60) : même notation
+		// que les objets déjà en base (« 196* »)
+		if ($sourceFormat && strpos($sourceFormat, 'y') !== false && preg_match('/^(\d)\*$/', $val, $m)) {
+			return substr((string) self::fullYear((int) $m[1] * 10), 0, 3) . '*';
+		}
+
 		if ($sourceFormat) {
 			// Tenter le parsing avec le format fourni par l'utilisateur
 			$dt = \DateTime::createFromFormat($sourceFormat, $val);
 
 			if ($dt !== false) {
 				// Si le format contient 'y' (année 2 chiffres), PHP peut produire
-				// n'importe quel siècle selon la version. On corrige via la règle POSIX :
-				// 69-99 → 19xx, 00-68 → 20xx
+				// n'importe quel siècle selon la version : on choisit le siècle (fullYear)
 				if (strpos($sourceFormat, 'y') !== false) {
 					$twoDigit   = (int) $dt->format('y'); // round-trip fiable quel que soit PHP
-					$correctYear = ($twoDigit >= 69 ? 1900 : 2000) + $twoDigit;
+					$correctYear = self::fullYear($twoDigit);
 					$dt->setDate(
 						$correctYear,
 						(int) $dt->format('m'),
@@ -429,7 +452,7 @@ class CollectorFieldDate extends CollectorField
 		} elseif (preg_match('/^\d{2,4}$/', $value)) {
 			$yr = (int) $value;
 			if ($yr >= 0 && $yr <= 99) {
-				$yr = ($yr >= 69 ? 1900 : 2000) + $yr;
+				$yr = self::fullYear($yr);
 			}
 			$dt = \DateTime::createFromFormat('Y', (string) $yr);
 		} else {
