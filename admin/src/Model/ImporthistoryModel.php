@@ -512,7 +512,8 @@ class ImporthistoryModel extends ListModel
         foreach ($ids as $id) {
             $exists  = array_key_exists($id, $states);
             $similar = [];
-            if ($exists && $imported && isset($missing[$id]) && !isset($merged[$id])) {
+            // Objet à la corbeille ou déjà fusionné : plus d'imports ressemblants à proposer
+            if ($exists && (int) $states[$id] !== -2 && $imported && isset($missing[$id]) && !isset($merged[$id])) {
                 $prepared = ImportSimilarity::prepare($missing[$id], $fields, $cmpCols, $keys);
                 foreach ($prepared ? ImportSimilarity::rank($missing[$id], $prepared, $imported, self::SIMILAR_IMPORTED) : [] as $c) {
                     $similar[] = $c + ['display' => $importModel->getItemDisplayData($collection, $c['id'], $fields)];
