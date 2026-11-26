@@ -247,6 +247,14 @@ class CollectorFieldDate extends CollectorField
 		return $year > $current ? $year - 100 : $year;
 	}
 
+	/**
+	 * Cellule au format date du tableur : la date, pas le nombre qui la code
+	 */
+	public function getImportedSpreadsheetDate(string $date, string $number, array $mapping = [])
+	{
+		return $this->getImportedValue($date, $mapping);
+	}
+
 	public function getImportedValue($value, array $mapping = [])
 	{
 		if (trim($value) === '') return '';

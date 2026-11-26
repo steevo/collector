@@ -21,6 +21,8 @@ defined('_JEXEC') or die;
  *   dans toutes les cellules de la zone (fusions verticales et horizontales).
  * - csv : séparateur « ; » ou « , » détecté sur la première ligne, encodage UTF-8
  *   (avec ou sans BOM) ou Windows-1252 (enregistrement « CSV » d'Excel).
+ * - cellules xlsx au format date : rendues en date (« 2003-03-02 00:00:00 ») ; le nombre
+ *   saisi (37682) est gardé à part (dates()), chaque type de champ choisit lequel il prend.
  *
  * Le résultat est mis en cache dans le dossier temporaire du système : les requêtes
  * AJAX de l'import ne relisent pas le fichier à chaque lot.
@@ -31,9 +33,9 @@ final class ImportReader
     public const EXTENSIONS = ['xlsx', 'csv'];
 
     /** À changer si le format du cache change (invalide les anciens caches) */
-    private const CACHE_VERSION = 1;
+    private const CACHE_VERSION = 2;
 
-    /** @var array<string, array<int, array<int, string>>> Cache mémoire par fichier */
+    /** @var array<string, array{rows: array, dates: array}> Cache mémoire par fichier */
     private static array $memory = [];
 
     private static string $lastError = '';
@@ -54,11 +56,29 @@ final class ImportReader
      */
     public static function rows(string $filepath): array
     {
+        return self::read($filepath)['rows'];
+    }
+
+    /**
+     * Cellules au format date du fichier, avec le nombre qu'elles contiennent.
+     *
+     * @return array<int, array<int, string>>  [numéro de ligne => [col => nombre, ex. « 37682 »]]
+     */
+    public static function dates(string $filepath): array
+    {
+        return self::read($filepath)['dates'];
+    }
+
+    /**
+     * @return array{rows: array, dates: array}
+     */
+    private static function read(string $filepath): array
+    {
         self::$lastError = '';
 
         if (!is_file($filepath)) {
             self::$lastError = 'file not found';
-            return [];
+            return ['rows' => [], 'dates' => []];
         }
 
         $key = md5(realpath($filepath) . '|' . filemtime($filepath) . '|' . filesize($filepath) . '|' . self::CACHE_VERSION);
@@ -70,21 +90,23 @@ final class ImportReader
         $cacheFile = sys_get_temp_dir() . '/collector_import_' . $key . '.ser';
 
         if (is_file($cacheFile)) {
-            $rows = @unserialize((string) file_get_contents($cacheFile), ['allowed_classes' => false]);
-            if (is_array($rows)) {
-                return self::$memory[$key] = $rows;
+            $cached = @unserialize((string) file_get_contents($cacheFile), ['allowed_classes' => false]);
+            if (is_array($cached) && isset($cached['rows'], $cached['dates'])) {
+                return self::$memory[$key] = $cached;
             }
         }
 
-        $ext  = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
-        $rows = $ext === 'csv' ? self::readCsv($filepath) : self::readXlsx($filepath);
-        $rows = self::finalize($rows);
+        $ext   = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+        $dates = [];
+        $rows  = $ext === 'csv' ? self::readCsv($filepath) : self::readXlsx($filepath, $dates);
+        $rows  = self::finalize($rows);
+        $read  = ['rows' => $rows, 'dates' => array_intersect_key($dates, $rows)];
 
         if (self::$lastError === '') {
-            @file_put_contents($cacheFile, serialize($rows));
+            @file_put_contents($cacheFile, serialize($read));
         }
 
-        return self::$memory[$key] = $rows;
+        return self::$memory[$key] = $read;
     }
 
     /**
@@ -136,7 +158,10 @@ final class ImportReader
 
     // ── xlsx ─────────────────────────────────────────────────────────────────
 
-    private static function readXlsx(string $filepath): array
+    /**
+     * @param  array  $dates  Reçoit les cellules au format date : [ligne => [col => nombre]]
+     */
+    private static function readXlsx(string $filepath, array &$dates = []): array
     {
         require_once JPATH_ADMINISTRATOR . '/components/com_collector/libraries/SimpleXLSX.php';
 
@@ -153,6 +178,18 @@ final class ImportReader
         foreach ($xlsx->readRows(0) as $i => $row) {
             $rows[$i + 1] = array_map([self::class, 'toString'], array_values($row));
         }
+
+        // Seconde lecture sans conversion des dates : une cellule qui change est au format date,
+        // on garde le nombre qu'elle contient (une référence saisie dans une cellule mise en date)
+        $xlsx->setDateTimeFormat(false);
+        foreach ($xlsx->readRows(0) as $i => $row) {
+            foreach (array_values($row) as $c => $raw) {
+                if (is_float($raw) && ($rows[$i + 1][$c] ?? '') !== self::toString($raw)) {
+                    $dates[$i + 1][$c] = self::toString($raw == floor($raw) ? (int) $raw : $raw);
+                }
+            }
+        }
+        $xlsx->setDateTimeFormat('Y-m-d H:i:s');
 
         // Cellules fusionnées : SimpleXLSX ne renseigne que la cellule en haut à gauche
         $sheet = $xlsx->worksheet(0);

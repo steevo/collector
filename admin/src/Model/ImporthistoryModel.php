@@ -466,9 +466,11 @@ class ImporthistoryModel extends ListModel
         $ids  = array_values(array_filter(array_map('intval', (array) ($data['ids'] ?? []))));
         // Lignes du fichier ignorées car identiques à une ligne précédente
         $duplicates = array_values(array_filter((array) ($data['duplicates'] ?? []), 'is_array'));
+        // Lignes en échec, avec leur raison
+        $failed = array_values(array_filter((array) ($data['failed'] ?? []), 'is_array'));
 
         if (!$ids) {
-            return ['scope' => [], 'items' => [], 'cols' => [], 'duplicates' => $duplicates];
+            return ['scope' => [], 'items' => [], 'cols' => [], 'duplicates' => $duplicates, 'failed' => $failed];
         }
 
         $db     = $this->getDbo();
@@ -537,7 +539,7 @@ class ImporthistoryModel extends ListModel
         }
 
         return ['scope' => (array) ($data['scope'] ?? []), 'items' => $items, 'cols' => $cols, 'fields' => $allFields,
-                'duplicates' => $duplicates];
+                'duplicates' => $duplicates, 'failed' => $failed];
     }
 
     /**

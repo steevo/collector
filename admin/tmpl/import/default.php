@@ -985,6 +985,7 @@ const T = {
 	dryRunWarning : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_WARNING')); ?>,
 	dryRunIntraFile : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_INTRA_FILE')); ?>,
 	fileDupLog      : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_LOG')); ?>,
+	failedLog       : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FAILED_ITEM')); ?>,
 	fileDupTitle    : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_TITLE')); ?>,
 	fileDupHelp     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_HELP')); ?>,
 	fileDupItem     : <?php echo json_encode(Text::_('COM_COLLECTOR_IMPORT_FILE_DUP_ITEM')); ?>,
@@ -1103,6 +1104,7 @@ async function runImport() {
     applyCounters(json);
     logAutoDecisions(json.auto);
     logFileDuplicates(json.duplicates);
+    logFailedRows(json.failed);
 
 	if (json.state === 'multiconflict') {
 		state.conflict   = json;
@@ -1300,6 +1302,7 @@ async function resolveConflict(decision, objIdx) {
     if (!resp?.success) { appendLog(resp?.message || T.error, 'text-danger'); return; }
 
     applyCounters(resp);
+    logFailedRows(resp.failed);
     state.currentRow = resp.next || (state.currentRow + 1);
     updateBar();
 
@@ -1871,6 +1874,13 @@ function diffText(fields) {
 
 /** Note dans le journal les conflits tranchés sans demander. */
 /** Lignes ignorées car identiques à une ligne précédente du fichier : signalées dans le journal. */
+/** Lignes en échec : la ligne et la raison, dans le journal */
+function logFailedRows(list) {
+    (list || []).forEach(f => {
+        appendLog('✖ ' + T.failedLog.replace('%1$d', f.row).replace('%2$s', f.message || ''), 'text-danger fw-semibold');
+    });
+}
+
 function logFileDuplicates(list) {
     (list || []).forEach(d => {
         state.fileDuplicates = (state.fileDuplicates || []).concat([d]);

@@ -453,6 +453,7 @@ class ImportController extends AdminController
 		$session['scope_values']           = [];
 		$session['cand_rows']              = [];
 		$session['file_duplicates'] = [];
+		$session['failed_rows']     = [];
 
 		$model->saveSession($collection, $userId, $session);
 
@@ -487,6 +488,7 @@ class ImportController extends AdminController
 
             $filepath  = $this->uploadDir() . $session['file'];
             $allRows   = ImportReader::rows($filepath);
+            $allDates  = ImportReader::dates($filepath);
             $totalRows = $session['total_rows'];
             $rowStart  = $session['current_row'] ?: $session['first_line'];
             $imported  = $session['imported'];
@@ -586,7 +588,7 @@ class ImportController extends AdminController
 						$session['value_mapping'] = $valueMap;
 					}
 
-					$data     = $this->buildData($rawRow, $fields, $colMap, $valueMap, $collection);
+					$data     = $this->buildData($rawRow, $fields, $colMap, $valueMap, $collection, $allDates[$row] ?? []);
 
 					if (CollectorField::$createdValues) {
 						if (!$isDryRun && $importHistoryId) {
@@ -1027,18 +1029,13 @@ class ImportController extends AdminController
 								$row
 							);
 						}
-					} elseif ($imported === 0 && $i === 0) {
-						return ['success' => false,
-								'message' => 'Ligne ' . $row . ' : ' . ($this->lastInsertError ?: 'insertRow=false'),
-								'debugData' => array_slice($data, 0, 5, true)];
 					} else {
-						$errors++;
+						$this->failRow($row, $this->lastInsertError ?: 'insertRow=false', $errors);
 					}
 
 				} catch (\Throwable $e) {
-					// L'exception est loguée mais l'import continue sur la ligne suivante
-					error_log('ImportController insert row=' . $row . ' : ' . $e->getMessage());
-					$errors++;
+					// L'échec est noté avec sa ligne, l'import continue sur la ligne suivante
+					$this->failRow($row, $e->getMessage(), $errors);
 				}
 			}
 
@@ -1049,6 +1046,7 @@ class ImportController extends AdminController
 				$session['dry_run_matched'] = array_values(array_unique($dryMatched));
 				$session['cand_rows']       = $candRows;
 				$session['file_duplicates'] = $fileDups;
+				$session['failed_rows']     = $this->keepFailedRows($session);
 				$session['dry_run_scope']   = $dryScope;
 				$session['scope_values']    = $this->scopeSets($scopeValues);
 				if ($importHistoryId) {
@@ -1057,6 +1055,7 @@ class ImportController extends AdminController
 				$this->persistSession($model, $collection, $userId, $session, $colMap, $valueMap);
 				$conflictResult['auto']       = $autoLog;
 				$conflictResult['duplicates'] = $newDups;
+				$conflictResult['failed']     = $this->failedRows;
 				return $conflictResult;
 			}
 
@@ -1077,6 +1076,7 @@ class ImportController extends AdminController
 			$session['dry_run_matched'] = array_values(array_unique($dryMatched));
 			$session['cand_rows']       = $candRows;
 			$session['file_duplicates'] = $fileDups;
+			$session['failed_rows']     = $this->keepFailedRows($session);
 			$session['dry_run_scope']   = $dryScope;
 			$session['scope_values']    = $this->scopeSets($scopeValues);
 
@@ -1143,6 +1143,7 @@ class ImportController extends AdminController
 				'errors'   => $errors,
 				'auto'     => $autoLog,
 				'duplicates' => $newDups,
+				'failed'     => $this->failedRows,
 				'dry_run'         => $isDryRun,
 				'dry_run_entries' => $dryRunEntries,
 				'dry_run_conflicts'      => $dryConflicts,
@@ -1314,6 +1315,7 @@ class ImportController extends AdminController
             $session['skipped']     = $skipped;
             $session['merged']      = $merged;
 			$session['errors']      = $errors;
+			$session['failed_rows'] = $this->keepFailedRows($session);
 			
 			if ($importHistoryId) {
 				$model->updateImportHistory($importHistoryId, $imported, $merged, $skipped, $errors);
@@ -1339,6 +1341,7 @@ class ImportController extends AdminController
                 'skipped'  => $skipped,
                 'merged'   => $merged,
 				'errors'   => $errors,
+				'failed'   => $this->failedRows,
             ];
         });
     }
@@ -1372,6 +1375,7 @@ class ImportController extends AdminController
 		$session['scope_values']           = [];
 		$session['cand_rows']              = [];
 		$session['file_duplicates'] = [];
+		$session['failed_rows']     = [];
 		$session['dry_run_missing']        = [];
 		$session['dry_run']                = true;
 		$session['step']                   = 5;
@@ -1457,6 +1461,7 @@ class ImportController extends AdminController
 		$session['scope_values']     = [];
 		$session['cand_rows']        = [];
 		$session['file_duplicates'] = [];
+		$session['failed_rows']     = [];
 
 		// Désactiver le mode simulation et réinitialiser les compteurs
 		$session['dry_run']              = false;
@@ -1690,7 +1695,7 @@ class ImportController extends AdminController
                 case 'import':
                     $result = $this->insertRow($collection, $data, $params, $publishing);
                     if ($result === false) {
-                        $errors++;
+                        $this->failRow($row, $this->lastInsertError ?: 'insertRow=false', $errors);
                         break;
                     }
                     $imported++;
@@ -1704,7 +1709,7 @@ class ImportController extends AdminController
                 case 'merge':
                     $result = $model->mergeItem($collection, $existingId, $data, $params, $publishing, $fields !== null);
                     if ($result === false) {
-                        $errors++;
+                        $this->failRow($row, '#' . $existingId . ' : ' . ($model->lastMergeError ?: 'mergeItem=false'), $errors);
                         break;
                     }
                     $merged++;
@@ -1718,9 +1723,34 @@ class ImportController extends AdminController
                     $skipped++;
             }
         } catch (\Throwable $e) {
-            error_log('ImportController ' . $decision . ' item=' . $existingId . ' : ' . $e->getMessage());
-            $errors++;
+            $this->failRow($row, ($existingId ? '#' . $existingId . ' : ' : '') . $e->getMessage(), $errors);
         }
+    }
+
+    /** @var array Lignes en échec de la requête en cours : [['row' => n, 'message' => raison]] */
+    private array $failedRows = [];
+
+    /**
+     * Note une ligne en échec avec sa raison : comptée, journalisée et gardée pour l'historique.
+     */
+    private function failRow(int $row, string $message, int &$errors): void
+    {
+        $errors++;
+        error_log('ImportController ligne ' . $row . ' : ' . $message);
+
+        $message = trim(strip_tags($message));
+        // Caractères que la colonne ne sait pas stocker (table en latin1 et texte en grec, par ex.)
+        if (preg_match("/Incorrect string value.*?([A-Za-z0-9_]+)[`']? at row/", $message, $m)) {
+            $message = Text::sprintf('COM_COLLECTOR_IMPORT_FAILED_CHARSET', $m[1]) . ' (' . $message . ')';
+        }
+
+        $this->failedRows[] = ['row' => $row, 'message' => mb_substr($message, 0, 300)];
+    }
+
+    /** Lignes en échec de la session, avec celles de cette requête */
+    private function keepFailedRows(array $session): array
+    {
+        return array_values(array_merge(array_filter((array) ($session['failed_rows'] ?? []), 'is_array'), $this->failedRows));
     }
 
     /**
@@ -1749,6 +1779,8 @@ class ImportController extends AdminController
 
         // Lignes ignorées car identiques à une ligne précédente du fichier
         $missing['duplicates'] = array_values((array) ($session['file_duplicates'] ?? []));
+        // Lignes en échec, avec leur raison
+        $missing['failed'] = array_values((array) ($session['failed_rows'] ?? []));
 
         $historyId = (int) ($session['import_history_id'] ?? 0);
         if ($historyId) {
@@ -1781,7 +1813,10 @@ class ImportController extends AdminController
         $app->close();
     }
 
-    private function buildData(array $row, array $fields, array $colMap, array $valueMap, int $collection): array
+    /**
+     * @param  array  $dates  Cellules au format date de la ligne : [col => nombre]
+     */
+    private function buildData(array $row, array $fields, array $colMap, array $valueMap, int $collection, array $dates = []): array
     {
         $data = ['collection' => $collection];
         foreach ($fields as $field) {
@@ -1792,9 +1827,13 @@ class ImportController extends AdminController
                 $data[$col] = '';
                 continue;
             }
-            $raw    = (string) ($row[ImportReader::colIndex($letter)] ?? '');
+            $idx    = ImportReader::colIndex($letter);
+            $raw    = (string) ($row[$idx] ?? '');
             $map    = $valueMap[$col] ?? [];
-            $data[$col] = $field->getImportedValue($raw, (array) $map);
+            // Cellule au format date : le type de champ choisit entre la date et le nombre saisi
+            $data[$col] = isset($dates[$idx])
+                ? $field->getImportedSpreadsheetDate($raw, $dates[$idx], (array) $map)
+                : $field->getImportedValue($raw, (array) $map);
         }
 		
         return $data;

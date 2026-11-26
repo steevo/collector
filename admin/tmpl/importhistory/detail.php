@@ -214,6 +214,24 @@ $hasModified = count(array_filter($items, fn($i) => $i->modified_since && $i->it
 
 <?php /* ── Objets de la base absents du fichier ──────────────────────────── */ ?>
 <?php $missing = $this->missing ?? ['items' => []]; ?>
+<?php if (!empty($missing['failed'])): ?>
+<div class="card mt-4 border-danger" id="failed-rows">
+  <div class="card-header fw-semibold">
+    <span class="icon-warning me-1 text-danger"></span>
+    <?php echo Text::_('COM_COLLECTOR_IMPORT_FAILED_TITLE'); ?>
+    <span class="badge bg-danger ms-1"><?php echo count($missing['failed']); ?></span>
+  </div>
+  <div class="card-body">
+    <p class="small text-muted"><?php echo Text::_('COM_COLLECTOR_IMPORT_FAILED_HELP'); ?></p>
+    <ul class="small mb-0">
+      <?php foreach ($missing['failed'] as $f): ?>
+      <li><?php echo Text::sprintf('COM_COLLECTOR_IMPORT_FAILED_ITEM', (int) ($f['row'] ?? 0),
+          htmlspecialchars((string) ($f['message'] ?? ''), ENT_QUOTES)); ?></li>
+      <?php endforeach; ?>
+    </ul>
+  </div>
+</div>
+<?php endif; ?>
 <?php if (!empty($missing['duplicates'])): ?>
 <div class="card mt-4 border-warning" id="file-duplicates">
   <div class="card-header fw-semibold">

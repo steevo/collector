@@ -477,6 +477,24 @@ class CollectorField
 	{
 		return $value;
 	}
+
+	/**
+	 * Valeur importée d'une cellule au format date du tableur.
+	 *
+	 * Le tableur stocke un nombre (37682) qu'il affiche en date (02/03/2003). Par défaut le
+	 * champ prend le nombre saisi : une référence dans une cellule mise en date par erreur.
+	 * Un champ de type date prend la date.
+	 *
+	 * Can be overloaded/supplemented by the child class
+	 *
+	 * @param	string	$date		Date de la cellule (« 2003-03-02 00:00:00 »)
+	 * @param	string	$number		Nombre contenu dans la cellule (« 37682 »)
+	 * @param	array	$mapping	Correspondances de valeurs du champ
+	 */
+	function getImportedSpreadsheetDate(string $date, string $number, array $mapping = [])
+	{
+		return $this->getImportedValue($number, $mapping);
+	}
 	
 	/**
 	 * Method to rebuild fulltitle

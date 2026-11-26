@@ -322,13 +322,16 @@ class ImportModel extends ListModel
 		$importDate          = Factory::getDate()->format(Text::_('DATE_FORMAT_LC2'));
 		$table->modification = Text::sprintf('COM_COLLECTOR_IMPORT_VERSION_NOTE', $importDate);
 		
+		$this->lastMergeError = '';
 		if (!$table->checkVersion()) {
+			$this->lastMergeError = 'checkVersion failed: ' . $table->getError();
 			return false;
 		}
 		
 		$versionBefore = (int) ($table->historyId ?? 0);
 
 		if (!$table->storeVersion(null)) {
+			$this->lastMergeError = 'storeVersion failed: ' . $table->getError();
 			return false;
 		}
 
@@ -341,6 +344,9 @@ class ImportModel extends ListModel
 
 	/** @var string Dernière erreur de createItem() */
 	public string $lastCreateError = '';
+
+	/** @var string Dernière erreur de mergeItem() */
+	public string $lastMergeError = '';
 
 	/**
 	 * Crée un objet avec ses valeurs de champs (nouvelle version active).
@@ -696,6 +702,8 @@ class ImportModel extends ListModel
 					'rows'  => (object) array_map('intval', (array) ($missing['rows'] ?? [])),
 					// Lignes ignorées car identiques à une ligne précédente du fichier
 					'duplicates' => array_values((array) ($missing['duplicates'] ?? [])),
+					// Lignes en échec [['row' => n, 'message' => raison]]
+					'failed'     => array_values((array) ($missing['failed'] ?? [])),
 				])))
 				->where($db->quoteName('id') . ' = ' . $importId)
 		)->execute();
@@ -741,6 +749,7 @@ class ImportModel extends ListModel
 			                                               (array) ($sessionData['scope_values'] ?? [])),
 			'cand_rows'              => (object) array_map('intval', (array) ($sessionData['cand_rows'] ?? [])),
 			'file_duplicates'        => array_values((array) ($sessionData['file_duplicates'] ?? [])),
+			'failed_rows'            => array_values((array) ($sessionData['failed_rows'] ?? [])),
 			'similar_threshold'      => (int) ($sessionData['similar_threshold'] ?? 80),
 			// [objet => ligne qui l'a retenu]
 			'claimed'                => (object) array_map('intval', array_filter((array) ($sessionData['claimed'] ?? []))),
@@ -868,6 +877,7 @@ class ImportModel extends ListModel
 			                                      (array) ($payload['scope_values'] ?? [])),
 			'cand_rows'              => array_map('intval', (array) ($payload['cand_rows'] ?? [])),
 			'file_duplicates'        => array_values((array) ($payload['file_duplicates'] ?? [])),
+			'failed_rows'            => array_values((array) ($payload['failed_rows'] ?? [])),
 			'similar_threshold'      => (int) ($payload['similar_threshold'] ?? 80),
 			// Ancien format : liste d'objets sans la ligne
 			'claimed'                => array_is_list((array) ($payload['claimed'] ?? []))
