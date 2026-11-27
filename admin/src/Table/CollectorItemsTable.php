@@ -33,6 +33,7 @@ use Joomla\Registry\Registry;
 use Joomla\String\StringHelper;
 use Joomla\Utilities\ArrayHelper;
 use Steevo\Component\Collector\Administrator\Table\CollectorItemsHistoryTable;
+use Steevo\Component\Collector\Administrator\Helper\ProposalNotifier;
 use Steevo\Component\Collector\Administrator\Classes\CollectorField;
 use Steevo\Component\Collector\Administrator\Classes\Field\Date\CollectorFieldDate;
 use Steevo\Component\Collector\Administrator\Classes\Field\Define\CollectorFieldDefine;
@@ -685,6 +686,9 @@ class CollectorItemsTable extends Table
 			$db->setQuery('DELETE FROM ' . $history . ' WHERE item = ' . $itemId . ' AND state = 2')->execute();
 		}
 
+		// L'auteur de la proposition en est prévenu (option « Prévenir l'auteur »)
+		ProposalNotifier::notifyDecision((int) $this->collection, $versionId, true);
+
 		return true;
 	}
 
@@ -738,6 +742,9 @@ class CollectorItemsTable extends Table
 					->where($db->quoteName('id') . ' = ' . (int) $version->item)
 			)->execute();
 		}
+
+		// L'auteur de la proposition en est prévenu, avec le motif (option « Prévenir l'auteur »)
+		ProposalNotifier::notifyDecision((int) $this->collection, $versionId, false);
 
 		return true;
 	}

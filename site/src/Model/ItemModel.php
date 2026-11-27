@@ -23,6 +23,7 @@ use Steevo\Component\Collector\Administrator\Classes\Field\Line\CollectorFieldLi
 use Steevo\Component\Collector\Administrator\Classes\Field\Number\CollectorFieldNumber;
 use Steevo\Component\Collector\Administrator\Classes\Field\Text\CollectorFieldText;
 use Steevo\Component\Collector\Administrator\Helper\CollectorHelper;
+use Steevo\Component\Collector\Administrator\Helper\ProposalNotifier;
 use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Multilanguage;
@@ -736,6 +737,12 @@ class ItemModel extends AdminModel
 			if (!$autoValidate)
 			{
 				$app->set('com_collector.version_pending', 1);
+
+				// Les validateurs en sont prévenus (option « Adresses à prévenir »)
+				if (!empty($table->history->id))
+				{
+					ProposalNotifier::notifyProposal((int) $collection, (int) $table->history->id);
+				}
 			}
 	
 			// Clean the cache.
