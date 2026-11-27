@@ -356,8 +356,14 @@ class CollectorItemsTable extends Table
 		$isNewItem = empty($this->id);
 
 		// Version en attente d'un objet existant : l'objet ne change pas avant la validation (date et auteur de
-		// la modification, titre…) ; un nouvel objet est créé, dépublié tant que sa version n'est pas validée
-		if (($auto_validate || $isNewItem) && !$this->store())
+		// la modification, titre…) ; un nouvel objet est créé, dépublié tant que sa version n'est pas validée,
+		// et suit sa proposition corrigée tant qu'il n'a aucune version validée
+		$hasActiveVersion = !$isNewItem && (int) $this->_db->setQuery(
+			'SELECT COUNT(*) FROM ' . $this->_db->quoteName('#__collector_items_history_' . (int) $this->collection)
+			. ' WHERE item = ' . (int) $this->id . ' AND state = 1'
+		)->loadResult();
+
+		if (($auto_validate || !$hasActiveVersion) && !$this->store())
 		{
 			return false;
 		}
@@ -683,12 +689,16 @@ class CollectorItemsTable extends Table
 	}
 
 	/**
-	 * Refuse une version en attente : état « refusée » (3) avec la note de refus ; elle ne peut pas être rétablie
+	 * Refuse une version en attente : état « refusée » (3) avec la note de refus, obligatoire (l'auteur la lit
+	 * dans ses propositions) ; elle ne peut pas être rétablie. Proposition d'un nouvel objet (aucune version
+	 * validée) : l'objet passe à la corbeille.
 	 */
 	public function refuseVersion(int $versionId, string $note = ''): bool
 	{
 		$db      = $this->_db;
+		$history = $db->quoteName('#__collector_items_history_' . (int) $this->collection);
 		$version = $this->loadVersionRow($versionId);
+		$note    = trim($note);
 
 		if (!$version || (int) $version->state !== 0)
 		{
@@ -697,9 +707,16 @@ class CollectorItemsTable extends Table
 			return false;
 		}
 
+		if ($note === '')
+		{
+			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSE_NOTE_REQUIRED'));
+
+			return false;
+		}
+
 		$db->setQuery(
 			$db->getQuery(true)
-				->update($db->quoteName('#__collector_items_history_' . (int) $this->collection))
+				->update($history)
 				->set($db->quoteName('state') . ' = 3')
 				->set($db->quoteName('refuse_note') . ' = ' . $db->quote($note))
 				->where('id = ' . $versionId)
@@ -707,7 +724,54 @@ class CollectorItemsTable extends Table
 
 		$this->decrementToValidate((int) $version->item);
 
+		// Nouvel objet refusé (ni version validée, ni autre proposition) : à la corbeille
+		$remaining = (int) $db->setQuery(
+			'SELECT COUNT(*) FROM ' . $history . ' WHERE item = ' . (int) $version->item . ' AND state IN (0, 1)'
+		)->loadResult();
+
+		if (!$remaining)
+		{
+			$db->setQuery(
+				$db->getQuery(true)
+					->update($db->quoteName('#__collector_items'))
+					->set($db->quoteName('state') . ' = -2')
+					->where($db->quoteName('id') . ' = ' . (int) $version->item)
+			)->execute();
+		}
+
 		return true;
+	}
+
+	/**
+	 * Retrait par son auteur d'une proposition encore en attente : supprimée ; proposition d'un nouvel objet
+	 * (aucune autre version) : l'objet est supprimé avec elle
+	 */
+	public function withdrawVersion(int $versionId, int $userId): bool
+	{
+		$db      = $this->_db;
+		$history = $db->quoteName('#__collector_items_history_' . (int) $this->collection);
+		$version = $this->loadVersionRow($versionId);
+
+		if (!$version || (int) $version->state !== 0 || (int) $version->modified_by !== $userId || !$userId)
+		{
+			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_NOT_PENDING'));
+
+			return false;
+		}
+
+		$others = (int) $db->setQuery(
+			'SELECT COUNT(*) FROM ' . $history . ' WHERE item = ' . (int) $version->item . ' AND id <> ' . $versionId
+		)->loadResult();
+
+		if (!$others)
+		{
+			// Objet créé par cette proposition : supprimé (versions, objet, droits)
+			$this->load((int) $version->item);
+
+			return $this->delete((int) $version->item);
+		}
+
+		return $this->deleteVersion($versionId);
 	}
 
 	/**

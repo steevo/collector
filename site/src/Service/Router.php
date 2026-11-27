@@ -110,7 +110,7 @@ class Router extends RouterView
         $usercollection->setKey('collection');
         $this->registerView($usercollection);
         // Pages sans lien de menu propre, déclarées pour que le routeur standard les connaisse
-        foreach (['itemstovalidate', 'itemversions', 'versionscompare'] as $name) {
+        foreach (['itemstovalidate', 'itemversions', 'versionscompare', 'myproposals'] as $name) {
             $this->registerView(new RouterViewConfiguration($name));
         }
 

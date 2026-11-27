@@ -52,6 +52,18 @@ class HtmlView extends BaseHtmlView
         $this->meta1      = $model->getVersionMeta($this->v1);
         $this->meta2      = $model->getVersionMeta($this->v2);
 
+        // Accès : les validateurs de la collection ; l'auteur d'une version, comparée à la version en cours de
+        // l'objet (ou seule, pour la proposition d'un nouvel objet) depuis ses propositions. Les deux versions
+        // doivent être celles de l'objet demandé.
+        $sameItem = $this->meta1 && $this->meta2
+            && (int) $this->meta1->item === $this->item && (int) $this->meta2->item === $this->item;
+        $isAuthor = !$user->guest && $this->meta2 && (int) $this->meta2->modified_by === (int) $user->id
+            && ($this->v1 === $this->v2 || (int) $this->meta1->state === 1);
+
+        if (!$sameItem || (!$this->canValidate && !$isAuthor)) {
+            throw new \Exception(Text::_('JERROR_ALERTNOAUTHOR'), 403);
+        }
+
         parent::display($tpl);
     }
 

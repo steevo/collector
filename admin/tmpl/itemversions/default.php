@@ -170,6 +170,12 @@ function openRefuseModal(versionId) {
 }
 
 function doRefuse() {
+    // Note de refus obligatoire : elle est communiquée à l'auteur de la proposition
+    if (!document.getElementById('refuse-note-input').value.trim()) {
+        document.getElementById('refuse-note-input').classList.add('is-invalid');
+        document.getElementById('refuse-note-input').focus();
+        return;
+    }
     const note = document.getElementById('refuse-note-input').value;
     const url  = 'index.php?option=com_collector&task=itemversions.refuse'
                + '&collection=<?php echo (int) $this->collection; ?>'
@@ -369,7 +375,7 @@ function doRefuse() {
                 <p class="text-muted small mb-3">
                     <?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSE_NOTE_HINT'); ?>
                 </p>
-                <textarea id="refuse-note-input"
+                <textarea id="refuse-note-input" required oninput="this.classList.remove('is-invalid')"
                           class="form-control"
                           rows="4"
                           placeholder="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSE_NOTE_PLACEHOLDER'); ?>"></textarea>

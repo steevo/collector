@@ -165,8 +165,12 @@ class ItemsModel extends ListModel
 		);
 		$query->from('#__collector_items AS i');
 		
-		// Join over the values.
-		$query->join('LEFT', '#__collector_items_history_' . $collection . ' AS h ON h.item = i.id');
+		// Join over the values : version en cours ; objet sans version validée (proposition d'un nouvel objet, en
+		// attente ou refusée) : sa dernière version, pour qu'il reste visible et traitable dans la liste
+		$history = $db->quoteName('#__collector_items_history_' . (int) $collection);
+		$query->join('LEFT', $history . ' AS h ON h.id = COALESCE('
+			. '(SELECT ha.id FROM ' . $history . ' AS ha WHERE ha.item = i.id AND ha.state = 1 LIMIT 1),'
+			. ' (SELECT MAX(hp.id) FROM ' . $history . ' AS hp WHERE hp.item = i.id))');
 		foreach($fields as $field)
 		{
 			$field->setQuery($query);
@@ -187,8 +191,6 @@ class ItemsModel extends ListModel
 		// Filter by collection
 		$query->where('i.collection = ' . $collection);
 		
-		// Filter by history
-		$query->where('h.state = 1');
 		
 		// Filter by access level.
 		if ($access = $this->getState('filter.access')) {

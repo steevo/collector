@@ -12,6 +12,8 @@ $itemId     = $this->item;
 $v1         = $this->v1;
 $v2         = $this->v2;
 $toValidate = $this->canValidate && $this->meta2 && (int)$this->meta2->state === 0;
+// Une seule version (proposition d'un nouvel objet, vue par son auteur) : pas de colonne de comparaison
+$single     = ((int) $v1 === (int) $v2);
 $changedCount = count(array_filter($this->comparison ?: [], fn($r) => $r['changed']));
 
 HTMLHelper::_('bootstrap.modal');
@@ -48,6 +50,7 @@ $wa->useScript('com_collector.version-dialog');
     <thead>
       <tr class="table-light">
         <th style="width:20%"><?php echo Text::_('COM_COLLECTOR_FIELD'); ?></th>
+        <?php if (!$single): ?>
         <th style="width:35%" class="table-success">
           <span class="icon-check me-1"></span>
           <?php echo Text::_('COM_COLLECTOR_VERSION_ACTIVE'); ?>
@@ -58,6 +61,7 @@ $wa->useScript('com_collector.version-dialog');
           </div>
           <?php endif; ?>
         </th>
+        <?php endif; ?>
         <th style="width:35%" class="<?php echo (int)($this->meta2->state ?? -1) === 0 ? 'table-warning' : 'table-secondary'; ?>">
 		  <?php if ((int)($this->meta2->state ?? -1) === 0): ?>
 			<span class="icon-clock me-1"></span>
@@ -78,6 +82,9 @@ $wa->useScript('com_collector.version-dialog');
 			— <?php echo htmlspecialchars($this->meta2->author_name ?? '', ENT_QUOTES); ?>
 			<?php if (!empty($this->meta2->modification)): ?>
 			<br><em><?php echo htmlspecialchars($this->meta2->modification, ENT_QUOTES); ?></em>
+			<?php endif; ?>
+			<?php if (!empty($this->meta2->refuse_note)): ?>
+			<br><span class="icon-info-circle me-1" aria-hidden="true"></span><?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSE_REASON'); ?> <?php echo htmlspecialchars($this->meta2->refuse_note, ENT_QUOTES); ?>
 			<?php endif; ?>
 		  </div>
 		  <?php endif; ?>
@@ -104,9 +111,11 @@ $wa->useScript('com_collector.version-dialog');
             <span class="visually-hidden"><?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE_CONFLICT'); ?></span>
           <?php endif; ?>
         </td>
+        <?php if (!$single): ?>
         <td class="small">
           <?php echo $this->renderFieldValue($row, 'v1'); ?>
         </td>
+        <?php endif; ?>
         <td class="small <?php echo $changed ? 'fw-semibold' : ''; ?>">
           <?php echo $this->renderFieldValue($row, 'v2'); ?>
         </td>
@@ -132,8 +141,8 @@ $wa->useScript('com_collector.version-dialog');
   </table>
 
   <?php /* ── Boutons d'action ──────────────────────────────────────────── */ ?>
-	<?php if ($this->canValidate): ?>
 	<div class="d-flex gap-2 mt-3 align-items-center">
+	<?php if ($this->canValidate): ?>
 
 	  <?php if ($toValidate): ?>
 	  <button type="button" id="btn-validate" class="btn btn-success"
@@ -161,12 +170,12 @@ $wa->useScript('com_collector.version-dialog');
 		<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_RESTORE_THIS'); ?>
 	  </a>
 	  <?php endif; ?>
+	<?php endif; ?>
 
 	  <button type="button" class="btn btn-outline-secondary ms-auto" onclick="Joomla.collectorVersionDialog.closeSelf()">
 		<?php echo Text::_('JCLOSE'); ?>
 	  </button>
 	</div>
-	<?php endif; ?>
 </form>
 
 </div>
@@ -218,7 +227,7 @@ $wa->useScript('com_collector.version-dialog');
                 <p class="text-muted small">
                     <?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSE_NOTE_HINT'); ?>
                 </p>
-                <textarea id="refuse-note-input"
+                <textarea id="refuse-note-input" required oninput="this.classList.remove('is-invalid')"
                           class="form-control"
                           rows="4"
                           placeholder="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSE_NOTE_PLACEHOLDER'); ?>"></textarea>
@@ -412,6 +421,12 @@ function openRefuseModal(versionId) {
 }
 
 function doRefuse() {
+    // Note de refus obligatoire : elle est communiquée à l'auteur de la proposition
+    if (!document.getElementById('refuse-note-input').value.trim()) {
+        document.getElementById('refuse-note-input').classList.add('is-invalid');
+        document.getElementById('refuse-note-input').focus();
+        return;
+    }
     const note = document.getElementById('refuse-note-input').value;
     const url  = '<?php echo \Joomla\CMS\Uri\Uri::base(true); ?>/index.php?option=com_collector&task=itemversions.refuse'
                + '&collection=' + <?php echo (int) $this->collection; ?>

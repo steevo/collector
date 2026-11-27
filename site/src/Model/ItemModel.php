@@ -330,9 +330,15 @@ class ItemModel extends AdminModel
 				$query->join('LEFT', '#__users AS uam ON uam.id = i.modified_by');
 				
 				
-				// Proposition (objet sans version validée) ouverte par un validateur : sa version en attente
-				$proposalVersion = $this->canValidateCollection((int) $collection->id)
-					? $this->getProposalVersionId((int) $collection->id, (int) $id) : 0;
+				// Proposition (objet sans version validée) ouverte par un validateur : sa version en attente ; ouverte
+				// par son auteur (pour la corriger) : la sienne
+				$proposalVersion = $user->guest ? 0 : $this->getProposalVersionId((int) $collection->id, (int) $id);
+
+				if ($proposalVersion && !$this->canValidateCollection((int) $collection->id))
+				{
+					$ownProposal     = $this->getOwnPendingVersion((int) $collection->id, (int) $id);
+					$proposalVersion = $ownProposal ? (int) $ownProposal->id : 0;
+				}
 
 				$query->where($proposalVersion ? 'h.id = ' . $proposalVersion : 'h.state = 1');
 				$query->where('i.collection = '.$collection->id);

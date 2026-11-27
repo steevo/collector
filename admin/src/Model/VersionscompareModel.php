@@ -90,7 +90,7 @@ class VersionscompareModel extends BaseDatabaseModel
 		// ── 3. Requête principale avec JOINs (valeurs résolues pour l'affichage)
 		$query = $db->getQuery(true)
 			->select(['h.id', 'h.modified', 'h.modified_by',
-			          'ua.name AS author_name', 'h.modification', 'h.state'])
+			          'ua.name AS author_name', 'h.modification', 'h.state', 'h.refuse_note', 'h.item'])
 			->from($db->quoteName('#__collector_items_history_' . $collection, 'h'))
 			->join('LEFT', $db->quoteName('#__users', 'ua') . ' ON ua.id = h.modified_by')
 			->whereIn($db->quoteName('h.id'), [$v1, $v2]);

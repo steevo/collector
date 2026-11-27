@@ -272,7 +272,7 @@ body{font-size:.875rem}
 				<p class="text-muted small mb-3">
 					<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSE_NOTE_HINT'); ?>
 				</p>
-				<textarea id="refuse-note-input"
+				<textarea id="refuse-note-input" required oninput="this.classList.remove('is-invalid')"
 						  class="form-control"
 						  rows="4"
 						  placeholder="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSE_NOTE_PLACEHOLDER'); ?>"></textarea>
@@ -426,6 +426,12 @@ function openRefuseNoteModal() {
 }
 
 async function doRefuseWithNote() {
+    // Note de refus obligatoire : elle est communiquée à l'auteur de la proposition
+    if (!document.getElementById('refuse-note-input').value.trim()) {
+        document.getElementById('refuse-note-input').classList.add('is-invalid');
+        document.getElementById('refuse-note-input').focus();
+        return;
+    }
     const note = document.getElementById('refuse-note-input').value;
     document.getElementById('refuse-note-hidden').value = note;
     

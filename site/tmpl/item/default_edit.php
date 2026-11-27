@@ -56,7 +56,7 @@ $formAction = Route::_('index.php?option=com_collector&view=item&collection=' . 
 
 		<?php /* ── Proposition (objet sans version validée) : relecture puis validation ── */ ?>
 		<?php $isProposal = !empty($this->item->proposal_version); ?>
-		<?php if ($isProposal) : ?>
+		<?php if ($isProposal && $canEdit) : ?>
 		<div class="alert alert-info">
 			<?php echo Text::_('COM_COLLECTOR_PROPOSAL_REVIEW'); ?>
 		</div>
@@ -69,6 +69,7 @@ $formAction = Route::_('index.php?option=com_collector&view=item&collection=' . 
 			<?php if ($ownPending) : ?>
 			<br><?php echo Text::sprintf('COM_COLLECTOR_PROPOSE_OWN_PENDING', HTMLHelper::_('date', $ownPending->modified, Text::_('DATE_FORMAT_LC2'))); ?>
 			<?php endif; ?>
+			<br><a href="<?php echo Route::_('index.php?option=com_collector&view=myproposals'); ?>"><?php echo Text::_('COM_COLLECTOR_MYPROPOSALS_TITLE'); ?></a>
 		</div>
 		<?php endif; ?>
 
