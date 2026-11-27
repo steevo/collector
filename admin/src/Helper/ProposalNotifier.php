@@ -13,6 +13,7 @@ namespace Steevo\Component\Collector\Administrator\Helper;
 \defined('_JEXEC') or die;
 // phpcs:enable PSR1.Files.SideEffects
 
+use Joomla\CMS\Access\Access;
 use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
@@ -24,7 +25,7 @@ use Joomla\Database\DatabaseInterface;
 
 /**
  * Courriels des propositions :
- * - nouvelle proposition (ou proposition corrigée) : aux utilisateurs de l'option « Membres à prévenir » ;
+ * - nouvelle proposition (ou proposition corrigée) : aux validateurs de la collection (voir validators) ;
  * - proposition validée ou refusée : à son auteur (option « Prévenir l'auteur »), sauf s'il l'a traitée lui-même.
  *
  * Les messages sont préparés (proposalMessages, decisionMessages) puis envoyés (send) : un échec d'envoi
@@ -61,14 +62,15 @@ class ProposalNotifier
 			return [];
 		}
 
-		// Utilisateurs choisis dans l'option « Membres à prévenir » : comptes actifs à l'adresse valide, sauf
-		// l'auteur de la proposition
+		if (!ComponentHelper::getParams('com_collector')->get('notify_validators', 1)) {
+			return [];
+		}
+
+		// Validateurs de la collection, sauf l'auteur de la proposition
 		$addresses = [];
 
-		foreach (array_unique(array_map('intval', (array) ComponentHelper::getParams('com_collector')->get('notify_users', []))) as $userId) {
-			$user = self::user($userId);
-
-			if ($user && !$user->block && $userId !== (int) $info->modified_by && MailHelper::isEmailAddress((string) $user->email)) {
+		foreach (self::validators($collection) as $user) {
+			if ((int) $user->id !== (int) $info->modified_by) {
 				$addresses[] = (string) $user->email;
 			}
 		}
@@ -77,8 +79,10 @@ class ProposalNotifier
 			return [];
 		}
 
+		// Page des versions de l'objet sur le site : les validateurs d'une collection n'ont pas forcément accès à
+		// l'administration
 		$author = self::user((int) $info->modified_by);
-		$review = Uri::root() . 'administrator/index.php?option=com_collector&view=itemversions&collection=' . $collection
+		$review = Uri::root() . 'index.php?option=com_collector&view=itemversions&collection=' . $collection
 			. '&item=' . (int) $info->item;
 		$body   = Text::sprintf(
 			$info->is_new ? 'COM_COLLECTOR_MAIL_PROPOSAL_BODY_NEW' : 'COM_COLLECTOR_MAIL_PROPOSAL_BODY_CHANGE',
@@ -197,6 +201,54 @@ class ProposalNotifier
 		$info->is_new = (bool) $info->is_new;
 
 		return $info;
+	}
+
+	/**
+	 * Validateurs à prévenir pour une collection : membres (comptes actifs, adresse valide) des groupes à qui le
+	 * droit « Modifier » est donné dans les permissions de la collection ou de Collector, et de leurs sous-groupes.
+	 * Les droits globaux du site (Rédacteur, Gestionnaire, super-utilisateurs…) ne comptent pas : un super-utilisateur
+	 * n'est prévenu que s'il fait partie d'un de ces groupes. Chaque compte doit encore pouvoir valider la collection
+	 * (un refus posé plus bas l'écarte).
+	 *
+	 * @return  array  Utilisateurs (objets User)
+	 */
+	public static function validators(int $collection): array
+	{
+		$db     = Factory::getContainer()->get(DatabaseInterface::class);
+		$groups = [];
+
+		foreach (['com_collector.collection.' . $collection, 'com_collector'] as $asset) {
+			$rules = json_decode((string) $db->setQuery(
+				'SELECT rules FROM ' . $db->quoteName('#__assets') . ' WHERE name = ' . $db->quote($asset)
+			)->loadResult(), true);
+
+			foreach ((array) ($rules['core.edit'] ?? []) as $group => $allowed) {
+				if ((int) $allowed === 1) {
+					$groups[] = (int) $group;
+				}
+			}
+		}
+
+		$users = [];
+
+		foreach (array_unique($groups) as $group) {
+			foreach (Access::getUsersByGroup($group, true) as $userId) {
+				$userId = (int) $userId;
+
+				if (isset($users[$userId])) {
+					continue;
+				}
+
+				$user = self::user($userId);
+
+				if ($user && !$user->block && MailHelper::isEmailAddress((string) $user->email)
+					&& CollectorHelper::canValidate($collection, $user)) {
+					$users[$userId] = $user;
+				}
+			}
+		}
+
+		return array_values($users);
 	}
 
 	private static function user(int $id): ?object

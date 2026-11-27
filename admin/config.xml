@@ -262,14 +262,15 @@
 			<option value="1">JYES</option>
 		</field>
 		<field
-			name="notify_users"
-			type="collectorusers"
-			addfieldprefix="Steevo\Component\Collector\Administrator\Field"
-			multiple="true"
-			label="COM_COLLECTOR_NOTIFY_USERS"
-			description="COM_COLLECTOR_NOTIFY_USERS_DESC"
-			hint="COM_COLLECTOR_NOTIFY_USERS_HINT"
-		/>
+			name="notify_validators"
+			type="radio"
+			class="btn-group btn-group-yesno"
+			default="1"
+			label="COM_COLLECTOR_NOTIFY_VALIDATORS"
+			description="COM_COLLECTOR_NOTIFY_VALIDATORS_DESC">
+			<option value="0">JNO</option>
+			<option value="1">JYES</option>
+		</field>
 		<field
 			name="notify_author"
 			type="radio"
