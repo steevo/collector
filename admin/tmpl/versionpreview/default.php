@@ -4,7 +4,7 @@
  * @copyright  Copyright (C) 2010 - 2026 Philippe Ousset. All rights reserved.
  * @license    GNU General Public License version 2 or later; see LICENSE.txt
  *
- * Aperçu d'une version d'un objet, ouvert dans une fenêtre depuis la page des versions.
+ * Aperçu d'une version d'un objet, ouvert dans la fenêtre intégrée de la page des versions.
  * Même présentation que la comparaison des versions.
  */
 
@@ -19,6 +19,7 @@ $date  = HTMLHelper::_('date', $meta->modified, Text::_('DATE_FORMAT_LC6'));
 $state = match ((int) $meta->state) {
     1       => ['text-success', 'icon-publish', 'COM_COLLECTOR_ITEM_HISTORY_PUBLISHED'],
     2       => ['text-muted', 'icon-archive', 'COM_COLLECTOR_ITEM_HISTORY_ARCHIVED'],
+    3       => ['text-danger', 'icon-cancel', 'COM_COLLECTOR_ITEM_HISTORY_REFUSED_STATE'],
     default => ['text-warning', 'icon-clock', 'COM_COLLECTOR_ITEM_HISTORY_TO_BE_CHECKED'],
 };
 ?>
@@ -41,6 +42,7 @@ body{font-size:.875rem}
 .value-empty{color:#adb5bd;font-style:italic;font-size:.8rem}
 .preview-table img{max-width:100%;height:auto}
 </style>
+<script src="<?php echo Uri::root(true); ?>/media/com_collector/js/version-dialog.js"></script>
 </head>
 <body>
 
@@ -54,7 +56,7 @@ body{font-size:.875rem}
     <?php if (!empty($meta->author_name)) : ?>
       <span class="text-muted small">— <?php echo $this->escape($meta->author_name); ?></span>
     <?php endif; ?>
-    <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" onclick="window.close()">
+    <button type="button" class="btn btn-sm btn-outline-secondary ms-auto" onclick="Joomla.collectorVersionDialog.closeSelf()">
       <?php echo Text::_('JTOOLBAR_CLOSE'); ?>
     </button>
   </div>

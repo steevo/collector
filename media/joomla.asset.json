@@ -18,6 +18,15 @@
             "version": "0.9.9"
         },
         {
+            "name": "com_collector.version-dialog",
+            "type": "script",
+            "uri": "com_collector/version-dialog.js",
+            "version": "0.9.9",
+            "attributes": {
+                "defer": true
+            }
+        },
+        {
             "name": "com_collector.ordered-fields",
             "type": "script",
             "uri": "com_collector/ordered-fields.js",

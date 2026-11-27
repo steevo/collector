@@ -119,7 +119,7 @@ body{font-size:.875rem}
       </div>
       <?php endif; ?>
       <div class="col-auto">
-        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.close()">✕</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="Joomla.collectorVersionDialog.closeSelf()">✕</button>
       </div>
     </div>
   </div>
@@ -292,6 +292,7 @@ body{font-size:.875rem}
 <?php endif; ?>
 
 <script src="<?php echo Uri::root(true); ?>/media/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="<?php echo Uri::root(true); ?>/media/com_collector/js/version-dialog.js"></script>
 <script>
 /* ── Textes localisés injectés côté PHP ─────────────────────────────────── */
 var L = {
@@ -466,10 +467,7 @@ async function doValidate() {
         var result = await response.json();
 
         if (result.success) {
-            if (window.opener && !window.opener.closed) {
-                window.opener.location.href = result.redirectUrl;
-            }
-            window.close();
+            Joomla.collectorVersionDialog.finish(result.redirectUrl);
         } else {
             showError(result.message);
             if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.innerHTML = origHTML; }

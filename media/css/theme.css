@@ -201,3 +201,29 @@ html joomla-tab[view=accordion] > button:hover {
 	color: var(--collector-bg) !important;
 	background-color: var(--collector-text);
 }
+
+/* Fenêtres de Collector (confirmation, refus d'une version) : le template donne à toute .modal ouverte un
+   fond blanc et une taille fixe (pensés pour ses propres fenêtres), sans marge intérieure, et limite les
+   champs à 240 px ; on rend à ces fenêtres la présentation de Bootstrap */
+body.modal-open .modal.collector-modal {
+	background: transparent;
+	border-radius: 0;
+	inset: 0;
+	margin: 0;
+	width: 100%;
+	height: 100%;
+	overflow-x: hidden;
+	overflow-y: auto;
+}
+
+body.modal-open .modal.collector-modal .modal-header,
+body.modal-open .modal.collector-modal .modal-body,
+body.modal-open .modal.collector-modal .modal-footer {
+	height: auto;
+	padding: 1rem;
+}
+
+.collector-modal .form-control {
+	max-width: none;
+	width: 100%;
+}

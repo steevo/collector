@@ -28,6 +28,11 @@ $canEdit    = $user->authorise('core.edit', 'com_collector.collection.' . $colle
            || $user->authorise('core.edit', 'com_collector');
 
 HTMLHelper::stylesheet(Uri::base() . 'components/com_collector/assets/css/collection.css', ['version' => 'auto']);
+
+// Comparaison de versions : fenêtre intégrée à la page (media/js/version-dialog.js)
+$wa = $this->document->getWebAssetManager();
+$wa->getRegistry()->addExtensionRegistryFile('com_collector');
+$wa->useScript('com_collector.version-dialog');
 HTMLHelper::_('bootstrap.modal');
 
 $labels = [
@@ -169,7 +174,7 @@ $taskUrl = fn (string $task, int $versionId) => Route::_('index.php?option=com_c
 </div>
 
 <!-- Modale saisie note de refus -->
-<div class="modal fade" id="modal-refuse" tabindex="-1">
+<div class="modal fade collector-modal" id="modal-refuse" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -243,6 +248,6 @@ function openCompareVersions(v1, v2) {
               + '&v1='         + v1
               + '&v2='         + v2
               + '<?php echo $menuItemid ? '&Itemid=' . $menuItemid : ''; ?>';
-    window.open(url, 'compare', 'width=900,height=700,scrollbars=yes,resizable=yes');
+    Joomla.collectorVersionDialog.open(url);
 }
 </script>

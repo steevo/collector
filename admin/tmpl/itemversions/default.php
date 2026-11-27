@@ -29,6 +29,11 @@ use Joomla\CMS\Toolbar\Toolbar;
 HTMLHelper::_('bootstrap.tooltip');
 HTMLHelper::_('bootstrap.modal');
 HTMLHelper::_('behavior.multiselect');
+
+// Comparaison et aperçu d'une version : fenêtre intégrée à la page (media/js/version-dialog.js)
+$wa = $this->document->getWebAssetManager();
+$wa->getRegistry()->addExtensionRegistryFile('com_collector');
+$wa->useScript('com_collector.version-dialog');
 // HTMLHelper::_('formbehavior.chosen', 'select');
 
 $app		= Factory::getApplication();
@@ -98,23 +103,25 @@ function openCompare() {
     let idA = parseInt(casesCochees[0].value);
     let idB = parseInt(casesCochees[1].value);
     
-    const v1 = Math.min(idA, idB);
-    const v2 = Math.max(idA, idB);
-    
+    // La plus ancienne à gauche, mais la version en cours toujours à gauche (validation d'une version en attente)
+    const active = <?php echo (int) $this->activeVersionId; ?>;
+    const v1 = (idB === active) ? idB : ((idA === active) ? idA : Math.min(idA, idB));
+    const v2 = (v1 === idA) ? idB : idA;
+
 	const item = <?php echo (int) $this->item; ?>;
 	const collection = <?php echo (int) $this->collection; ?>;
 
     const url = `index.php?option=com_collector&view=versionscompare&tmpl=component&collection=${collection}&item=${item}&v1=${v1}&v2=${v2}`;
-    window.open(url, '<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE'); ?>', 'width=1000,height=750,scrollbars=yes,resizable=yes');
+    Joomla.collectorVersionDialog.open(url);
 }
 
-// Lien sur la date d'une version : ouvre son aperçu dans une fenêtre
+// Lien sur la date d'une version : ouvre son aperçu dans la fenêtre intégrée
 document.addEventListener('click', function (event) {
     const link = event.target.closest('.js-link-open-window');
 
     if (link && link.dataset.url) {
         event.preventDefault();
-        window.open(link.dataset.url, 'versionpreview', 'width=1000,height=750,scrollbars=yes,resizable=yes');
+        Joomla.collectorVersionDialog.open(link.dataset.url);
     }
 });
 
@@ -144,16 +151,16 @@ function openPreview() {
 	const collection = <?php echo (int) $this->collection; ?>;
 
     const url = `index.php?option=com_collector&view=versionpreview&tmpl=component&collection=${collection}&item=${item}&v_id=${v_id}`;
-    window.open(url, '<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_PREVIEW'); ?>', 'width=1000,height=750,scrollbars=yes,resizable=yes');
+    Joomla.collectorVersionDialog.open(url);
 }
 
+// Comparaison avec la version en cours : celle-ci toujours à gauche (v1), sinon une version en attente
+// plus ancienne qu'elle se retrouverait à gauche, sans possibilité de la valider
 function openCompareVersions(v1, v2) {
     const item       = <?php echo (int) $this->item; ?>;
     const collection = <?php echo (int) $this->collection; ?>;
-    const vMin = Math.min(v1, v2);
-    const vMax = Math.max(v1, v2);
-    const url = `index.php?option=com_collector&view=versionscompare&tmpl=component&collection=${collection}&item=${item}&v1=${vMin}&v2=${vMax}`;
-    window.open(url, '<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE'); ?>', 'width=1000,height=750,scrollbars=yes,resizable=yes');
+    const url = `index.php?option=com_collector&view=versionscompare&tmpl=component&collection=${collection}&item=${item}&v1=${v1}&v2=${v2}`;
+    Joomla.collectorVersionDialog.open(url);
 }
 
 function openRefuseModal(versionId) {
@@ -165,23 +172,13 @@ function openRefuseModal(versionId) {
 function doRefuse() {
     const note = document.getElementById('refuse-note-input').value;
     const url  = 'index.php?option=com_collector&task=itemversions.refuse'
-               + '&collection=<?php echo $collection ?? 0; ?>'
+               + '&collection=<?php echo (int) $this->collection; ?>'
                + '&item=<?php echo $this->item ?? 0; ?>'
                + '&version_id=' + refuseVersionId
                + '&refuse_note=' + encodeURIComponent(note)
                + '&<?php echo Session::getFormToken(); ?>=1';
     window.location.href = url;
 }
-
-// ── Relay postMessage depuis les popups enfants vers item/edit.php ──────
-// La popup de comparaison (window.open) a pour opener cette iframe.
-// Elle envoie ses messages à window.opener (= ici). On les relaie
-// vers window.parent (= item/edit.php) qui porte le vrai listener.
-window.addEventListener('message', function (event) {
-    if (event.origin !== window.location.origin) { return; }
-    if (!event.data || event.data.collectorAction !== 'versionRestored') { return; }
-    window.parent.postMessage(event.data, window.location.origin);
-});
 </script>
 
 <div class="container-popup">

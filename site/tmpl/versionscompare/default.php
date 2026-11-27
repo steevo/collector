@@ -15,6 +15,11 @@ $toValidate = $this->canValidate && $this->meta2 && (int)$this->meta2->state ===
 $changedCount = count(array_filter($this->comparison ?: [], fn($r) => $r['changed']));
 
 HTMLHelper::_('bootstrap.modal');
+
+// Page affichée dans la fenêtre intégrée de la page des versions (media/js/version-dialog.js)
+$wa = $this->document->getWebAssetManager();
+$wa->getRegistry()->addExtensionRegistryFile('com_collector');
+$wa->useScript('com_collector.version-dialog');
 ?>
 
 <div class="collector-versionscompare p-3">
@@ -157,7 +162,7 @@ HTMLHelper::_('bootstrap.modal');
 	  </a>
 	  <?php endif; ?>
 
-	  <button type="button" class="btn btn-outline-secondary ms-auto" onclick="window.close()">
+	  <button type="button" class="btn btn-outline-secondary ms-auto" onclick="Joomla.collectorVersionDialog.closeSelf()">
 		<?php echo Text::_('JCLOSE'); ?>
 	  </button>
 	</div>
@@ -167,7 +172,7 @@ HTMLHelper::_('bootstrap.modal');
 </div>
 
 <?php if ($toValidate): ?>
-<div class="modal fade" id="modal-confirm" tabindex="-1"
+<div class="modal fade collector-modal" id="modal-confirm" tabindex="-1"
      aria-labelledby="modal-confirm-label" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -200,7 +205,7 @@ HTMLHelper::_('bootstrap.modal');
 </div>
 
 <!-- Modale saisie note de refus -->
-<div class="modal fade" id="modal-refuse" tabindex="-1">
+<div class="modal fade collector-modal" id="modal-refuse" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
@@ -376,12 +381,8 @@ async function doSubmit() {
         var result = await response.json();
 
         if (result.success) {
-			// ── Topologie nouvelle : window.opener = fenêtre itemversions ─────
-            // itemversions est une page normale (plus une iframe).
-            // On redirige directement window.opener vers la liste items.
-            // Le message a déjà été persisté en session PHP côté contrôleur :
-            // Joomla l'affichera automatiquement au chargement de items.
-            goAndClose(REDIRECT_URL);
+            // La page des versions qui a ouvert la comparaison est rechargée (la fenêtre intégrée se ferme)
+            Joomla.collectorVersionDialog.finish(REDIRECT_URL);
 
         } else {
             showError(result.message);
@@ -398,19 +399,10 @@ async function doSubmit() {
     }
 }
 
-/* Fenêtre ouverte depuis la liste des versions : la liste suit l'action et la fenêtre se ferme ;
-   sinon (lien ouvert directement) la page elle-même va à l'action, sans se fermer avant */
-function goAndClose(url) {
-    if (window.opener && !window.opener.closed) {
-        window.opener.location.href = url;
-        window.close();
-    } else {
-        window.location.href = url;
-    }
-}
-
+/* Action faite (validation, refus, rétablissement) : la page des versions qui a ouvert la comparaison
+   la suit et la fenêtre intégrée se ferme (media/js/version-dialog.js) */
 function doRestore(url) {
-    goAndClose(url);
+    Joomla.collectorVersionDialog.finish(url);
 }
 
 function openRefuseModal(versionId) {
@@ -428,6 +420,6 @@ function doRefuse() {
                + '&refuse_note=' + encodeURIComponent(note)
                + '&<?php echo Session::getFormToken(); ?>=1';
 
-    goAndClose(url);
+    Joomla.collectorVersionDialog.finish(url);
 }
 </script>

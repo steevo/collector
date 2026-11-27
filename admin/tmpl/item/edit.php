@@ -28,6 +28,12 @@ Form::addFieldPath(JPATH_COMPONENT . '/models/fields');
 // Load the tooltip behavior.
 HTMLHelper::_('bootstrap.tooltip');
 HTMLHelper::_('behavior.formvalidator');
+
+// Comparaison et aperçu des versions ouverts depuis la fenêtre « Historique des versions » : affichés
+// dans une fenêtre intégrée à cette page plutôt que dans ce cadre étroit (media/js/version-dialog.js)
+$wa = $this->document->getWebAssetManager();
+$wa->getRegistry()->addExtensionRegistryFile('com_collector');
+$wa->useScript('com_collector.version-dialog');
 // HTMLHelper::_('behavior.keepalive');
 // HTMLHelper::_('formbehavior.chosen', 'select');
 // HTMLHelper::_('behavior.modal');
