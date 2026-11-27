@@ -191,7 +191,11 @@ class com_collectorInstallerScript
 				$db->setQuery('ALTER TABLE ' . $db->quoteName($table) . ' ADD COLUMN `base_version` int(11) DEFAULT NULL AFTER `refuse_note`');
 				$db->execute();
 			}
-			
+
+			// Anciennes versions à l'état -1 (« version initiale » des toutes premières installations), inconnu de
+			// Collector : archivées (état 2), comme les autres versions remplacées
+			$db->setQuery('UPDATE ' . $db->quoteName($table) . ' SET `state` = 2 WHERE `state` = -1')->execute();
+
 			// collection list
 			$query = "SELECT id FROM `#__collector_userslists` WHERE collection = '".$collection->id."' AND type = '2'";
 			$db->setQuery( $query );
