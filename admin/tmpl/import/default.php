@@ -789,11 +789,12 @@ function resolveDbId(input) {
            class="btn btn-outline-secondary btn-sm">
           <span class="icon-arrow-left me-1"></span><?php echo Text::_('JPREV'); ?>
         </a>
-		<a href="<?php echo Route::_('index.php?option=com_collector&task=import.startdryrun&collection=' . $collection . '&' . Session::getFormToken() . '=1', false); ?>"
-		   class="btn btn-outline-secondary btn-sm">
+		<?php /* Envoie le formulaire : les infos de publication sont gardées pour l'import réel */ ?>
+		<button type="submit" class="btn btn-outline-secondary btn-sm"
+		        formaction="<?php echo Route::_('index.php?option=com_collector&task=import.startdryrun&collection=' . $collection . '&' . Session::getFormToken() . '=1', false); ?>">
 			<span class="icon-eye me-1"></span>
 			<?php echo Text::_('COM_COLLECTOR_IMPORT_DRY_RUN_BTN'); ?>
-		</a>
+		</button>
         <button type="submit" class="btn btn-primary btn-sm">
           <?php echo Text::_('COM_COLLECTOR_IMPORT_STEP4_NEXT'); ?>
           <span class="icon-arrow-right ms-1"></span>

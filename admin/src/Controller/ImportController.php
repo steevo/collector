@@ -404,18 +404,7 @@ class ImportController extends AdminController
 		$session = $model->getSession($collection, $userId);
 		if (!$session) { $this->setRedirect($this->getStep1Url()); return; }
 
-		// Charger le form pour bénéficier des filtres (user_utc, UINT, etc.)
-		$form = Factory::getContainer()->get(\Joomla\CMS\Form\FormFactoryInterface::class)->createForm('com_collector.import_publishing');
-		$form->loadFile(JPATH_ADMINISTRATOR . '/components/com_collector/forms/import_publishing.xml');
-		$form->bind($this->input->post->getArray());
-		$data = $form->filter($this->input->post->getArray());
-
-		$session['publishing'] = [
-			'state'        => (int) ($data['state']        ?? 1),
-			'access'       => (int) ($data['access']       ?? 1),
-			'publish_up'   => $data['publish_up']   ?: null,
-			'publish_down' => $data['publish_down'] ?: null,
-		];
+		$session['publishing'] = $this->publishingFromRequest();
 		$session['step'] = 5;
 
 		// Import réel lancé directement (sans simulation) : repartir d'un état propre,
@@ -449,6 +438,25 @@ class ImportController extends AdminController
 		$this->setRedirect(Route::_(
 			'index.php?option=com_collector&view=import&collection=' . $collection . '&step=5&start=1', false
 		));
+	}
+
+	/**
+	 * Infos de publication envoyées par le formulaire de l'étape 4
+	 * (filtres du formulaire : dates en UTC, entiers…).
+	 */
+	private function publishingFromRequest(): array
+	{
+		$form = Factory::getContainer()->get(\Joomla\CMS\Form\FormFactoryInterface::class)->createForm('com_collector.import_publishing');
+		$form->loadFile(JPATH_ADMINISTRATOR . '/components/com_collector/forms/import_publishing.xml');
+		$form->bind($this->input->post->getArray());
+		$data = $form->filter($this->input->post->getArray());
+
+		return [
+			'state'        => (int) ($data['state']        ?? 1),
+			'access'       => (int) ($data['access']       ?? 1),
+			'publish_up'   => ($data['publish_up']   ?? null) ?: null,
+			'publish_down' => ($data['publish_down'] ?? null) ?: null,
+		];
 	}
 
     // ── Étape 5 : Import AJAX ────────────────────────────────────────────────
@@ -1342,6 +1350,12 @@ class ImportController extends AdminController
 		if (!$session) {
 			$this->setRedirect(Route::_('index.php?option=com_collector&view=import&collection=' . $collection, false));
 			return;
+		}
+
+		// Simulation lancée depuis l'étape 4 : les infos de publication du formulaire
+		// valent aussi pour l'import réel qui la suivra
+		if ($this->input->post->exists('access')) {
+			$session['publishing'] = $this->publishingFromRequest();
 		}
 
 		// Réinitialiser les compteurs et activer le mode simulation
