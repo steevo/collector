@@ -17,16 +17,16 @@ $meta1Auth    = $this->meta1->author_name ?? '';
 $meta2Auth    = $this->meta2->author_name ?? '';
 $formAction   = 'index.php?option=com_collector&task=versionscompare.validate';
 
-switch ($this->meta1->state) {
-	case 1:  $badgeV1 = '<span class="text-success" data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_PUBLISHED").'"><span class="icon-publish" aria-hidden="true"></span></span>'; break;
-	case 2:  $badgeV1 = '<span class="text-muted"   data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_ARCHIVED" ).'"><span class="icon-archive" aria-hidden="true"></span></span>'; break;
-	default: $badgeV1 = '<span class="text-warning" data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_TO_BE_CHECKED").'"><span class="icon-clock" aria-hidden="true"></span></span>';
-}
-switch ($this->meta2->state) {
-	case 1:  $badgeV2 = '<span class="text-success" data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_PUBLISHED").'"><span class="icon-publish" aria-hidden="true"></span></span>'; break;
-	case 2:  $badgeV2 = '<span class="text-muted"   data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_ARCHIVED" ).'"><span class="icon-archive" aria-hidden="true"></span></span>'; break;
-	default: $badgeV2 = '<span class="text-warning" data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_TO_BE_CHECKED").'"><span class="icon-clock" aria-hidden="true"></span></span>';
-}
+$stateBadge = function ($state) {
+	switch ((int) $state) {
+		case 1:  return '<span class="text-success" data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_PUBLISHED").'"><span class="icon-publish" aria-hidden="true"></span></span>';
+		case 2:  return '<span class="text-muted"   data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_ARCHIVED" ).'"><span class="icon-archive" aria-hidden="true"></span></span>';
+		case 3:  return '<span class="text-danger"  data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_REFUSED_STATE").'"><span class="icon-cancel" aria-hidden="true"></span></span>';
+		default: return '<span class="text-warning" data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_TO_BE_CHECKED").'"><span class="icon-clock" aria-hidden="true"></span></span>';
+	}
+};
+$badgeV1 = $stateBadge($this->meta1->state);
+$badgeV2 = $stateBadge($this->meta2->state);
 
 // Mode validation : version A active (state=1) + version B à valider (state=0)
 $toValidate = ($this->meta1->state == 1) && ($this->meta2->state == 0);
@@ -161,6 +161,10 @@ body{font-size:.875rem}
         <tr class="<?php echo $row['changed'] ? 'row-changed' : ''; ?>">
           <td class="col-label fw-semibold small text-muted">
             <?php echo $this->escape($row['label']); ?>
+            <?php if (!empty($row['conflict'])): ?>
+              <span class="icon-warning text-danger ms-1" data-bs-toggle="tooltip"
+                    title="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE_CONFLICT'); ?>"></span>
+            <?php endif; ?>
             <div style="font-size:.7rem;font-weight:400">
               <?php echo Text::_('COM_COLLECTOR_' . strtoupper($this->escape($row['type']))); ?>
             </div>

@@ -15,7 +15,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Model\BaseDatabaseModel;
 use Joomla\Registry\Registry;
 use Steevo\Component\Collector\Administrator\Classes\CollectorField;
-use Steevo\Component\Collector\Administrator\Table\CollectorItemsHistoryTable;
+use Steevo\Component\Collector\Administrator\Table\CollectorItemsTable;
 
 /**
  * Modèle de comparaison de deux versions d'un item.
@@ -122,7 +122,18 @@ class VersionscompareModel extends BaseDatabaseModel
 		$db->setQuery($rawQuery);
 		$rawRows = $db->loadObjectList('id');
 
-		// ── 5. Construction du tableau de comparaison ─────────────────────────
+		// ── 5. Version en attente comparée à la version en cours : rapportée sur celle-ci.
+		//    Les champs que son auteur n'a pas touchés, modifiés depuis sa saisie, ne sont pas
+		//    proposés (ce serait un retour en arrière) ; un champ modifié des deux côtés est signalé.
+		$rebase = ['rebased' => [], 'conflicts' => []];
+
+		if ((int) $rows[$v1]->state === 1 && (int) $rows[$v2]->state === 0) {
+			$table             = new CollectorItemsTable($db);
+			$table->collection = $collection;
+			$rebase            = $table->rebasePendingVersion($v2);
+		}
+
+		// ── 6. Construction du tableau de comparaison ─────────────────────────
 		$comparison = [];
 
 		foreach ($fieldInstances as $fieldInstance) {
@@ -130,18 +141,25 @@ class VersionscompareModel extends BaseDatabaseModel
 			$type = $fieldInstance->getFieldType();
 			$val1 = $rows[$v1]->$col ?? '';
 			$val2 = $rows[$v2]->$col ?? '';
+			$raw1 = isset($rawRows[$v1]) ? (string) ($rawRows[$v1]->$col ?? '') : '';
+			$raw2 = isset($rawRows[$v2]) ? (string) ($rawRows[$v2]->$col ?? '') : '';
+
+			if (in_array($col, $rebase['rebased'], true)) {
+				$val2 = $val1;
+				$raw2 = $raw1;
+			}
 
 			$comparison[] = [
-				'label'   => $fieldInstance->getFieldName(),
-				'type'    => $type,
-				'column'  => $col,
-				'field'   => $fieldInstance,
-				'v1'      => $val1,
-				'v2'      => $val2,
-				'v1_raw'  => isset($rawRows[$v1]) ? (string) ($rawRows[$v1]->$col ?? '') : '',
-				'v2_raw'  => isset($rawRows[$v2]) ? (string) ($rawRows[$v2]->$col ?? '') : '',
-				'changed' => $fieldInstance->normalizeForComparison((string)($rawRows[$v1]->$col ?? ''))
-					!== $fieldInstance->normalizeForComparison((string)($rawRows[$v2]->$col ?? '')),
+				'label'    => $fieldInstance->getFieldName(),
+				'type'     => $type,
+				'column'   => $col,
+				'field'    => $fieldInstance,
+				'v1'       => $val1,
+				'v2'       => $val2,
+				'v1_raw'   => $raw1,
+				'v2_raw'   => $raw2,
+				'changed'  => $fieldInstance->normalizeForComparison($raw1) !== $fieldInstance->normalizeForComparison($raw2),
+				'conflict' => in_array($col, $rebase['conflicts'], true),
 			];
 		}
 
@@ -160,20 +178,13 @@ class VersionscompareModel extends BaseDatabaseModel
 	// ── Validation ────────────────────────────────────────────────────────────
 
 	/**
-	 * Fusionne les valeurs choisies dans la version à valider (v2) et l'active.
-	 * Si aucune modification n'est acceptée ($acceptedCount === 0), archive
-	 * simplement v2 sans la modifier ni l'activer.
+	 * Valide la version en attente (v2) avec les valeurs choisies champ par champ, ou la refuse.
 	 *
-	 * Deux chemins :
-	 *
-	 * A) acceptedCount > 0 (au moins un "Oui") :
-	 *    - Charge v2 depuis l'historique
-	 *    - Applique les valeurs choisies (v2_raw pour les "Oui", v1_raw pour les "Non")
-	 *    - Appelle store() → archive toutes les versions de l'item, active v2
-	 *
-	 * B) acceptedCount === 0 (aucun "Oui") :
-	 *    - Archive v2 directement (state=2) sans toucher ses données ni activer quoi que ce soit
-	 *    - v1 reste active (state=1)
+	 * - au moins une modification acceptée (« Oui ») : les valeurs choisies (v2_raw pour les « Oui »,
+	 *   v1_raw pour les « Non ») sont enregistrées dans v2, qui devient la version en cours
+	 *   (CollectorItemsTable::validatePendingVersion : ordre des versions en attente, titre et alias
+	 *   recalculés, proposition publiée) ;
+	 * - aucune modification acceptée : v2 est refusée, avec la note saisie (CollectorItemsTable::refuseVersion).
 	 *
 	 * @param  int    $collection
 	 * @param  int    $item
@@ -200,127 +211,18 @@ class VersionscompareModel extends BaseDatabaseModel
 		$validColumns = $db->loadColumn();
 		$safeValues   = array_intersect_key($fieldValues, array_flip($validColumns));
 
-		// ── Cas B : aucune modification acceptée → archive v2 directement ────
-		if ($acceptedCount === 0) {
-			$query = $db->getQuery(true)
-				->update($db->quoteName('#__collector_items_history_' . $collection))
-				->set($db->quoteName('state') . ' = 2')
-				->set($db->quoteName('refuse_note') . ' = ' . $db->quote($fieldValues['refuse_note'] ?? ''))
-				->where($db->quoteName('id') . ' = ' . $v2);
+		$table             = new CollectorItemsTable($db);
+		$table->collection = $collection;
+		$table->load($item);
 
-			$db->setQuery($query);
+		$result = ($acceptedCount === 0)
+			? $table->refuseVersion($v2, (string) ($fieldValues['refuse_note'] ?? ''))
+			: $table->validatePendingVersion($v2, $safeValues);
 
-			if (!$db->execute()) {
-				$this->setError($db->getErrorMsg());
-				return false;
-			}
-
-			// Si save_history=0, supprimer toutes les versions archivées ← ajouter
-			$params = ComponentHelper::getParams('com_collector');
-			if (!$params->get('save_history', 1)) {
-				$db->setQuery(
-					$db->getQuery(true)
-					   ->delete($db->quoteName('#__collector_items_history_' . $collection))
-					   ->where($db->quoteName('item')  . ' = ' . $item)
-					   ->where($db->quoteName('state') . ' = 2')
-				)->execute();
-			}
-			
-			$this->decrementToValidate($db, $item);
-			return true;
+		if (!$result) {
+			$this->setError($table->getError());
 		}
 
-		// ── Cas A : au moins une modification acceptée → fusion + activation ──
-
-		// Sauvegarder la date originale de v2 avant le store
-		$db->setQuery(
-			$db->getQuery(true)
-			   ->select('modified, modified_by')
-			   ->from($db->quoteName('#__collector_items_history_' . $collection))
-			   ->where($db->quoteName('id') . ' = ' . $v2)
-		);
-		$originalMeta = $db->loadObject();
-
-		// Charger v2 depuis la table d'historique
-		$historyTable = new CollectorItemsHistoryTable($db, $collection);
-		$historyTable->initVersion($collection);
-		$historyTable->load($v2);
-
-		if (!$historyTable->id) {
-			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_VERSION_NOT_FOUND'));
-			return false;
-		}
-
-		// Appliquer les valeurs choisies :
-		//   - "Non" : safeValues[$col] = v1_raw → écrase la valeur de v2 par celle de v1
-		//   - "Oui" : safeValues[$col] = v2_raw → identique à ce qui est déjà dans v2
-		foreach ($safeValues as $col => $val) {
-			$historyTable->$col = $val;
-		}
-
-		// CRITIQUE : state doit être 1 avant store() pour que
-		// CollectorItemsHistoryTable::store() archive v1 (state=1→2)
-		// et active v2 (state=0→1). Sans cette ligne, v2 reste state=0
-		// après store() et v1 reste active : la validation ne s'applique pas.
-		$historyTable->state = 1;
-		
-		// store() : UPDATE state=2 WHERE item=X (archive tout)
-		//           puis SET state=1 sur ce record (active v2)
-		if (!$historyTable->store()) {
-			$this->setError($historyTable->getError());
-			return false;
-		}
-
-		// Restaurer la date et l'auteur originaux de v2
-		if ($originalMeta) {
-			$db->setQuery(
-				$db->getQuery(true)
-				   ->update($db->quoteName('#__collector_items_history_' . $collection))
-				   ->set($db->quoteName('modified')    . ' = ' . $db->quote($originalMeta->modified))
-				   ->set($db->quoteName('modified_by') . ' = ' . (int) $originalMeta->modified_by)
-				   ->where($db->quoteName('id')        . ' = ' . $v2)
-			)->execute();
-		}
-		// Restaurer modified dans #__collector_items
-		if ($originalMeta) {
-			$db->setQuery(
-				$db->getQuery(true)
-				   ->update($db->quoteName('#__collector_items'))
-				   ->set($db->quoteName('modified')    . ' = ' . $db->quote($originalMeta->modified))
-				   ->set($db->quoteName('modified_by') . ' = ' . (int) $originalMeta->modified_by)
-				   ->where($db->quoteName('id')        . ' = ' . $item)
-			)->execute();
-		}
-
-		// Si save_history=0, supprimer toutes les versions archivées
-		$params = ComponentHelper::getParams('com_collector');
-		if (!$params->get('save_history', 1)) {
-			$db->setQuery(
-				$db->getQuery(true)
-				   ->delete($db->quoteName('#__collector_items_history_' . $collection))
-				   ->where($db->quoteName('item')  . ' = ' . $item)
-				   ->where($db->quoteName('state') . ' = 2')
-			)->execute();
-		}
-
-		$this->decrementToValidate($db, $item);
-		return true;
-	}
-
-	// ── Utilitaires ───────────────────────────────────────────────────────────
-
-	/**
-	 * Décrémente i.to_validate de 1, avec plancher à 0.
-	 * Appelé après chaque validation (acceptée ou archivée).
-	 */
-	private function decrementToValidate(\Joomla\Database\DatabaseInterface $db, int $item): void
-	{
-		$query = $db->getQuery(true)
-			->update($db->quoteName('#__collector_items'))
-			->set($db->quoteName('to_validate') . ' = GREATEST(0, ' . $db->quoteName('to_validate') . ' - 1)')
-			->where($db->quoteName('id') . ' = ' . $item);
- 
-		$db->setQuery($query);
-		$db->execute();
+		return $result;
 	}
 }

@@ -240,6 +240,9 @@ window.addEventListener('message', function (event) {
 								case 2: // Archivée
 									echo '<span class="text-muted" data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_ARCHIVED").'"><span class="icon-archive" aria-hidden="true"></span></span>';
 									break;
+								case 3: // Refusée
+									echo '<span class="text-danger" data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_REFUSED_STATE").'"><span class="icon-cancel" aria-hidden="true"></span></span>';
+									break;
 								case 0: // À valider
 								default:
 									echo '<span class="text-warning" data-bs-toggle="tooltip" title="'.Text::_("COM_COLLECTOR_ITEM_HISTORY_TO_BE_CHECKED").'"><span class="icon-clock" aria-hidden="true"></span></span>';
@@ -252,7 +255,7 @@ window.addEventListener('message', function (event) {
 							<a href="#" class="js-link-open-window save-date" data-url="<?php echo Route::_('index.php?option=com_collector&view=versionpreview&tmpl=component&collection=' . (int) $this->collection . '&item=' . (int) $this->item . '&v_id=' . (int) $item->id); ?>">
                                 <?php echo HTMLHelper::_('date', $item->modified, Text::_('DATE_FORMAT_LC6')); ?>
                             </a>
-							<?php if ($item->state === 2 && !empty($item->refuse_note)): ?>
+							<?php if (in_array((int) $item->state, [2, 3], true) && !empty($item->refuse_note)): ?>
 							<div class="small text-muted fst-italic mt-1">
 								<span class="icon-info-circle me-1"></span>
 								<?php echo htmlspecialchars($item->refuse_note, ENT_QUOTES); ?>
@@ -319,6 +322,16 @@ window.addEventListener('message', function (event) {
 							   data-bs-toggle="tooltip" title="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_RESTORE_THIS'); ?>">
 								<span class="icon-undo"></span>
 							</a>
+
+						<?php elseif ((int) $item->state === 3): // Refusée : comparer seulement, elle ne se rétablit pas ?>
+
+							<?php if ($this->activeVersionId): ?>
+							<a href="#" onclick="openCompareVersions(<?php echo $this->activeVersionId; ?>, <?php echo $item->id; ?>); return false;"
+							   class="btn btn-sm btn-outline-secondary me-1"
+							   data-bs-toggle="tooltip" title="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE_WITH_ACTIVE'); ?>">
+								<span class="icon-eye"></span>
+							</a>
+							<?php endif; ?>
 
 						<?php endif; ?>
 						</td>

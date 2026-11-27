@@ -60,6 +60,9 @@ HTMLHelper::_('bootstrap.modal');
 		  <?php elseif ((int)($this->meta2->state ?? -1) === 2): ?>
 			<span class="icon-archive me-1"></span>
 			<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_ARCHIVED'); ?>
+		  <?php elseif ((int)($this->meta2->state ?? -1) === 3): ?>
+			<span class="icon-cancel me-1"></span>
+			<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSED_STATE'); ?>
 		  <?php else: ?>
 			<span class="icon-eye me-1"></span>
 			<?php echo Text::_('COM_COLLECTOR_VERSION_OTHER'); ?>
@@ -91,6 +94,10 @@ HTMLHelper::_('bootstrap.modal');
       <tr class="<?php echo $changed ? 'table-danger bg-opacity-10' : ''; ?>">
         <td class="small fw-semibold">
           <?php echo htmlspecialchars($row['label'], ENT_QUOTES); ?>
+          <?php if (!empty($row['conflict'])): ?>
+            <span class="icon-warning ms-1" title="<?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE_CONFLICT'); ?>"></span>
+            <span class="visually-hidden"><?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE_CONFLICT'); ?></span>
+          <?php endif; ?>
         </td>
         <td class="small">
           <?php echo $this->renderFieldValue($row, 'v1'); ?>

@@ -1086,6 +1086,12 @@ td.collector-userlist-extra {
 	border: 1px solid var(--t4-border-color, #dee2e6);
 }
 
+.badge.collector-status-refused {
+	background-color: transparent;
+	color: var(--mainnav-link-active-color, #c62144);
+	border: 1px solid var(--mainnav-link-active-color, #c62144);
+}
+
 .collector-version-active > td {
 	font-weight: 600;
 }

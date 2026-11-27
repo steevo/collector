@@ -190,7 +190,7 @@ class ItemversionsModel extends ListModel
 				if ( !$row )
 				{
 					/**
-					 * tag à defaut d'une collection
+					 * tag Ã  defaut d'une collection
 					 */
 					$query = 'UPDATE `#__collector` SET home = 1 LIMIT 1;';
 					$this->_db->setQuery( $query );
@@ -258,173 +258,49 @@ class ItemversionsModel extends ListModel
 	}
 	
 	/**
-	 * Valide une version en attente (state=0 ? state=1).
-	 * Contrainte : doit être la plus ancienne version en attente.
+	 * Valide une version en attente (voir CollectorItemsTable::validatePendingVersion)
 	 */
 	public function validate(int $itemId, int $versionId): bool
 	{
-		$collection = $this->getCollection();
-		$db         = $this->getDbo();
-
-		// Vérifier que la version est bien en attente
-		$db->setQuery(
-			$db->getQuery(true)
-			   ->select('state')
-			   ->from($db->quoteName('#__collector_items_history_' . $collection))
-			   ->where($db->quoteName('id') . ' = ' . $versionId)
-		);
-		$state = (int) $db->loadResult();
-
-		if ($state !== 0) {
-			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_NOT_PENDING'));
-			return false;
-		}
-
-		// Vérifier que c'est la plus ancienne version en attente
-		$db->setQuery(
-			$db->getQuery(true)
-			   ->select('MIN(id)')
-			   ->from($db->quoteName('#__collector_items_history_' . $collection))
-			   ->where($db->quoteName('item')  . ' = ' . $itemId)
-			   ->where($db->quoteName('state') . ' = 0')
-		);
-		$oldestPending = (int) $db->loadResult();
-
-		if ($oldestPending !== $versionId) {
-			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_VALIDATE_ORDER_ERROR'));
-			return false;
-		}
-
-		// Charger la table et restaurer la version
 		$row             = $this->getTable('CollectorItems');
-		$row->collection = $collection;
+		$row->collection = $this->getCollection();
 		$row->load($itemId);
-		$row->initVersion($collection);
-		$row->loadVersion($collection, $itemId, $versionId);
 
-		// Récupérer l'ID de la version active AVANT activation
-		$previousActiveId = $this->getActiveVersionId();
-
-		if (!$row->activateVersion($versionId)) {
+		if (!$row->validatePendingVersion($versionId)) {
 			$this->setError($row->getError());
 			return false;
 		}
 
-		// Objet sans version validée (proposition en attente) : la validation le publie
-		if ($previousActiveId === 0) {
-			$db->setQuery(
-				$db->getQuery(true)
-				   ->update($db->quoteName('#__collector_items'))
-				   ->set($db->quoteName('state') . ' = 1')
-				   ->where($db->quoteName('id') . ' = ' . $itemId)
-				   ->where($db->quoteName('state') . ' = 0')
-			)->execute();
-		}
-
-		// Si save_history=0, supprimer l'ancienne version active
-		$params = ComponentHelper::getParams('com_collector');
-		if (!$params->get('save_history', 1)) {
-			$db->setQuery(
-				$db->getQuery(true)
-				   ->delete($db->quoteName('#__collector_items_history_' . $collection))
-				   ->where($db->quoteName('item')  . ' = ' . $itemId)
-				   ->where($db->quoteName('state') . ' = 2')
-			)->execute();
-		}
-
-		// Décrémenter to_validate
-		$db->setQuery(
-			$db->getQuery(true)
-			   ->update($db->quoteName('#__collector_items'))
-			   ->set($db->quoteName('to_validate') . ' = GREATEST(0, ' . $db->quoteName('to_validate') . ' - 1)')
-			   ->where($db->quoteName('id') . ' = ' . $itemId)
-		)->execute();
-
 		return true;
 	}
 
 	/**
-	 * Refuse une version en attente (state=0 ? state=2).
+	 * Refuse une version en attente (voir CollectorItemsTable::refuseVersion)
 	 */
 	public function refuse(int $itemId, int $versionId, string $note = ''): bool
 	{
-		$collection = $this->getCollection();
-		$db         = $this->getDbo();
+		$row             = $this->getTable('CollectorItems');
+		$row->collection = $this->getCollection();
+		$row->load($itemId);
 
-		// Vérifier que la version est bien en attente
-		$db->setQuery(
-			$db->getQuery(true)
-			   ->select('state')
-			   ->from($db->quoteName('#__collector_items_history_' . $collection))
-			   ->where($db->quoteName('id') . ' = ' . $versionId)
-		);
-		$state = (int) $db->loadResult();
-
-		if ($state !== 0) {
-			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_NOT_PENDING'));
+		if (!$row->refuseVersion($versionId, $note)) {
+			$this->setError($row->getError());
 			return false;
 		}
-
-		// Archiver la version refusée
-		$db->setQuery(
-			$db->getQuery(true)
-			   ->update($db->quoteName('#__collector_items_history_' . $collection))
-			   ->set($db->quoteName('state')       . ' = 2')
-			   ->set($db->quoteName('refuse_note') . ' = ' . $db->quote($note))
-			   ->where($db->quoteName('id')        . ' = ' . $versionId)
-		)->execute();
-
-		// Si save_history=0, supprimer toutes les versions archivées ? ajouter
-		$params = ComponentHelper::getParams('com_collector');
-		if (!$params->get('save_history', 1)) {
-			$db->setQuery(
-				$db->getQuery(true)
-				   ->delete($db->quoteName('#__collector_items_history_' . $collection))
-				   ->where($db->quoteName('item')  . ' = ' . $itemId)
-				   ->where($db->quoteName('state') . ' = 2')
-			)->execute();
-		}
-		
-		// Décrémenter to_validate
-		$db->setQuery(
-			$db->getQuery(true)
-			   ->update($db->quoteName('#__collector_items'))
-			   ->set($db->quoteName('to_validate') . ' = GREATEST(0, ' . $db->quoteName('to_validate') . ' - 1)')
-			   ->where($db->quoteName('id') . ' = ' . $itemId)
-		)->execute();
 
 		return true;
 	}
 
 	/**
-	 * Method to restore item version
-	 *
-	 * @access	public
-	 * @return	string	Message to display
+	 * RÃ©tablit une ancienne version (voir CollectorItemsTable::restoreVersion)
 	 */
 	function restore($item, $cid)
 	{
-		$versionId = $cid[0];
-		$row       = $this->getTable('CollectorItems');
+		$row             = $this->getTable('CollectorItems');
 		$row->collection = $this->getCollection();
-
 		$row->load($item);
-		$row->initVersion($row->collection);
-		$row->loadVersion($row->collection, $item, $versionId);
 
-		// Bloquer la restauration des versions en attente — utiliser validate()
-		if ($row->state == 0) {
-			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_TO_BE_CHECKED_UNRESTORED'));
-			return false;
-		}
-
-		// Bloquer la restauration de la version active
-		if ($row->state == 1) {
-			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_ALREADY_ACTIVE'));
-			return false;
-		}
-
-		if (!$row->activateVersion($versionId)) {
+		if (!$row->restoreVersion((int) $cid[0])) {
 			$this->setError($row->getError());
 			return false;
 		}

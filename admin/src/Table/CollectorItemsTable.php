@@ -17,6 +17,7 @@ defined('_JEXEC') or die;
 
 use Joomla\CMS\Access\Rules;
 use Joomla\CMS\Application\ApplicationHelper;
+use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Filter\InputFilter;
 use Joomla\CMS\Language\Text;
@@ -178,16 +179,22 @@ class CollectorItemsTable extends Table
 		
 		foreach ( $properties as $key => $value )
 		{
-			if ( ($key!='id') )
-			{
-				$this->$key = $value;
-			}
-			else
+			if ($key == 'id')
 			{
 				$this->historyId = $value;
 			}
+			elseif ($key == 'state')
+			{
+				// L'objet garde son état de publication : celui de la version (en cours, archivée…) ne le
+				// remplace pas, sinon l'enregistrement republie un objet dépublié ou à la corbeille
+				continue;
+			}
+			else
+			{
+				$this->$key = $value;
+			}
 		}
-		
+
 		$this->modification = '';
 		
 		unset($this->history);
@@ -314,10 +321,13 @@ class CollectorItemsTable extends Table
 		
 		// recuperation des donnees de la version
 		$this->history->loadVersion( $this->collection, $this->id, false, $version );
-		
+
+		// Version sur laquelle la nouvelle a été saisie (la version en cours, sauf version donnée)
+		$baseVersion = (int) $this->history->id;
+
 		// Convert to the JObject before adding other data.
 		$properties = $this->history->getProperties(1);
-		
+
 		foreach ( $properties as $key => $value )
 		{
 			if (($key!='id')&&($key!='state')&&($key!='collection')&&($key!='typeAlias'))
@@ -326,9 +336,16 @@ class CollectorItemsTable extends Table
 				unset($this->$key);
 			}
 		}
+
+		// Version en attente d'un objet existant : sa version de départ, pour ne reporter à la validation que
+		// les champs réellement modifiés (voir rebasePendingVersion). Colonne absente avant la mise à jour de Collector.
+		if (property_exists($this->history, 'base_version'))
+		{
+			$this->history->base_version = (!$auto_validate && $this->id && $baseVersion) ? $baseVersion : null;
+		}
 		if ($this->id) {
 			if ($auto_validate) {
-				// Version active imm�diatement ? mettre � jour modified
+				// Version active immédiatement ? mettre à jour modified
 				$this->modified    = $date->toSql();
 				$this->modified_by = $user->get('id');
 			}
@@ -352,12 +369,12 @@ class CollectorItemsTable extends Table
 		
 		if (!$this->history->store())
 		{
-			// Version refus�e : l'erreur remonte, et un nouvel objet ne reste pas sans version
+			// Version refusée : l'erreur remonte, et un nouvel objet ne reste pas sans version
 			$error = $this->history->getError() ?: Text::_('JLIB_APPLICATION_ERROR_SAVE_FAILED');
 
 			if ($isNewItem)
 			{
-				// objet et asset cr��s juste avant
+				// objet et asset créés juste avant
 				$this->delete((int) $this->id);
 			}
 
@@ -388,12 +405,347 @@ class CollectorItemsTable extends Table
 	 */
 	function deleteVersion($id)
 	{
-		$query = 'DELETE FROM `#__collector_items_history_'.$this->collection.'` WHERE `id` = "' . $id . '";';
-		
-		$this->_db->setQuery( $query );
-		$this->_db->execute();
-		
+		$db      = $this->_db;
+		$history = $db->quoteName('#__collector_items_history_' . (int) $this->collection);
+
+		$version = $db->setQuery('SELECT item, state FROM ' . $history . ' WHERE id = ' . (int) $id)->loadObject();
+
+		if (!$version)
+		{
+			return true;
+		}
+
+		// La version en cours ne se supprime pas : l'objet n'en aurait plus et disparaîtrait du site
+		if ((int) $version->state === 1)
+		{
+			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_DELETE_ACTIVE'));
+
+			return false;
+		}
+
+		$db->setQuery('DELETE FROM ' . $history . ' WHERE id = ' . (int) $id)->execute();
+
+		// Version en attente supprimée : une de moins à valider
+		if ((int) $version->state === 0)
+		{
+			$this->decrementToValidate((int) $version->item);
+		}
+
 		return true;
+	}
+
+	/**
+	 * Une version de l'objet (toutes ses colonnes), ou null
+	 */
+	protected function loadVersionRow(int $versionId): ?object
+	{
+		$db = $this->_db;
+
+		return $db->setQuery(
+			'SELECT * FROM ' . $db->quoteName('#__collector_items_history_' . (int) $this->collection) . ' WHERE id = ' . $versionId
+		)->loadObject() ?: null;
+	}
+
+	/**
+	 * Une version de moins à valider pour un objet
+	 */
+	protected function decrementToValidate(int $itemId): void
+	{
+		$db = $this->_db;
+
+		$db->setQuery(
+			$db->getQuery(true)
+				->update($db->quoteName('#__collector_items'))
+				->set($db->quoteName('to_validate') . ' = GREATEST(0, ' . $db->quoteName('to_validate') . ' - 1)')
+				->where($db->quoteName('id') . ' = ' . $itemId)
+		)->execute();
+	}
+
+	/**
+	 * Colonnes de données d'une version : champs de la collection (avec leur CollectorField, qui sait
+	 * comparer ses valeurs) et métadonnées (null)
+	 *
+	 * @return  array  [colonne => CollectorField|null]
+	 */
+	public function getVersionDataColumns(): array
+	{
+		$db    = $this->_db;
+		$query = $db->getQuery(true)
+			->select('f.id, f.field, f.tablecolumn, f.attribs, f.filter, t.type AS type')
+			->from($db->quoteName('#__collector_fields', 'f'))
+			->join('LEFT', $db->quoteName('#__collector_fields_type', 't') . ' ON t.id = f.type')
+			->where('f.collection = ' . (int) $this->collection)
+			->order('f.ordering');
+
+		$columns = [];
+
+		foreach ($db->setQuery($query)->loadObjectList() as $def)
+		{
+			$registry = new Registry;
+			$registry->loadString($def->attribs ?? '');
+			$def->attribs = $registry->toArray();
+
+			$columns[$def->tablecolumn] = CollectorField::getInstance((int) $this->collection, $def);
+		}
+
+		foreach (['metakey', 'metadesc', 'metadata'] as $column)
+		{
+			$columns[$column] = null;
+		}
+
+		return $columns;
+	}
+
+	/**
+	 * Version en attente rapportée sur la version en cours.
+	 *
+	 * Une version en attente est une copie complète de l'objet, prise sur sa version de départ (base_version).
+	 * Si l'objet a changé depuis (autre validation, administration, import), les champs que son auteur n'a
+	 * pas touchés reprennent la valeur en cours au lieu de revenir en arrière ; ceux qu'il a changés gardent
+	 * sa valeur. Conflit : champ changé par l'auteur et aussi, autrement, depuis sa version de départ.
+	 * Sans version de départ connue (proposition d'un nouvel objet, version plus ancienne) : rien n'est rapporté.
+	 *
+	 * @return  array  ['data' => [colonne => valeur brute], 'rebased' => colonnes reprises, 'conflicts' => colonnes en conflit]
+	 */
+	public function rebasePendingVersion(int $versionId): array
+	{
+		$result  = ['data' => [], 'rebased' => [], 'conflicts' => []];
+		$pending = $this->loadVersionRow($versionId);
+
+		if (!$pending)
+		{
+			return $result;
+		}
+
+		$columns = array_filter($this->getVersionDataColumns(), fn ($column) => property_exists($pending, $column), ARRAY_FILTER_USE_KEY);
+
+		foreach ($columns as $column => $field)
+		{
+			$result['data'][$column] = $pending->$column;
+		}
+
+		$baseId = (int) ($pending->base_version ?? 0);
+
+		if (!$baseId)
+		{
+			return $result;
+		}
+
+		$db     = $this->_db;
+		$active = $db->setQuery(
+			'SELECT * FROM ' . $db->quoteName('#__collector_items_history_' . (int) $this->collection)
+			. ' WHERE item = ' . (int) $pending->item . ' AND state = 1'
+		)->loadObject();
+		$base   = $this->loadVersionRow($baseId);
+
+		if (!$active || !$base || (int) $active->id === $baseId)
+		{
+			return $result;
+		}
+
+		foreach ($columns as $column => $field)
+		{
+			$normalize = fn ($value) => $field ? $field->normalizeForComparison((string) $value) : trim((string) $value);
+
+			$p = $normalize($pending->$column);
+			$b = $normalize($base->$column ?? '');
+			$a = $normalize($active->$column ?? '');
+
+			if ($p === $b)
+			{
+				// Champ non touché par l'auteur : valeur en cours
+				if ($a !== $b)
+				{
+					$result['data'][$column] = $active->$column;
+					$result['rebased'][]     = $column;
+				}
+			}
+			elseif ($a !== $b && $a !== $p)
+			{
+				$result['conflicts'][] = $column;
+			}
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Valide une version en attente : elle devient la version en cours.
+	 *
+	 * - seulement la plus ancienne version en attente de l'objet ;
+	 * - rapportée sur la version en cours (voir rebasePendingVersion) ; sans $values, un conflit bloque la
+	 *   validation (à faire depuis la comparaison, champ par champ) ;
+	 * - $values : valeurs choisies champ par champ dans la comparaison [colonne => valeur brute] ;
+	 * - titre et alias recalculés, date et auteur de la version reportés sur l'objet ;
+	 * - objet sans version validée (proposition) : publié s'il était dépublié.
+	 */
+	public function validatePendingVersion(int $versionId, ?array $values = null): bool
+	{
+		$db      = $this->_db;
+		$history = $db->quoteName('#__collector_items_history_' . (int) $this->collection);
+		$version = $this->loadVersionRow($versionId);
+
+		if (!$version || (int) $version->state !== 0)
+		{
+			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_NOT_PENDING'));
+
+			return false;
+		}
+
+		$itemId = (int) $version->item;
+
+		if ((int) $this->id !== $itemId)
+		{
+			$this->load($itemId);
+		}
+
+		$oldestPending = (int) $db->setQuery('SELECT MIN(id) FROM ' . $history . ' WHERE item = ' . $itemId . ' AND state = 0')->loadResult();
+
+		if ($oldestPending !== $versionId)
+		{
+			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_VALIDATE_ORDER_ERROR'));
+
+			return false;
+		}
+
+		$firstVersion = !(int) $db->setQuery('SELECT COUNT(*) FROM ' . $history . ' WHERE item = ' . $itemId . ' AND state = 1')->loadResult();
+
+		$rebase = $this->rebasePendingVersion($versionId);
+
+		if ($values === null && $rebase['conflicts'])
+		{
+			$columns = $this->getVersionDataColumns();
+			$names   = array_map(fn ($column) => $columns[$column] ? $columns[$column]->getFieldName() : $column, $rebase['conflicts']);
+			$this->setError(Text::sprintf('COM_COLLECTOR_ITEM_HISTORY_VALIDATE_CONFLICT', implode(', ', $names)));
+
+			return false;
+		}
+
+		$data = $rebase['data'];
+
+		foreach ((array) $values as $column => $value)
+		{
+			if (array_key_exists($column, $data))
+			{
+				$data[$column] = $value;
+			}
+		}
+
+		// Valeurs retenues enregistrées dans la version, qui devient la version en cours
+		if ($data)
+		{
+			$query = $db->getQuery(true)
+				->update($history)
+				->where('id = ' . $versionId);
+
+			foreach ($data as $column => $value)
+			{
+				$query->set($db->quoteName($column) . ' = ' . ($value === null ? 'NULL' : $db->quote((string) $value)));
+			}
+
+			$db->setQuery($query)->execute();
+		}
+
+		if (!$this->activateVersion($versionId))
+		{
+			return false;
+		}
+
+		$db->setQuery(
+			$db->getQuery(true)
+				->update($db->quoteName('#__collector_items'))
+				->set($db->quoteName('modified_by') . ' = ' . (int) $version->modified_by)
+				->set($db->quoteName('to_validate') . ' = GREATEST(0, ' . $db->quoteName('to_validate') . ' - 1)')
+				->where($db->quoteName('id') . ' = ' . $itemId)
+		)->execute();
+
+		// Objet sans version validée (proposition) : la validation le publie
+		if ($firstVersion)
+		{
+			$db->setQuery(
+				$db->getQuery(true)
+					->update($db->quoteName('#__collector_items'))
+					->set($db->quoteName('state') . ' = 1')
+					->where($db->quoteName('id') . ' = ' . $itemId)
+					->where($db->quoteName('state') . ' = 0')
+			)->execute();
+		}
+
+		// Sans historique : l'ancienne version en cours n'est pas gardée
+		if (!ComponentHelper::getParams('com_collector')->get('save_history', 1))
+		{
+			$db->setQuery('DELETE FROM ' . $history . ' WHERE item = ' . $itemId . ' AND state = 2')->execute();
+		}
+
+		return true;
+	}
+
+	/**
+	 * Refuse une version en attente : état « refusée » (3) avec la note de refus ; elle ne peut pas être rétablie
+	 */
+	public function refuseVersion(int $versionId, string $note = ''): bool
+	{
+		$db      = $this->_db;
+		$version = $this->loadVersionRow($versionId);
+
+		if (!$version || (int) $version->state !== 0)
+		{
+			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_NOT_PENDING'));
+
+			return false;
+		}
+
+		$db->setQuery(
+			$db->getQuery(true)
+				->update($db->quoteName('#__collector_items_history_' . (int) $this->collection))
+				->set($db->quoteName('state') . ' = 3')
+				->set($db->quoteName('refuse_note') . ' = ' . $db->quote($note))
+				->where('id = ' . $versionId)
+		)->execute();
+
+		$this->decrementToValidate((int) $version->item);
+
+		return true;
+	}
+
+	/**
+	 * Rétablit une ancienne version (archivée) : elle redevient la version en cours
+	 */
+	public function restoreVersion(int $versionId): bool
+	{
+		$version = $this->loadVersionRow($versionId);
+
+		if (!$version)
+		{
+			$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_VERSION_NOT_FOUND'));
+
+			return false;
+		}
+
+		switch ((int) $version->state)
+		{
+			case 1:
+				$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_ALREADY_ACTIVE'));
+
+				return false;
+
+			case 0:
+				$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_TO_BE_CHECKED_UNRESTORED'));
+
+				return false;
+
+			case 3:
+				$this->setError(Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSED_UNRESTORED'));
+
+				return false;
+		}
+
+		if ((int) $this->id !== (int) $version->item)
+		{
+			$this->load((int) $version->item);
+		}
+
+		return $this->activateVersion($versionId);
 	}
 	
 	/**
@@ -406,26 +758,26 @@ class CollectorItemsTable extends Table
 	{
 		$db = $this->_db;
 
-		// D�sactiver la version courante
+		// Désactiver la version courante
 		$db->setQuery(
 			'UPDATE ' . $db->quoteName('#__collector_items_history_' . $this->collection)
 			. ' SET state = 2 WHERE item = ' . (int) $this->id . ' AND state = 1'
 		)->execute();
 
-		// Activer la version restaur�e
+		// Activer la version restaurée
 		$db->setQuery(
 			'UPDATE ' . $db->quoteName('#__collector_items_history_' . $this->collection)
 			. ' SET state = 1 WHERE id = ' . (int) $id
 		)->execute();
 
-		// Charger les donn�es de la version restaur�e (dont modified)
+		// Charger les données de la version restaurée (dont modified)
 		$this->loadVersion($this->collection, $this->id, $id);
 
 		// Recalculer fulltitle et alias
 		$this->check();
 
-		// Mettre � jour #__collector_items avec fulltitle, alias
-		// et modified = date de la version restaur�e (pas la date courante)
+		// Mettre à jour #__collector_items avec fulltitle, alias
+		// et modified = date de la version restaurée (pas la date courante)
 		$db->setQuery(
 			$db->getQuery(true)
 			   ->update($db->quoteName('#__collector_items'))
@@ -485,7 +837,7 @@ class CollectorItemsTable extends Table
 			if ( !$row )
 			{
 				/**
-				 * tag � defaut d'un champ
+				 * tag à defaut d'un champ
 				 */
 				$queryHome = 'UPDATE `#__collector_fields` SET home = 1  WHERE collection = '.$this->collection.' LIMIT 1;';
 				$db->setQuery( $queryHome );

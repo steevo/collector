@@ -184,6 +184,13 @@ class com_collectorInstallerScript
 				$db->setQuery('ALTER TABLE ' . $db->quoteName($table) . ' ADD COLUMN `refuse_note` text DEFAULT NULL AFTER `modification`');
 				$db->execute();
 			}
+
+			// Version de départ d'une version en attente (champs réellement modifiés, à la validation)
+			$db->setQuery('SHOW COLUMNS FROM ' . $db->quoteName($table) . ' LIKE ' . $db->quote('base_version'));
+			if (!$db->loadResult()) {
+				$db->setQuery('ALTER TABLE ' . $db->quoteName($table) . ' ADD COLUMN `base_version` int(11) DEFAULT NULL AFTER `refuse_note`');
+				$db->execute();
+			}
 			
 			// collection list
 			$query = "SELECT id FROM `#__collector_userslists` WHERE collection = '".$collection->id."' AND type = '2'";

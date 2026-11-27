@@ -92,6 +92,7 @@ $taskUrl = fn (string $task, int $versionId) => Route::_('index.php?option=com_c
         $isPending  = ((int) $version->state === 0);
         $isActive   = ((int) $version->state === 1);
         $isArchived = ((int) $version->state === 2);
+        $isRefused  = ((int) $version->state === 3);
         $isOldest   = ($version->id === $this->oldestPendingId);
         $compare    = $this->activeVersionId
             ? $iconButton('button', 'btn-outline-secondary', 'icon-eye', Text::_('COM_COLLECTOR_ITEM_HISTORY_COMPARE_WITH_ACTIVE'),
@@ -109,12 +110,16 @@ $taskUrl = fn (string $task, int $versionId) => Route::_('index.php?option=com_c
             <span class="badge collector-status collector-status-active">
               <span class="icon-check me-1" aria-hidden="true"></span><?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_ACTIVE'); ?>
             </span>
+          <?php elseif ($isRefused): ?>
+            <span class="badge collector-status collector-status-refused">
+              <span class="icon-cancel me-1" aria-hidden="true"></span><?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_REFUSED_STATE'); ?>
+            </span>
           <?php else: ?>
             <span class="badge collector-status collector-status-archived">
               <span class="icon-archive me-1" aria-hidden="true"></span><?php echo Text::_('COM_COLLECTOR_ITEM_HISTORY_ARCHIVED'); ?>
             </span>
           <?php endif; ?>
-          <?php if ($isArchived && !empty($version->refuse_note)): ?>
+          <?php if (($isArchived || $isRefused) && !empty($version->refuse_note)): ?>
             <span class="d-block small text-muted fst-italic mt-1">
               <span class="icon-info-circle me-1" aria-hidden="true"></span><?php echo $this->escape($version->refuse_note); ?>
             </span>
@@ -148,6 +153,8 @@ $taskUrl = fn (string $task, int $versionId) => Route::_('index.php?option=com_c
             <?php echo $compare; ?>
             <?php echo $iconButton('a', 'btn-outline-secondary', 'icon-undo', Text::_('COM_COLLECTOR_ITEM_HISTORY_RESTORE_THIS'),
                 'href="' . $taskUrl('restore', (int) $version->id) . '"'); ?>
+          <?php elseif ($isRefused): ?>
+            <?php echo $compare; ?>
           <?php endif; ?>
           </span>
         </td>
