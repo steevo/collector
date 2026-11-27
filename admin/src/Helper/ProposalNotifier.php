@@ -24,7 +24,7 @@ use Joomla\Database\DatabaseInterface;
 
 /**
  * Courriels des propositions :
- * - nouvelle proposition (ou proposition corrigée) : aux adresses de l'option « Adresses à prévenir » ;
+ * - nouvelle proposition (ou proposition corrigée) : aux utilisateurs de l'option « Membres à prévenir » ;
  * - proposition validée ou refusée : à son auteur (option « Prévenir l'auteur »), sauf s'il l'a traitée lui-même.
  *
  * Les messages sont préparés (proposalMessages, decisionMessages) puis envoyés (send) : un échec d'envoi
@@ -55,14 +55,25 @@ class ProposalNotifier
 	 */
 	public static function proposalMessages(int $collection, int $versionId): array
 	{
-		$params    = ComponentHelper::getParams('com_collector');
-		$addresses = array_values(array_unique(array_filter(
-			preg_split('/[\s,;]+/', (string) $params->get('notify_emails', '')) ?: [],
-			fn ($address) => MailHelper::isEmailAddress($address)
-		)));
 		$info = self::versionInfo($collection, $versionId);
 
-		if (!$addresses || !$info) {
+		if (!$info) {
+			return [];
+		}
+
+		// Utilisateurs choisis dans l'option « Membres à prévenir » : comptes actifs à l'adresse valide, sauf
+		// l'auteur de la proposition
+		$addresses = [];
+
+		foreach (array_unique(array_map('intval', (array) ComponentHelper::getParams('com_collector')->get('notify_users', []))) as $userId) {
+			$user = self::user($userId);
+
+			if ($user && !$user->block && $userId !== (int) $info->modified_by && MailHelper::isEmailAddress((string) $user->email)) {
+				$addresses[] = (string) $user->email;
+			}
+		}
+
+		if (!$addresses) {
 			return [];
 		}
 
@@ -82,11 +93,13 @@ class ProposalNotifier
 
 		$body .= "\n\n" . Text::sprintf('COM_COLLECTOR_MAIL_PROPOSAL_REVIEW', $review);
 
-		return [[
-			'to'      => $addresses,
-			'subject' => Text::sprintf('COM_COLLECTOR_MAIL_PROPOSAL_SUBJECT', self::siteName(), $info->title),
-			'body'    => $body,
-		]];
+		// Un courriel par destinataire : les adresses ne sont pas communiquées aux autres
+		$subject = Text::sprintf('COM_COLLECTOR_MAIL_PROPOSAL_SUBJECT', self::siteName(), $info->title);
+
+		return array_map(
+			fn ($address) => ['to' => [$address], 'subject' => $subject, 'body' => $body],
+			array_values(array_unique($addresses))
+		);
 	}
 
 	/**

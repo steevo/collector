@@ -738,7 +738,7 @@ class ItemModel extends AdminModel
 			{
 				$app->set('com_collector.version_pending', 1);
 
-				// Les validateurs en sont prévenus (option « Adresses à prévenir »)
+				// Les validateurs en sont prévenus (option « Membres à prévenir »)
 				if (!empty($table->history->id))
 				{
 					ProposalNotifier::notifyProposal((int) $collection, (int) $table->history->id);
