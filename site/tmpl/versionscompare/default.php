@@ -381,10 +381,7 @@ async function doSubmit() {
             // On redirige directement window.opener vers la liste items.
             // Le message a déjà été persisté en session PHP côté contrôleur :
             // Joomla l'affichera automatiquement au chargement de items.
-            if (window.opener && !window.opener.closed) {
-                window.opener.location.href = REDIRECT_URL;
-            }
-            window.close();
+            goAndClose(REDIRECT_URL);
 
         } else {
             showError(result.message);
@@ -401,13 +398,19 @@ async function doSubmit() {
     }
 }
 
-function doRestore(url) {
+/* Fenêtre ouverte depuis la liste des versions : la liste suit l'action et la fenêtre se ferme ;
+   sinon (lien ouvert directement) la page elle-même va à l'action, sans se fermer avant */
+function goAndClose(url) {
     if (window.opener && !window.opener.closed) {
         window.opener.location.href = url;
+        window.close();
     } else {
         window.location.href = url;
     }
-    window.close();
+}
+
+function doRestore(url) {
+    goAndClose(url);
 }
 
 function openRefuseModal(versionId) {
@@ -425,11 +428,6 @@ function doRefuse() {
                + '&refuse_note=' + encodeURIComponent(note)
                + '&<?php echo Session::getFormToken(); ?>=1';
 
-    if (window.opener && !window.opener.closed) {
-        window.opener.location.href = url;
-    } else {
-        window.location.href = url;
-    }
-    window.close();
+    goAndClose(url);
 }
 </script>
