@@ -29,6 +29,10 @@ $collId = (int) $this->collection->id;
 // protéger les boutons individuellement.
 $canEdit   = $this->item->params->get('access-edit', false);
 
+// Proposition (droit « Proposer une modification » sans droit de modifier) : enregistrée en attente de validation
+$canPropose = !$canEdit && $this->item->params->get('access-propose', false);
+$ownPending = $canPropose ? ($this->item->own_pending ?? null) : null;
+
 // Suppression : permission distincte de l'édition
 $canDelete = $user->authorise('core.delete', 'com_collector.item.' . $itemId)
            || $user->authorise('core.delete', 'com_collector.collection.' . $collId)
@@ -58,8 +62,30 @@ $formAction = Route::_('index.php?option=com_collector&view=item&collection=' . 
 		</div>
 		<?php endif; ?>
 
+		<?php /* ── Proposition d'un membre : vérifiée avant d'apparaître sur la fiche ── */ ?>
+		<?php if ($canPropose) : ?>
+		<div class="alert alert-info">
+			<?php echo Text::_('COM_COLLECTOR_PROPOSE_INTRO'); ?>
+			<?php if ($ownPending) : ?>
+			<br><?php echo Text::sprintf('COM_COLLECTOR_PROPOSE_OWN_PENDING', HTMLHelper::_('date', $ownPending->modified, Text::_('DATE_FORMAT_LC2'))); ?>
+			<?php endif; ?>
+		</div>
+		<?php endif; ?>
+
 		<?php /* ── Barre de boutons principale ────────────────────────────────── */ ?>
 		<div class="btn-toolbar mb-3">
+			<?php if ($canPropose) : ?>
+			<div class="btn-group me-2">
+				<button type="button" class="btn btn-primary" onclick="Joomla.submitbutton('item.save')">
+					<span class="icon-ok" aria-hidden="true"></span>&#160;<?php echo Text::_('COM_COLLECTOR_PROPOSE_SUBMIT'); ?>
+				</button>
+			</div>
+			<div class="btn-group me-2">
+				<button type="button" class="btn btn-secondary" onclick="Joomla.submitbutton('item.cancel')">
+					<span class="icon-cancel" aria-hidden="true"></span>&#160;<?php echo Text::_('JCANCEL'); ?>
+				</button>
+			</div>
+			<?php endif; ?>
 			<?php if ($canEdit) : ?>
 			<div class="btn-group me-2">
 				<?php if ($isProposal) : ?>
@@ -101,11 +127,25 @@ $formAction = Route::_('index.php?option=com_collector&view=item&collection=' . 
 				<?php endforeach; ?>
 
 				<?php // Proposition : son commentaire (« version initiale ») est conservé à la validation, pas de champ à présenter ?>
-				<?php if (!$isProposal && $this->params->get('save_history') && $this->params->get('show_modification')) : ?>
+				<?php if ($canPropose || (!$isProposal && $this->params->get('save_history') && $this->params->get('show_modification'))) : ?>
 					<?php echo $this->form->renderField('modification'); ?>
 				<?php endif; ?>
 
 				<?php /* Répétition des boutons en bas de l'onglet pour les formulaires longs */ ?>
+				<?php if ($canPropose) : ?>
+				<div class="btn-toolbar mt-3">
+					<div class="btn-group me-2">
+						<button type="button" class="btn btn-primary" onclick="Joomla.submitbutton('item.save')">
+							<span class="icon-ok" aria-hidden="true"></span>&#160;<?php echo Text::_('COM_COLLECTOR_PROPOSE_SUBMIT'); ?>
+						</button>
+					</div>
+					<div class="btn-group">
+						<button type="button" class="btn btn-secondary" onclick="Joomla.submitbutton('item.cancel')">
+							<span class="icon-cancel" aria-hidden="true"></span>&#160;<?php echo Text::_('JCANCEL'); ?>
+						</button>
+					</div>
+				</div>
+				<?php endif; ?>
 				<?php if ($canEdit) : ?>
 				<div class="btn-toolbar mt-3">
 					<div class="btn-group me-2">
@@ -129,6 +169,8 @@ $formAction = Route::_('index.php?option=com_collector&view=item&collection=' . 
 
 			<?php echo HTMLHelper::_('uitab.endTab'); ?>
 
+			<?php // Publication et métadonnées : réservées à qui modifie directement (pas aux propositions) ?>
+			<?php if ($canEdit) : ?>
 			<?php /* ── Onglet Publication ─────────────────────────────────────── */ ?>
 			<?php echo HTMLHelper::_('uitab.addTab', 'edition', 'publishing', Text::_('COM_COLLECTOR_PUBLISHING')); ?>
 
@@ -147,6 +189,7 @@ $formAction = Route::_('index.php?option=com_collector&view=item&collection=' . 
 				<?php echo $this->form->renderField('metakey'); ?>
 
 			<?php echo HTMLHelper::_('uitab.endTab'); ?>
+			<?php endif; ?>
 
 			<?php echo HTMLHelper::_('uitab.endTabSet'); ?>
 		</fieldset>

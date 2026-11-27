@@ -22,6 +22,7 @@ use Steevo\Component\Collector\Administrator\Classes\Field\Item\CollectorFieldIt
 use Steevo\Component\Collector\Administrator\Classes\Field\Line\CollectorFieldLine;
 use Steevo\Component\Collector\Administrator\Classes\Field\Number\CollectorFieldNumber;
 use Steevo\Component\Collector\Administrator\Classes\Field\Text\CollectorFieldText;
+use Steevo\Component\Collector\Administrator\Helper\CollectorHelper;
 use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Multilanguage;
@@ -416,6 +417,16 @@ class ItemModel extends AdminModel
 					}
 				}
 
+				// Proposer une modification (sans pouvoir modifier directement) : formulaire de proposition, enregistré
+				// en attente de validation ; sa propre proposition encore en attente y est reprise
+				$data->own_pending = null;
+
+				if (!$data->params->get('access-edit') && CollectorHelper::canPropose((int) $data->collection, (int) $data->id, $user))
+				{
+					$data->params->set('access-propose', true);
+					$data->own_pending = $this->getOwnPendingVersion((int) $data->collection, (int) $data->id);
+				}
+
 				// Compute view access permissions.
 				$user = Factory::getApplication()->getIdentity();
 				$groups = $user->getAuthorisedViewLevels();
@@ -515,7 +526,8 @@ class ItemModel extends AdminModel
 		$itemId = !empty($data['id']) ? (int) $data['id'] : (int) $this->getState('item.id');
 		$item   = $itemId ? $this->getItem($itemId) : null;
 	
-		if ($item && $item->modification != '') {
+		// Proposition : le commentaire, destiné aux validateurs, reste toujours modifiable
+		if ($item && $item->modification != '' && !$item->params->get('access-propose')) {
 			$form->setFieldAttribute('modification', 'readonly', 'true');
 		}
 		
@@ -555,7 +567,8 @@ class ItemModel extends AdminModel
 		$params = $app->isClient('site') ? $app->getParams() : ComponentHelper::getParams('com_collector');
 		$table = $this->getTable();
 		$key = $table->getKeyName();
-		$pk = (!empty($data[$key])) ? $data[$key] : (int) $this->getState($this->getName() . '.id');
+		// Objet du formulaire (0 : nouvel objet) ; l'« id » de la requête peut être celui d'une collection (lien de menu)
+		$pk = array_key_exists($key, $data) ? (int) $data[$key] : (int) $this->getState($this->getName() . '.id');
 		$isNew = true;
 		$collection = $data['collection'];
 
@@ -614,8 +627,17 @@ class ItemModel extends AdminModel
 				)->loadResult();
 			}
 
-			// Modification d'un objet : option « Validation automatique » de Collector (onglet Modification)
-			$autoValidate = (int) $params->get('auto_validate', 1);
+			$user = $app->getIdentity();
+
+			// Droit de modifier directement (créer, pour un nouvel objet) ; sinon, droit de proposer seulement
+			$canDirect = $isNew
+				? ($user->authorise('core.create', 'com_collector.collection.' . (int) $collection) || $user->authorise('core.create', 'com_collector'))
+				: CollectorHelper::canEditDirectly((int) $collection, (int) $pk, (int) $table->created_by, $user);
+			$proposer  = !$canDirect && CollectorHelper::canPropose((int) $collection, $isNew ? 0 : (int) $pk, $user);
+
+			// Modification d'un objet : directe pour qui valide la collection, sinon option « Validation automatique »
+			// de Collector (onglet Modification)
+			$autoValidate = CollectorHelper::canValidate((int) $collection, $user) ? 1 : (int) $params->get('auto_validate', 1);
 
 			// Nouvel objet proposé depuis le site par un utilisateur qui ne gère pas la publication, ou sans état
 			// choisi (onglet Publication masqué) : option « Publication automatique » (onglet Proposition d'objet,
@@ -625,6 +647,25 @@ class ItemModel extends AdminModel
 			if ($isNew && (!$this->canEditState((object) $data) || !isset($data['state']) || $data['state'] === '')) {
 				$autoValidate = (int) (bool) $app->getParams()->get('auto_publish', 1);
 				$table->state = $autoValidate;
+			}
+
+			// Proposition (droit « Proposer une modification » seulement) : toujours en attente de validation ; un
+			// nouvel objet proposé reste dépublié jusqu'à sa validation. La proposition encore en attente du membre
+			// sur cet objet est remplacée par la nouvelle (une seule par membre et par objet).
+			$replacedVersion = null;
+
+			if ($proposer && !$proposalVersion)
+			{
+				$autoValidate = 0;
+
+				if ($isNew)
+				{
+					$table->state = 0;
+				}
+				else
+				{
+					$replacedVersion = $this->getOwnPendingVersion((int) $collection, (int) $pk);
+				}
 			}
 
 			// Prepare the row for saving
@@ -677,6 +718,12 @@ class ItemModel extends AdminModel
 						->set($db->quoteName('to_validate') . ' = GREATEST(0, ' . $db->quoteName('to_validate') . ' - 1)')
 						->where($db->quoteName('id') . ' = ' . (int) $pk)
 				)->execute();
+			}
+
+			// Proposition précédente du membre sur cet objet, remplacée par celle-ci
+			if ($replacedVersion)
+			{
+				$table->deleteVersion((int) $replacedVersion->id);
 			}
 
 			// Version en attente : le contrôleur l'annonce au membre (au lieu de « enregistré »)
@@ -734,13 +781,31 @@ class ItemModel extends AdminModel
 		}
 
 		if ($pk > 0) {
-			// Attempt to load the row (proposition sans version validée : sa version en attente)
-			$return = $table->loadVersion($collection, $pk, $this->getProposalVersionId((int) $collection, (int) $pk) ?: null);
+			// Proposition en attente du membre sur cet objet : le formulaire la reprend (pour la corriger), rapportée
+			// sur la version en cours ; sinon la version en cours (proposition sans version validée : sa version en attente)
+			$createdBy  = (int) $this->getDbo()->setQuery('SELECT created_by FROM #__collector_items WHERE id = ' . (int) $pk)->loadResult();
+			$ownPending = !CollectorHelper::canEditDirectly((int) $collection, (int) $pk, $createdBy) && CollectorHelper::canPropose((int) $collection, (int) $pk)
+				? $this->getOwnPendingVersion((int) $collection, (int) $pk) : null;
+
+			$version = $ownPending ? (int) $ownPending->id : ($this->getProposalVersionId((int) $collection, (int) $pk) ?: null);
+
+			// Attempt to load the row
+			$return = $table->loadVersion($collection, $pk, $version);
 
 			// Check for a table object error.
 			if ($return === false && $table->getError()) {
 				$this->setError($table->getError());
 				return false;
+			}
+
+			if ($ownPending) {
+				$table->collection = (int) $collection;
+
+				foreach ($table->rebasePendingVersion((int) $ownPending->id)['data'] as $column => $value) {
+					$table->$column = $value;
+				}
+
+				$table->modification = (string) $ownPending->modification;
 			}
 		}
 		else
@@ -1018,10 +1083,33 @@ class ItemModel extends AdminModel
 	 */
 	public function canValidateCollection(int $collection): bool
 	{
+		return CollectorHelper::canValidate($collection);
+	}
+
+	/**
+	 * Proposition encore en attente de l'utilisateur sur un objet (la plus récente), ou null
+	 *
+	 * @return  object|null  id, modified, modification
+	 */
+	public function getOwnPendingVersion(int $collection, int $id): ?object
+	{
 		$user = Factory::getApplication()->getIdentity();
 
-		return $user->authorise('core.edit', 'com_collector.collection.' . $collection)
-			|| $user->authorise('core.edit', 'com_collector');
+		if ($user->guest || $collection <= 0 || $id <= 0)
+		{
+			return null;
+		}
+
+		$db = $this->getDbo();
+		$db->setQuery(
+			'SELECT id, modified, modification FROM ' . $db->quoteName('#__collector_items_history_' . $collection)
+			. ' WHERE item = ' . $id . ' AND state = 0 AND modified_by = ' . (int) $user->id
+			. ' ORDER BY id DESC',
+			0,
+			1
+		);
+
+		return $db->loadObject() ?: null;
 	}
 
 	/**

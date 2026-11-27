@@ -14,6 +14,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Uri\Uri;
+use Steevo\Component\Collector\Administrator\Helper\CollectorHelper;
 
 /**
  * Vue « Proposition d'objet » : formulaire de création d'un objet dans une collection.
@@ -32,6 +33,13 @@ class HtmlView extends BaseHtmlView
 	 * @var  bool
 	 */
 	protected $canChangeState = false;
+
+	/**
+	 * L'utilisateur peut seulement proposer (droit « Proposer une modification ») : objet en attente de validation
+	 *
+	 * @var  bool
+	 */
+	protected $isProposer = false;
 
 	protected $pageclass_sfx = '';
 
@@ -56,7 +64,10 @@ class HtmlView extends BaseHtmlView
 			$canCreate = $this->user->authorise('core.create', 'com_collector');
 		}
 
-		if (!$canCreate) {
+		// Droit de proposer seulement : l'objet est enregistré en attente de validation (voir ItemModel::save)
+		$this->isProposer = !$canCreate && CollectorHelper::canPropose((int) $this->collection->id, 0, $this->user);
+
+		if (!$canCreate && !$this->isProposer) {
 			if ($this->user->guest) {
 				// Visiteur : connexion, puis retour sur ce formulaire
 				$return = base64_encode(Uri::getInstance()->toString());

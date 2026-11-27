@@ -21,8 +21,9 @@ HTMLHelper::_('behavior.keepalive');
 $collId          = (int) $this->collection->id;
 // Onglet Publication selon l'option « Afficher les options de publication » (lien de menu, sinon options
 // de Collector), même pour qui gère la publication : son objet prend alors l'état de « Publication automatique »
-$showPublishing  = (bool) $this->params->get('show_publishfields', 0);
-$showMetadata    = (bool) $this->params->get('show_metafields', 0);
+// Proposition d'un membre (droit « Proposer une modification » seulement) : ni publication ni métadonnées
+$showPublishing  = !$this->isProposer && (bool) $this->params->get('show_publishfields', 0);
+$showMetadata    = !$this->isProposer && (bool) $this->params->get('show_metafields', 0);
 
 // L'adresse du formulaire garde le lien de menu : ses paramètres (publication automatique…)
 // s'appliquent à l'enregistrement
@@ -57,6 +58,10 @@ $buttons = function () {
 		<input type="hidden" name="jform[id]" id="jform_id" value="0">
 		<input type="hidden" name="jform[collection]" id="jform_collection" value="<?php echo $collId; ?>">
 		<?php echo HTMLHelper::_('form.token'); ?>
+
+		<?php if ($this->isProposer) : ?>
+			<div class="alert alert-info"><?php echo Text::_('COM_COLLECTOR_PROPOSE_NEW_INTRO'); ?></div>
+		<?php endif; ?>
 
 		<?php if ($showPublishing || $showMetadata) : ?>
 			<?php echo HTMLHelper::_('uitab.startTabSet', 'submission', ['active' => 'details', 'breakpoint' => 768]); ?>

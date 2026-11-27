@@ -354,8 +354,10 @@ class CollectorItemsTable extends Table
 		unset($this->historyId);
 
 		$isNewItem = empty($this->id);
-		
-		if (!$this->store())
+
+		// Version en attente d'un objet existant : l'objet ne change pas avant la validation (date et auteur de
+		// la modification, titre…) ; un nouvel objet est créé, dépublié tant que sa version n'est pas validée
+		if (($auto_validate || $isNewItem) && !$this->store())
 		{
 			return false;
 		}

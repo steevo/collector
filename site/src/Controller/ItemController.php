@@ -15,6 +15,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\FormController;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
+use Steevo\Component\Collector\Administrator\Helper\CollectorHelper;
 
 /**
  * Contrôleur frontend pour les items (fiche et édition).
@@ -61,6 +62,11 @@ class ItemController extends FormController
 	{
 		$app    = Factory::getApplication();
 		$isNew  = empty($app->input->get('jform', [], 'array')['id']);
+
+		// L'objet enregistré est celui du formulaire : FormController prend l'« id » de la requête, qui peut être celui
+		// d'une collection (lien de menu d'une collection) ; un nouvel objet était alors enregistré sur l'objet de ce numéro
+		$this->input->set('id', $isNew ? 0 : (int) $app->input->get('jform', [], 'array')['id']);
+
 		$result = parent::save($key, $urlVar);
 
 		// Version enregistrée en attente de validation (modification sans validation automatique, ou
@@ -121,6 +127,11 @@ class ItemController extends FormController
 		$collection = (int) ($data['collection'] ?? $this->app->input->getInt('collection'));
 		$allow      = $user->authorise('core.create', 'com_collector.collection.' . $collection);
 
+		// Droit de proposer : nouvel objet enregistré en attente de validation (voir ItemModel::save)
+		if (!$allow && $collection && CollectorHelper::canPropose($collection, 0, $user)) {
+			return true;
+		}
+
 		return $allow ?? parent::allowAdd();
 	}
 
@@ -162,6 +173,11 @@ class ItemController extends FormController
 					}
 				}
 			}
+		}
+
+		// Droit de proposer : modification enregistrée en attente de validation (voir ItemModel::save)
+		if ($recordId && CollectorHelper::canPropose($collection, $recordId, $user)) {
+			return true;
 		}
 
 		return parent::allowEdit($data, $key);

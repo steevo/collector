@@ -177,7 +177,9 @@ $showCommentsTab = ($this->params->get('comments') != 0) && ($this->params->get(
 // Proposition (objet sans version validée) ouverte par un validateur : onglet de modification ouvert d'emblée,
 // avec le bouton « Valider la proposition »
 $isProposal      = !empty($this->item->proposal_version);
-$showEditTab     = ($this->params->get('allow_front_mod') || $isProposal) && $this->item->params->get('access-edit');
+// Membre qui peut seulement proposer une modification : même onglet, enregistré en attente de validation
+$isProposer      = !$this->item->params->get('access-edit') && $this->item->params->get('access-propose');
+$showEditTab     = ($this->params->get('allow_front_mod') || $isProposal) && ($this->item->params->get('access-edit') || $isProposer);
 $editTabId       = 'index.php?option=com_collector&view=itemform&collection='.$this->item->collection.'&id='.$this->item->id.'&Itemid='.$Itemid;
 $showWantTab     = $this->user->id && !empty($this->userlistWant);
 $showExchangeTab = $this->user->id && !empty($this->userlistExchange);
@@ -204,7 +206,7 @@ if ($showCommentsTab)
 
 if ($showEditTab)
 {
-	echo HTMLHelper::_('uitab.addTab', 'myTab', $editTabId, Text::_('COM_COLLECTOR_EDIT'));
+	echo HTMLHelper::_('uitab.addTab', 'myTab', $editTabId, Text::_($isProposer ? 'COM_COLLECTOR_PROPOSE_TAB' : 'COM_COLLECTOR_EDIT'));
 
 	echo $this->loadTemplate('edit');
 
